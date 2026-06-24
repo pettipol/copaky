@@ -100,6 +100,7 @@ public struct TabBarData: Codable, Sendable {
         TabBarItem(label: .image("keyboard.chevron.compact.down"), pinned: true, actions: [.dismissKeyboard]),
         TabBarItem(label: .image("aspectratio"), pinned: true, actions: [.enableResizingMode, .toggleTabBar]),
         TabBarItem(label: .image("face.smiling"), pinned: true, actions: [.moveTab(.system(.emoji_tab))]),
+        TabBarItem(label: .image("doc.badge.clock"), pinned: true, actions: [.moveTab(.system(.clipboard_history_tab))]),
         TabBarItem(label: .text("あいう"), pinned: false, actions: [.moveTab(.system(.user_japanese))]),
         TabBarItem(label: .text("ABC"), pinned: false, actions: [.moveTab(.system(.user_english))]),
     ])

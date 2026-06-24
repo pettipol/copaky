@@ -16,23 +16,9 @@ struct ReportSubmissionHelper {
         variableStates: VariableStates,
         inputManager: InputManager
     ) async -> Bool {
-        guard SemiStaticStates.shared.hasFullAccess else { return false }
-        let url = URL(string: "https://docs.google.com/forms/d/e/1FAIpQLSeTdOtFZfuFHurrDMIIzLyX-Z84Y3IKHflewNZ8dPOFgCTOtw/formResponse")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("no-cors", forHTTPHeaderField: "mode")
-        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        let entries = reportFormEntries(for: content, variableStates: variableStates, inputManager: inputManager)
-        request.httpBody = buildFormBody(from: entries)
-
-        do {
-            let (_, response) = try await URLSession.shared.data(for: request)
-            debug("reportSuggestion response", response)
-            return true
-        } catch {
-            debug("reportSuggestion error", error)
-            return false
-        }
+        // Disabilitato per conformità offline completa (SviluppoTastieraOpen)
+        debug("ReportSubmissionHelper.submitSuggestion disabilitato offline-only")
+        return true
     }
 
     @MainActor
@@ -42,35 +28,9 @@ struct ReportSubmissionHelper {
         variableStates: VariableStates,
         inputManager: InputManager
     ) async {
-        let url = URL(string: "https://docs.google.com/forms/d/e/1FAIpQLSfpYQqbX8u5SgGVfXjNzCPtKAH_5Mp7PCkUiCiUceEaevb8pQ/formResponse")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("no-cors", forHTTPHeaderField: "mode")
-        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        let surfaceCandidate = switch candidate.label {
-        case .text(let text): text
-        case .systemImage: "System Image"
-        }
-        let ruby = makeRubyDescription(candidate: candidate, inputManager: inputManager)
-        let indexString = index?.description ?? "nil"
-        let version = SharedStore.currentAppVersion?.description ?? "Unknown Version"
-        @KeyboardSetting(.learningType) var learningType
-        let learning = learningType.needUsingMemory ? "有効" : "無効"
-        request.httpBody = buildFormBody(from: [
-            ("entry.134904003", surfaceCandidate),
-            ("entry.869464972", ruby),
-            ("entry.1459534202", indexString),
-            ("entry.571429448", version),
-            ("entry.524189292", learning),
-        ])
-
-        do {
-            let (_, response) = try await URLSession.shared.data(for: request)
-            debug("notifyReportWrongConversion response", response)
-            variableStates.temporalMessage = .doneReportWrongConversion
-        } catch {
-            debug("notifyReportWrongConversion error", error)
-        }
+        // Disabilitato per conformità offline completa (SviluppoTastieraOpen)
+        debug("ReportSubmissionHelper.submitWrongConversion disabilitato offline-only")
+        variableStates.temporalMessage = .doneReportWrongConversion
     }
 
     @MainActor

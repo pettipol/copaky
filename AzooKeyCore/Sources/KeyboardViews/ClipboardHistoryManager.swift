@@ -117,6 +117,13 @@ public struct ClipboardHistoryManager {
                 self.items.append(item)
             }
         }
+
+        // Elementi non pinnati scadono dopo 7 giorni per privacy (pulizia automatica)
+        let expirationLimit = Date().addingTimeInterval(-7 * 24 * 60 * 60)
+        self.items.removeAll { item in
+            item.pinnedDate == nil && item.createdData < expirationLimit
+        }
+
         // 増えすぎないように削除する
         while self.items.count > config.maxCount {
             self.items.removeLast()
