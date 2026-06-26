@@ -16,9 +16,10 @@ struct ReportSubmissionHelper {
         variableStates: VariableStates,
         inputManager: InputManager
     ) async -> Bool {
-        // Disabilitato per conformità offline completa (SviluppoTastieraOpen)
+        // Disabilitato per conformità offline completa (SviluppoTastieraOpen).
+        // Ritorna false (nessun invio): la UI non deve registrare la coppia come "segnalata".
         debug("ReportSubmissionHelper.submitSuggestion disabilitato offline-only")
-        return true
+        return false
     }
 
     @MainActor
@@ -28,9 +29,9 @@ struct ReportSubmissionHelper {
         variableStates: VariableStates,
         inputManager: InputManager
     ) async {
-        // Disabilitato per conformità offline completa (SviluppoTastieraOpen)
+        // Disabilitato per conformità offline completa (SviluppoTastieraOpen).
+        // Nessun messaggio di conferma: l'invio non avviene, la UI non deve mostrare "inviato".
         debug("ReportSubmissionHelper.submitWrongConversion disabilitato offline-only")
-        variableStates.temporalMessage = .doneReportWrongConversion
     }
 
     @MainActor

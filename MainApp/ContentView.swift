@@ -76,7 +76,7 @@ struct ContentView: View {
                 }
             }
             .onOpenURL { url in
-                if url.scheme == "azooKey" {
+                if url.scheme == "copaky" {
                     // Deep link handling for azooKey scheme
                     let host = url.host?.lowercased()
                     let last = url.lastPathComponent.lowercased()

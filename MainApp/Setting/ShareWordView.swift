@@ -14,6 +14,7 @@ struct ShareWordView: View {
     @State private var ruby = ""
     @State private var note = ""
     @State private var sending = false
+    @State private var shareUnavailable = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -52,10 +53,13 @@ struct ShareWordView: View {
                 Button("申請する") {
                     Task {
                         self.sending = true
-                        _ = await SharedStore.sendSharedWord(word: word, ruby: ruby.toKatakana(), note: note, options: [])
+                        let shared = await SharedStore.sendSharedWord(word: word, ruby: ruby.toKatakana(), note: note, options: [])
                         self.sending = false
-                        await MainActor.run {
+                        if shared {
                             dismiss()
+                        } else {
+                            // オフライン版では共有は無効。誤った「成功」表示（黙ってdismiss）を避けて通知する。
+                            self.shareUnavailable = true
                         }
                     }
                 }
@@ -64,6 +68,11 @@ struct ShareWordView: View {
         }
         .multilineTextAlignment(.leading)
         .navigationBarTitle(Text("変換候補の追加申請"), displayMode: .inline)
+        .alert("オフラインのため共有できません", isPresented: $shareUnavailable) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("このバージョンは完全オフラインで動作します。入力した単語は外部に送信されず、この端末にのみ保存されます。")
+        }
 
     }
 }

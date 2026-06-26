@@ -11,8 +11,8 @@ import SwiftUtils
 
 public enum SharedStore {
     @MainActor public static let userDefaults = UserDefaults(suiteName: Self.appGroupKey)!
-    public static let bundleName = "DevEn3.azooKey.keyboard"
-    public static let appGroupKey = "group.com.azooKey.keyboard"
+    public static let bundleName = "com.pettipol.copaky.keyboard"
+    public static let appGroupKey = "group.com.pettipol.copaky"
 
     private static var appVersionString: String? {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
@@ -60,8 +60,9 @@ public enum SharedStore {
     }
 
     public static func sendSharedWord(word: String, ruby: String, note: String? = nil, options: [ShareThisWordOptions]) async -> Bool {
-        // Disabilitato per conformità offline completa (SviluppoTastieraOpen)
+        // Disabilitato per conformità offline completa (SviluppoTastieraOpen).
+        // Ritorna false: nessuna condivisione è avvenuta, lo stato locale non deve risultare "condiviso".
         debug("SharedStore.sendSharedWord disabilitato offline-only")
-        return true
+        return false
     }
 }

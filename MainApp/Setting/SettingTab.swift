@@ -225,7 +225,7 @@ struct SettingTabView: View {
                     }
                     .searchKeys("更新履歴", "アップデート情報", "変更", "バージョン")
                     LabeledContent("URL Scheme") {
-                        Text(verbatim: "azooKey://")
+                        Text(verbatim: "copaky://")
                             .monospaced()
                     }
                     .searchKeys("URLスキーム")

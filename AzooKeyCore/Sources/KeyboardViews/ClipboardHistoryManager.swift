@@ -33,19 +33,47 @@ struct ClipboardHistoryItem: Equatable, Comparable, Hashable, Codable, Identifia
     }
 }
 
+/// Sorgente appunti di sistema, astratta per (a) isolare l'UNICO punto di lettura della pasteboard
+/// e (b) rendere i test deterministici: la `UIPasteboard.general` reale, in un contesto di test
+/// headless su Simulatore iOS 16+, può bloccarsi sul servizio `com.apple.pasteboard.pasted` in attesa
+/// del permesso di incolla. I test iniettano una sorgente fittizia.
+public protocol ClipboardSource {
+    @MainActor var changeCount: Int { get }
+    @MainActor var hasStrings: Bool { get }
+    @MainActor var string: String? { get }
+}
+
+/// Implementazione di produzione: legge la `UIPasteboard.general` reale.
+public struct SystemClipboardSource: ClipboardSource {
+    public init() {}
+    @MainActor public var changeCount: Int { UIPasteboard.general.changeCount }
+    @MainActor public var hasStrings: Bool { UIPasteboard.general.hasStrings }
+    @MainActor public var string: String? { UIPasteboard.general.string }
+}
+
 public struct ClipboardHistoryManager {
 
     var items: [ClipboardHistoryItem] = []
     var config: any ClipboardHistoryManagerConfiguration
     private var collapsed = false
     private var previousChangedCount = 0
+    /// Sorgente appunti (iniettabile per i test). In produzione è `SystemClipboardSource`.
+    private var clipboardSource: any ClipboardSource
+    /// true se sugli appunti c'è nuovo contenuto testuale non ancora aggiunto alla cronologia.
+    /// Calcolato SOLO dai metadati (`changeCount` + `hasStrings`): non legge mai il valore, quindi
+    /// non innesca il banner di sistema "incollato da…". Usato dalla UI per l'affordance di cattura.
+    public internal(set) var hasPendingClipboard = false
+
+    /// Lunghezza massima (in caratteri) di un singolo elemento, per non saturare il container condiviso.
+    static let maxItemCharacterCount = 50_000
 
     @MainActor private var enabled: Bool {
         config.enabled
     }
 
-    init(config: any ClipboardHistoryManagerConfiguration) {
+    init(config: any ClipboardHistoryManagerConfiguration, clipboardSource: any ClipboardSource = SystemClipboardSource()) {
         self.config = config
+        self.clipboardSource = clipboardSource
         // TODO: メモリ対策をやる必要がある。
         do {
             self.items = try Self.load(config: config)
@@ -89,44 +117,72 @@ public struct ClipboardHistoryManager {
         self.items.sort(by: >)
     }
 
-    @MainActor public mutating func checkUpdate() {
+    /// DETECT — fase automatica, eseguita a ogni apparizione/aggiornamento della tastiera.
+    /// Usa SOLO metadati (`changeCount`, `hasStrings`): **non legge mai il valore degli appunti**,
+    /// quindi non mostra il banner di sistema. Aggiorna `hasPendingClipboard` per l'affordance UI
+    /// ed esegue la pulizia temporale. La cattura del valore avviene solo in `captureCurrentClipboard`,
+    /// su intento esplicito dell'utente.
+    @MainActor public mutating func detectClipboardChange(now: Date = Date()) {
         guard self.enabled else {
+            self.hasPendingClipboard = false
             return
         }
-        if UIPasteboard.general.changeCount == self.previousChangedCount {
-            return
-        }
-        if !UIPasteboard.general.hasStrings {
-            return
-        }
-        self.previousChangedCount = UIPasteboard.general.changeCount
+        let currentCount = self.clipboardSource.changeCount
+        // Solo metadati: c'è nuovo contenuto stringa non ancora acquisito? (nessuna lettura del valore)
+        self.hasPendingClipboard = (currentCount != self.previousChangedCount) && self.clipboardSource.hasStrings
+        self.pruneExpired(now: now)
+    }
 
-        if let string = UIPasteboard.general.string {
-            var item = ClipboardHistoryItem(content: .text(string), createdData: Date())
-            if let index = self.items.firstIndex(where: {item.content == $0.content}) {
-                let oldItem = self.items.remove(at: index)
-                if oldItem.pinnedDate != nil {
-                    item.pinnedDate = Date()
-                }
+    /// CAPTURE — UNICO punto in cui si legge il valore degli appunti (`UIPasteboard.general.string`).
+    /// Da invocare SOLO in risposta a un'azione esplicita dell'utente (intento). Saltata nei campi
+    /// sicuri (`isSecureEntry`) e per stringhe oltre `maxItemCharacterCount`.
+    @MainActor public mutating func captureCurrentClipboard(isSecureEntry: Bool, now: Date = Date()) {
+        guard self.enabled, !isSecureEntry else {
+            return
+        }
+        let currentCount = self.clipboardSource.changeCount
+        guard self.clipboardSource.hasStrings, let string = self.clipboardSource.string else {
+            self.previousChangedCount = currentCount
+            self.hasPendingClipboard = false
+            return
+        }
+        // Cap dimensione del singolo elemento: non memorizzare blob enormi nel container condiviso.
+        guard string.count <= Self.maxItemCharacterCount else {
+            self.previousChangedCount = currentCount
+            self.hasPendingClipboard = false
+            return
+        }
+        self.previousChangedCount = currentCount
+
+        var item = ClipboardHistoryItem(content: .text(string), createdData: now)
+        if let index = self.items.firstIndex(where: { item.content == $0.content }) {
+            let oldItem = self.items.remove(at: index)
+            if oldItem.pinnedDate != nil {
+                item.pinnedDate = now
             }
-            if self.items.isEmpty {
-                self.items.append(item)
-            } else if let index = self.items.firstIndex(where: { item > $0 }) {
-                self.items.insert(item, at: index)
-            } else {
-                self.items.append(item)
-            }
+        }
+        if self.items.isEmpty {
+            self.items.append(item)
+        } else if let index = self.items.firstIndex(where: { item > $0 }) {
+            self.items.insert(item, at: index)
+        } else {
+            self.items.append(item)
         }
 
-        // Elementi non pinnati scadono dopo 7 giorni per privacy (pulizia automatica)
-        let expirationLimit = Date().addingTimeInterval(-7 * 24 * 60 * 60)
-        self.items.removeAll { item in
-            item.pinnedDate == nil && item.createdData < expirationLimit
-        }
-
+        self.pruneExpired(now: now)
         // 増えすぎないように削除する
         while self.items.count > config.maxCount {
             self.items.removeLast()
+        }
+        self.hasPendingClipboard = false
+    }
+
+    /// Pulizia temporale: gli elementi non pinnati scadono dopo 7 giorni (privacy).
+    /// Il clock è iniettabile (`now`) per rendere i test deterministici.
+    @MainActor mutating func pruneExpired(now: Date = Date()) {
+        let expirationLimit = now.addingTimeInterval(-7 * 24 * 60 * 60)
+        self.items.removeAll { item in
+            item.pinnedDate == nil && item.createdData < expirationLimit
         }
     }
 

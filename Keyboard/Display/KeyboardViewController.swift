@@ -282,14 +282,28 @@ final class KeyboardViewController: UIInputViewController {
         }
     }
 
+    /// Euristica per rilevare un campo sicuro/password da `UITextDocumentProxy`, che NON espone
+    /// direttamente `isSecureTextEntry`. Ci si basa sul `textContentType`. iOS inoltre sostituisce la
+    /// tastiera di terze parti con quella di sistema nei campi sicuri: difesa aggiuntiva di sistema.
+    static func isSecureField(_ proxy: any UITextDocumentProxy) -> Bool {
+        switch proxy.textContentType {
+        case .some(.password), .some(.newPassword):
+            return true
+        default:
+            return false
+        }
+    }
+
     func updateStates() {
         // キーボードタイプはviewDidAppearのタイミングで取得できる
         KeyboardViewController.variableStates.setKeyboardType(self.textDocumentProxy.keyboardType)
         KeyboardViewController.variableStates.setTextContentType(self.textDocumentProxy.textContentType)
+        // 安全な（パスワード）フィールドかどうかを記録し、クリップボード取得を抑止する
+        KeyboardViewController.variableStates.setSecureEntry(Self.isSecureField(self.textDocumentProxy))
 
-        // クリップボード履歴を更新する
+        // クリップボード履歴を更新する（メタデータのみ・値は読まない）
         KeyboardViewController.variableStates.clipboardHistoryManager.reload()
-        KeyboardViewController.variableStates.clipboardHistoryManager.checkUpdate()
+        KeyboardViewController.variableStates.clipboardHistoryManager.detectClipboardChange()
         // ロード済みのインスタンスの数が増えすぎるとパフォーマンスに悪影響があるので、適当なところで強制終了する
         // viewDidAppearで強制終了すると再ロードが自然な形で実行される
         if KeyboardViewController.loadedInstanceCount > 15 {
@@ -483,10 +497,11 @@ final class KeyboardViewController: UIInputViewController {
 
         Self.action.notifySomethingDidChange(a_left: left, a_center: center, a_right: right, variableStates: KeyboardViewController.variableStates)
         Self.action.setTextDocumentProxy(.preference(.main))
-        // このタイミングでクリップボードを確認する
-        KeyboardViewController.variableStates.clipboardHistoryManager.checkUpdate()
+        // このタイミングでクリップボードを確認する（メタデータのみ・値は読まない）
+        KeyboardViewController.variableStates.clipboardHistoryManager.detectClipboardChange()
         KeyboardViewController.variableStates.setUIReturnKeyType(type: self.textDocumentProxy.returnKeyType ?? .default)
         KeyboardViewController.variableStates.setTextContentType(self.textDocumentProxy.textContentType)
+        KeyboardViewController.variableStates.setSecureEntry(Self.isSecureField(self.textDocumentProxy))
     }
 
     /// Reference: https://stackoverflow.com/questions/79077018/unable-to-open-main-app-from-action-extension-in-ios-18-previously-working-met

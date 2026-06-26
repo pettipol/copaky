@@ -24,7 +24,7 @@ final class UserDictionaryMigrationCoordinatorTests: XCTestCase {
         .init(ruby: "てんぷれ", word: word, isVerb: false, isPersonName: false, isPlaceName: false, id: id, isTemplateMode: false, formatLiteral: nil)
     }
 
-    func test_backup_created_once_and_not_overwritten() {
+    @MainActor func test_backup_created_once_and_not_overwritten() {
         let store = FakeStore()
         let flagKey = "flag"
         let backupKey = "backup"

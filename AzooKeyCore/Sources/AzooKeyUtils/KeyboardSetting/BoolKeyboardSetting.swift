@@ -246,7 +246,8 @@ public extension KeyboardSettingKey where Self == EnableContactImport {
 public struct EnableClipboardHistoryManagerTab: BoolKeyboardSettingKey {
     public static let title: LocalizedStringKey = "クリップボードの履歴を保存"
     public static let explanation: LocalizedStringKey = "コピーした文字列の履歴を保存し、専用のタブから入力できるようにします。"
-    public static let defaultValue = true
+    // 既定でオフ（オプトイン）。フルアクセスが必要な付加機能であり、基本入力はこれ無しで動作する（App Review 4.4.1）。
+    public static let defaultValue = false
     public static let key: String = "enable_clipboard_history_manager_tab"
     public static let requireFullAccess: Bool = true
     public static func onEnabled() -> LocalizedStringKey? {

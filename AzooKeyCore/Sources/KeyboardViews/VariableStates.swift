@@ -126,6 +126,11 @@ public final class VariableStates: ObservableObject {
 
     @MainActor private(set) public var keyboardType: UIKeyboardType = .default
     @MainActor @Published private(set) public var textContentType: UITextContentType?
+    /// true quando il campo attivo è sicuro/password: usato per disabilitare la cattura clipboard.
+    /// Nota: `UITextDocumentProxy` non espone `isSecureTextEntry`; il valore è euristico (vedi
+    /// `KeyboardViewController.isSecureField`). Difesa aggiuntiva: iOS sostituisce comunque la
+    /// tastiera di terze parti con quella di sistema nei campi sicuri.
+    @MainActor private(set) public var isSecureEntry: Bool = false
 
     /// `ResultModel`の変数
     @Published public var resultModel = ResultModel()
@@ -246,8 +251,8 @@ public final class VariableStates: ObservableObject {
         self.upsideComponent = nil
         // 変更する
         self.textChangedCount += 1
-        // このタイミングでクリップボードを確認する
-        self.clipboardHistoryManager.checkUpdate()
+        // このタイミングでクリップボードを確認する（メタデータのみ・値は読まない）
+        self.clipboardHistoryManager.detectClipboardChange()
         // 保存処理を行う
         self.clipboardHistoryManager.save()
     }
@@ -291,6 +296,19 @@ public final class VariableStates: ObservableObject {
             return
         }
         self.textContentType = type
+    }
+
+    /// Imposta lo stato "campo sicuro" usato per disabilitare la cattura clipboard.
+    @MainActor public func setSecureEntry(_ isSecure: Bool) {
+        self.isSecureEntry = isSecure
+    }
+
+    /// Cattura il contenuto corrente degli appunti nella cronologia, su intento esplicito dell'utente.
+    /// Saltata automaticamente nei campi sicuri.
+    @MainActor public func captureClipboard() {
+        self.clipboardHistoryManager.captureCurrentClipboard(isSecureEntry: self.isSecureEntry)
+        // Persisti subito: l'estensione può essere terminata prima di closeKeyboard (perdita dell'elemento).
+        self.clipboardHistoryManager.save()
     }
 
     @MainActor public func setEnterKeyState(_ state: RoughEnterKeyState) {

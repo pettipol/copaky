@@ -102,6 +102,7 @@ let package = Package(
             name: "AzooKeyUtilsTests",
             dependencies: [
                 "AzooKeyUtils",
+                "KeyboardViews",
             ],
             swiftSettings: swiftSettings
         ),

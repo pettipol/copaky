@@ -102,6 +102,28 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
         }
     }
 
+    /// Cattura user-initiated: legge gli appunti SOLO quando l'utente tocca questo bottone (intento).
+    /// Disabilitato nei campi sicuri. La label cambia se ci sono nuovi appunti rilevati (solo metadati).
+    @ViewBuilder
+    private var captureBar: some View {
+        Button {
+            variableStates.captureClipboard()
+            self.target.reload(manager: variableStates.clipboardHistoryManager)
+            KeyboardFeedback<Extension>.click()
+        } label: {
+            HStack {
+                Image(systemName: "doc.on.clipboard")
+                Text(variableStates.clipboardHistoryManager.hasPendingClipboard ? "コピーした内容を追加" : "現在のクリップボードを追加")
+            }
+            .font(.system(size: 13, weight: .medium))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+        }
+        .disabled(variableStates.isSecureEntry)
+        .opacity(variableStates.isSecureEntry ? 0.4 : 1)
+        .padding(.horizontal, 12)
+    }
+
     @ViewBuilder
     private var tileGridView: some View {
         // ピン留めがない場合は縦スクロールを無効にする
@@ -109,6 +131,7 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
 
         ScrollView(scrollAxes) {
             VStack(spacing: 12) {
+                captureBar
                 if !self.target.pinnedItems.isEmpty {
                     ClipboardSection(
                         title: "ピン留め",
@@ -336,7 +359,7 @@ private struct ClipboardSection<TileView: View, MenuView: View>: View {
 private struct EmptyHistoryView: View {
     var body: some View {
         VStack {
-            Text("テキストをコピーするとここに追加されます")
+            Text("コピーした後、上の「追加」ボタンを押すとここに保存されます")
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
