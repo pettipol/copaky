@@ -168,7 +168,7 @@ final class InputManager {
             textReplacer: self.textReplacer,
             specialCandidateProviders: providers,
             zenzaiMode: zenzaiMode,
-            metadata: .init(versionString: "azooKey version " + (SharedStore.currentAppVersion?.description ?? "Unknown")))
+            metadata: .init(versionString: "Copaky version " + (SharedStore.currentAppVersion?.description ?? "Unknown")))
     }
 
     @MainActor private func getConvertRequestOptionsForPrediction() -> (ConvertRequestOptions, denylist: Set<String>) {

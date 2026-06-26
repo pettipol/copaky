@@ -53,7 +53,7 @@ struct KeyboardPreview: View {
             .frame(width: SemiStaticStates.shared.screenWidth * scale, height: Design.keyboardScreenHeight(upsideComponent: nil, orientation: MainAppDesign.keyboardOrientation) * scale)
             .onAppear {
                 variableStates.resultModel.setResults([
-                    CandidateMock(text: "azooKey"),
+                    CandidateMock(text: "Copaky"),
                     CandidateMock(text: "あずーきー"),
                     CandidateMock(text: "アズーキー"),
                 ])

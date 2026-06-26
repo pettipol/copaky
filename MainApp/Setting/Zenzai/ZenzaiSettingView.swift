@@ -15,7 +15,7 @@ struct ZenzaiSettingView: View {
             }
             .disabled(!zenzaiEnabled.value)
             Section(header: Text("Zenzaiについて")) {
-                Text("「Zenzai」はazooKeyの新しいかな漢字変換システムです。")
+                Text("「Zenzai」はCopakyの新しいかな漢字変換システムです。")
                 Text("ニューラル言語モデルを用いることで、高精度な変換と文脈の理解を実現しました。")
             }
 

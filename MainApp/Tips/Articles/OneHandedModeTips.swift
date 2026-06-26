@@ -13,7 +13,7 @@ struct OneHandedModeTipsView: View {
     var body: some View {
         TipsContentView("片手モードを利用する") {
             TipsContentParagraph {
-                Text("azooKeyでは片手モードを利用可能です。")
+                Text("Copakyでは片手モードを利用可能です。")
             }
             TipsContentParagraph {
                 Text("まずタブバーを表示します。変換候補欄を長押しするか記号タブキーを長押しすると表示されます。")

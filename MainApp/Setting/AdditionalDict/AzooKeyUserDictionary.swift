@@ -19,7 +19,7 @@ import SwiftUtils
 
 private final class UserDictManagerVariables: ObservableObject {
     @Published var items: [UserDictionaryData] = [
-        UserDictionaryData(ruby: "あずーきー", word: "azooKey", isVerb: false, isPersonName: true, isPlaceName: false, id: 0)
+        UserDictionaryData(ruby: "こぱきー", word: "Copaky", isVerb: false, isPersonName: true, isPlaceName: false, id: 0)
     ]
     @Published var mode: Mode = .list
     @Published var selectedItem: EditableUserDictionaryData?

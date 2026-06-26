@@ -12,7 +12,7 @@ struct CustomKeyTipsView: View {
     var body: some View {
         TipsContentView("キーをカスタマイズする") {
             TipsContentParagraph {
-                Text("azooKeyでは一部キーのカスタマイズが可能です。「設定」タブから変更できます。")
+                Text("Copakyでは一部キーのカスタマイズが可能です。「設定」タブから変更できます。")
             }
             TipsContentParagraph {
                 Text("フリック入力では、ひらがなタブの「小ﾞﾟ」キーと「､｡?!」キーのフリックに最大3方向まで好きな文字を登録することができます。")

@@ -13,7 +13,7 @@ struct KanjiLargeTextTipsView: View {
     var body: some View {
         TipsContentView("文字を拡大表示する") {
             TipsContentParagraph {
-                Text("azooKeyではキーボード上で文字を拡大して表示することができます。")
+                Text("Copakyではキーボード上で文字を拡大して表示することができます。")
             }
 
             TipsContentParagraph {

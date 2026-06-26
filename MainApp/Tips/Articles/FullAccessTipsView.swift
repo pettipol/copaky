@@ -24,7 +24,7 @@ struct FullAccessTipsView: View {
     var body: some View {
         TipsContentView("フルアクセスについて") {
             TipsContentParagraph {
-                Text("azooKeyは、キーボードの振動フィードバックや、キーボードからのペーストを実現するために、フルアクセスの許可が必要です。フルアクセスを許可していただくことで、これらの機能が使用できます。")
+                Text("Copakyは、キーボードの振動フィードバックや、キーボードからのペーストを実現するために、フルアクセスの許可が必要です。フルアクセスを許可していただくことで、これらの機能が使用できます。")
             }
             TipsContentParagraph {
                 Text("以下は、フルアクセスをオンにすることで利用できる設定項目です。フルアクセスを必要とする設定は、すべてデフォルトで無効になっているため、フルアクセスを許可しただけでキーボードの振る舞いが変わることはありません。")
@@ -53,8 +53,8 @@ struct FullAccessTipsView: View {
             TipsContentParagraph {
                 Text("フルアクセスを有効化する際、以下のような警告が表示されますが、すべてのキーボードアプリで共通して表示されている警告です。")
                 TipsImage(.fullAccessAlert)
-                Text("azooKeyは安全なキーボードアプリであり、ユーザの明示的な同意なく、個人情報を外部に送信したり、保存したりすることはありません。")
-                Text("なお、azooKeyはオープンソースであり、誰もが実装を確認することができます。")
+                Text("Copakyは安全なキーボードアプリであり、ユーザの明示的な同意なく、個人情報を外部に送信したり、保存したりすることはありません。")
+                Text("なお、CopakyはオープンソースであるazooKeyをベースにしており、誰もがその実装を確認することができます。")
             }
             if let url = URL(string: UIApplication.openSettingsURLString) {
                 Button(SemiStaticStates.shared.hasFullAccess

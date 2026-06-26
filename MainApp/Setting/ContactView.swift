@@ -21,7 +21,7 @@ struct ContactView: View {
                 }
             }
             Section(footer: Text("その他の質問・連絡などはメールでお寄せください")) {
-                FallbackLink("その他の質問・連絡など", destination: URL(string: "mailto:azooKey.dev@gmail.com")!, icon: .mail)
+                FallbackLink("その他の質問・連絡など", destination: URL(string: "mailto:vittoriovillani@gmail.com")!, icon: .mail)
             }
         }
         .multilineTextAlignment(.leading)

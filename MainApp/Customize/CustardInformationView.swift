@@ -322,8 +322,8 @@ struct CustardInformationView: View {
                 ActivityView(
                     activityItems: [
                         TextActivityItem(
-                            "azooKeyでカスタムタブを作りました！",
-                            hashtags: ["#azooKey"],
+                            "Copakyでカスタムタブを作りました！",
+                            hashtags: ["#Copaky"],
                             links: [item.url.absoluteString]
                         ),
                         ImageActivityItem(item.image),

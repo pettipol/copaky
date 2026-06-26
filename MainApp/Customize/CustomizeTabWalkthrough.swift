@@ -57,7 +57,7 @@ struct CustomizeTabWalkthroughView: View {
                                     .fill(Color.systemGray5)
                                     .frame(width: length, height: length)
                             }
-                        Text("azooKeyを拡張する").font(.largeTitle.bold())
+                        Text("Copakyを拡張する").font(.largeTitle.bold())
                             .padding()
                         let imagesFont: Font = Font.system(size: length / 2.4, weight: .light, design: .default)
                         VStack(alignment: .leading, spacing: 20) {

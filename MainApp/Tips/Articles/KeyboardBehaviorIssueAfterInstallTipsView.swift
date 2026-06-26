@@ -12,8 +12,8 @@ struct KeyboardBehaviorIssueAfterInstallTipsView: View {
     var body: some View {
         TipsContentView("インストール直後、特定のアプリでキーボードが開かない") {
             TipsContentParagraph {
-                Text("azooKeyをインストールした直後、特定のアプリでキーボードが開かないことがあります。")
-                Text("これはazooKeyの問題ではなく、OS側のデータの更新が遅れている可能性があります。")
+                Text("Copakyをインストールした直後、特定のアプリでキーボードが開かないことがあります。")
+                Text("これはCopakyの問題ではなく、OS側のデータの更新が遅れている可能性があります。")
                 Text("一度端末を再起動していただくとデータが更新され、キーボードが使えるようになることがあります。")
             }
 

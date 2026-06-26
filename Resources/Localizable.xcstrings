@@ -180,12 +180,12 @@
         }
       }
     },
-    "「Zenzai」はazooKeyの新しいかな漢字変換システムです。" : {
+    "「Zenzai」はCopakyの新しいかな漢字変換システムです。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zenzai is azooKey’s new kana-kanji conversion system."
+            "value" : "Zenzai is Copaky’s new kana-kanji conversion system."
           }
         }
       }
@@ -867,12 +867,12 @@
         }
       }
     },
-    "1. 設定 → ユーザ辞書 → azooKeyユーザ辞書 を開く" : {
+    "1. 設定 → ユーザ辞書 → Copakyユーザ辞書 を開く" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. Open Settings → User Dictionary → azooKey User Dictionary"
+            "value" : "1. Open Settings → User Dictionary → Copaky User Dictionary"
           }
         },
         "ja" : {
@@ -974,12 +974,12 @@
         }
       }
     },
-    "azooKeyが使えます！" : {
+    "Copakyが使えます！" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "You can use azooKey now!"
+            "value" : "You can use Copaky now!"
           }
         },
         "ja" : {
@@ -990,12 +990,12 @@
         }
       }
     },
-    "azooKeyが開かれました！" : {
+    "Copakyが開かれました！" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "You enabled azooKey!"
+            "value" : "You enabled Copaky!"
           }
         },
         "ja" : {
@@ -1006,12 +1006,12 @@
         }
       }
     },
-    "azooKeyではキーボード上で文字を拡大して表示することができます。" : {
+    "Copakyではキーボード上で文字を拡大して表示することができます。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "On azooKey, you can zoom letters and check them."
+            "value" : "On Copaky, you can zoom letters and check them."
           }
         },
         "ja" : {
@@ -1022,12 +1022,12 @@
         }
       }
     },
-    "azooKeyでは一部キーのカスタマイズが可能です。「設定」タブから変更できます。" : {
+    "Copakyでは一部キーのカスタマイズが可能です。「設定」タブから変更できます。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "With azooKey, you can customize some of the keys. You can change keys on the Settings tab."
+            "value" : "With Copaky, you can customize some of the keys. You can change keys on the Settings tab."
           }
         },
         "ja" : {
@@ -1038,12 +1038,12 @@
         }
       }
     },
-    "azooKeyでは片手モードを利用可能です。" : {
+    "Copakyでは片手モードを利用可能です。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "In azooKey, you can use one-handed mode."
+            "value" : "In Copaky, you can use one-handed mode."
           }
         },
         "ja" : {
@@ -1054,7 +1054,7 @@
         }
       }
     },
-    "azooKeyとアプリの相性の問題で、入力がうまくいかないケースがあります。" : {
+    "Copakyとアプリの相性の問題で、入力がうまくいかないケースがあります。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1086,12 +1086,12 @@
         }
       }
     },
-    "azooKeyのロゴ" : {
+    "Copakyのロゴ" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "logo of azooKey"
+            "value" : "logo of Copaky"
           }
         },
         "ja" : {
@@ -1118,12 +1118,12 @@
         }
       }
     },
-    "azooKeyは、キーボードの振動フィードバックや、キーボードからのペーストを実現するために、フルアクセスの許可が必要です。フルアクセスを許可していただくことで、これらの機能が使用できます。" : {
+    "Copakyは、キーボードの振動フィードバックや、キーボードからのペーストを実現するために、フルアクセスの許可が必要です。フルアクセスを許可していただくことで、これらの機能が使用できます。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "azooKey requires full access permission in order to enable features such as keyboard haptics and pasting from the keyboard. By granting full access, these features can be utilized."
+            "value" : "Copaky requires full access permission in order to enable features such as keyboard haptics and pasting from the keyboard. By granting full access, these features can be utilized."
           }
         },
         "ja" : {
@@ -1134,12 +1134,28 @@
         }
       }
     },
-    "azooKeyはオープンソースソフトウェアであり、GitHubでソースコードを公開しています。" : {
+    "CopakyはオープンソースソフトウェアであるazooKeyをベースにしています。azooKeyのソースコードはGitHubで公開されています。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "azooKey is open source software and its source code is available on GitHub."
+            "value" : "Copaky is built on azooKey, an open-source keyboard. azooKey's source code is available on GitHub."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CopakyはオープンソースソフトウェアであるazooKeyをベースにしています。azooKeyのソースコードはGitHubで公開されています。"
+          }
+        }
+      }
+    },
+    "Copakyはクリップボードの履歴を保存するため、定期的にクリップボードをチェックします。また、ペーストする際にもクリップボードの情報を利用します。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copaky periodically checks the clipboard to save its history, and also uses its information when pasting."
           }
         },
         "ja" : {
@@ -1150,12 +1166,12 @@
         }
       }
     },
-    "azooKeyはクリップボードの履歴を保存するため、定期的にクリップボードをチェックします。また、ペーストする際にもクリップボードの情報を利用します。" : {
+    "Copakyは安全なキーボードアプリであり、ユーザの明示的な同意なく、個人情報を外部に送信したり、保存したりすることはありません。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "azooKey periodically checks the clipboard to save its history, and also uses its information when pasting."
+            "value" : "Copaky is a safe keyboard app and does not transmit or store personal information without the explicit consent of the user."
           }
         },
         "ja" : {
@@ -1166,12 +1182,12 @@
         }
       }
     },
-    "azooKeyは安全なキーボードアプリであり、ユーザの明示的な同意なく、個人情報を外部に送信したり、保存したりすることはありません。" : {
+    "Copakyユーザ辞書" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "azooKey is a safe keyboard app and does not transmit or store personal information without the explicit consent of the user."
+            "value" : "Copaky's Text replacement"
           }
         },
         "ja" : {
@@ -1182,12 +1198,12 @@
         }
       }
     },
-    "azooKeyユーザ辞書" : {
+    "Copakyをインストールした直後、特定のアプリでキーボードが開かないことがあります。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "azooKey's Text replacement"
+            "value" : "Immediately after installing Copaky, the keyboard may not open in certain applications."
           }
         },
         "ja" : {
@@ -1198,12 +1214,12 @@
         }
       }
     },
-    "azooKeyをインストールした直後、特定のアプリでキーボードが開かないことがあります。" : {
+    "Copakyをオンにして" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Immediately after installing azooKey, the keyboard may not open in certain applications."
+            "value" : "Turn on Copaky"
           }
         },
         "ja" : {
@@ -1214,12 +1230,12 @@
         }
       }
     },
-    "azooKeyをオンにして" : {
+    "Copakyをお楽しみください！" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Turn on azooKey"
+            "value" : "Enjoy Copaky!"
           }
         },
         "ja" : {
@@ -1230,29 +1246,13 @@
         }
       }
     },
-    "azooKeyをお楽しみください！" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enjoy azooKey!"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
-        }
-      }
-    },
-    "azooKeyを使う前に、iPhoneのキーボードのリストにazooKeyを追加する必要があります" : {
+    "Copakyを使う前に、iPhoneのキーボードのリストにCopakyを追加する必要があります" : {
       "comment" : "Localizable.strings\n  azooKey\n\n  Created by ensan on 2021/02/14.\n  Copyright © 2021 ensan. All rights reserved.",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Before using azooKey, you need to add azooKey into the list of device keyboards"
+            "value" : "Before using Copaky, you need to add Copaky into the list of device keyboards"
           }
         },
         "ja" : {
@@ -1263,12 +1263,12 @@
         }
       }
     },
-    "azooKeyを使ってくれてありがとう！" : {
+    "Copakyを使ってくれてありがとう！" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Thank you for using azooKey!"
+            "value" : "Thank you for using Copaky!"
           }
         },
         "ja" : {
@@ -1279,12 +1279,12 @@
         }
       }
     },
-    "azooKeyを拡張する" : {
+    "Copakyを拡張する" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Extend azooKey"
+            "value" : "Extend Copaky"
           }
         },
         "ja" : {
@@ -1295,22 +1295,22 @@
         }
       }
     },
-    "azooKeyを開く" : {
+    "Copakyを開く" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Open azooKey"
+            "value" : "Open Copaky"
           }
         }
       }
     },
-    "azooKey本体アプリを開く" : {
+    "Copaky本体アプリを開く" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Open azooKey.app"
+            "value" : "Open Copaky.app"
           }
         },
         "ja" : {
@@ -1845,7 +1845,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tab bar will appear when you press azooKey's icon on the keyboard."
+            "value" : "Tab bar will appear when you press Copaky's icon on the keyboard."
           }
         },
         "ja" : {
@@ -2353,7 +2353,7 @@
         }
       }
     },
-    "カスタムタブをファイルとして外部で作成し、azooKeyに読み込むことができます。より高機能なタブの作成が可能です。詳しくは以下をご覧ください。" : {
+    "カスタムタブをファイルとして外部で作成し、Copakyに読み込むことができます。より高機能なタブの作成が可能です。詳しくは以下をご覧ください。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2666,12 +2666,12 @@
         }
       }
     },
-    "キーボードの地球儀ボタンを長押しし、azooKeyを選択してください" : {
+    "キーボードの地球儀ボタンを長押しし、Copakyを選択してください" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tap and hold the globe button on the keyboard, and select azooKey"
+            "value" : "Tap and hold the globe button on the keyboard, and select Copaky"
           }
         },
         "ja" : {
@@ -3178,7 +3178,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "About azooKey"
+            "value" : "About Copaky"
           }
         },
         "ja" : {
@@ -3369,12 +3369,12 @@
         }
       }
     },
-    "このとき、実際のキーボードでは「(」を入力し、「)」を入力し、ついで「確定」を押します。azooKeyは自動でカーソルを移動するので、これで実現したい操作が完了します。" : {
+    "このとき、実際のキーボードでは「(」を入力し、「)」を入力し、ついで「確定」を押します。Copakyは自動でカーソルを移動するので、これで実現したい操作が完了します。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "In this case, you would input '(' and then ')', followed by pressing 'Enter' on the actual keyboard. Since azooKey automatically moves the cursor, this sequence accomplishes the desired action."
+            "value" : "In this case, you would input '(' and then ')', followed by pressing 'Enter' on the actual keyboard. Since Copaky automatically moves the cursor, this sequence accomplishes the desired action."
           }
         }
       }
@@ -3526,7 +3526,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Without this operation you cannot use azooKey"
+            "value" : "Without this operation you cannot use Copaky"
           }
         },
         "ja" : {
@@ -3570,12 +3570,12 @@
         }
       }
     },
-    "これはazooKeyの問題ではなく、OS側のデータの更新が遅れている可能性があります。" : {
+    "これはCopakyの問題ではなく、OS側のデータの更新が遅れている可能性があります。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This may not be an azooKey issue, but a delay in updating the data on the OS side."
+            "value" : "This may not be an Copaky issue, but a delay in updating the data on the OS side."
           }
         },
         "ja" : {
@@ -4529,7 +4529,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Note that if you have not enabled 'clipboard history,' azooKey will not periodically access the clipboard. Also, the text obtained from the clipboard is only used within the app."
+            "value" : "Note that if you have not enabled 'clipboard history,' Copaky will not periodically access the clipboard. Also, the text obtained from the clipboard is only used within the app."
           }
         },
         "ja" : {
@@ -4540,18 +4540,18 @@
         }
       }
     },
-    "なお、azooKeyはオープンソースであり、誰もが実装を確認することができます。" : {
+    "なお、CopakyはオープンソースであるazooKeyをベースにしており、誰もがその実装を確認することができます。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Additionally, azooKey is an open-source keyboard app, allowing anyone to review the implementation."
+            "value" : "Additionally, Copaky is built on the open-source azooKey, so anyone can review its implementation."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : ""
+            "value" : "なお、CopakyはオープンソースであるazooKeyをベースにしており、誰もがその実装を確認することができます。"
           }
         }
       }
@@ -6337,7 +6337,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "By protecting composing text, azooKey will behave more stably in some web apps. \nSince this is an experimental feature, this feature may be discontinued without notice."
+            "value" : "By protecting composing text, Copaky will behave more stably in some web apps. \nSince this is an experimental feature, this feature may be discontinued without notice."
           }
         },
         "ja" : {
@@ -7467,7 +7467,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "You can use caps lock in azooKey."
+            "value" : "You can use caps lock in Copaky."
           }
         },
         "ja" : {
@@ -9371,7 +9371,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Currently, azooKey doesn't support the Japanese flip phone input style."
+            "value" : "Currently, Copaky doesn't support the Japanese flip phone input style."
           }
         },
         "ja" : {

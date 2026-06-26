@@ -22,13 +22,13 @@ struct HeaderLogoView: View {
             case .light:
                 Text(verbatim: "A")
                     .font(Design.fonts.azooKeyIconFont(iconSize * 0.75))
-                    .accessibilityLabel("azooKeyのロゴ")
+                    .accessibilityLabel("Copakyのロゴ")
             case .dark:
                 Text(verbatim: "B")
                     .font(Design.fonts.azooKeyIconFont(iconSize * 0.75))
-                    .accessibilityLabel("azooKeyのロゴ")
+                    .accessibilityLabel("Copakyのロゴ")
             @unknown default:
-                Text(verbatim: "azooKey")
+                Text(verbatim: "Copaky")
                     .font(Font(UIFont.systemFont(ofSize: iconSize)))
             }
         }

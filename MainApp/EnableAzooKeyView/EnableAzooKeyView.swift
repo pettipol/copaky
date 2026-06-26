@@ -46,7 +46,7 @@ struct EnableAzooKeyView: View {
                             CenterAlignedView {
                                 HeaderLogoView()
                             }
-                            EnableAzooKeyViewText("azooKeyを使う前に、iPhoneのキーボードのリストにazooKeyを追加する必要があります", with: "exclamationmark.triangle.fill")
+                            EnableAzooKeyViewText("Copakyを使う前に、iPhoneのキーボードのリストにCopakyを追加する必要があります", with: "exclamationmark.triangle.fill")
                             CenterAlignedView {
                                 EnableAzooKeyViewButton("手順を見る", systemName: "arrowtriangle.right.fill") {
                                     self.step = .append
@@ -65,7 +65,7 @@ struct EnableAzooKeyView: View {
                             CenterAlignedView {
                                 EnableAzooKeyViewImage(.initSettingKeyboardImageHand)
                             }
-                            EnableAzooKeyViewText("azooKeyをオンにして", with: "square.and.line.vertical.and.square.fill")
+                            EnableAzooKeyViewText("Copakyをオンにして", with: "square.and.line.vertical.and.square.fill")
                             CenterAlignedView {
                                 EnableAzooKeyViewImage(.initSettingAzooKeySwitchImageHand)
                             }
@@ -119,17 +119,17 @@ struct EnableAzooKeyView: View {
 
                     case .finish:
                         VStack(alignment: .leading, spacing: 20) {
-                            EnableAzooKeyViewHeader("azooKeyが使えます！")
+                            EnableAzooKeyViewHeader("Copakyが使えます！")
                             EnableAzooKeyViewText("準備は完了です！", with: "checkmark")
                             if showDoneMessage {
-                                EnableAzooKeyViewText("azooKeyが開かれました！", with: "checkmark")
+                                EnableAzooKeyViewText("Copakyが開かれました！", with: "checkmark")
                                 CenterAlignedView {
                                     EnableAzooKeyViewButton("始める", systemName: "arrowshape.turn.up.right.fill") {
                                         appStates.requireFirstOpenView = false
                                     }
                                 }
                             } else {
-                                EnableAzooKeyViewText("キーボードの地球儀ボタンを長押しし、azooKeyを選択してください", with: "globe")
+                                EnableAzooKeyViewText("キーボードの地球儀ボタンを長押しし、Copakyを選択してください", with: "globe")
                             }
                             TextField("キーボードを開く", text: $text)
                                 .textFieldStyle(.roundedBorder)
@@ -142,7 +142,7 @@ struct EnableAzooKeyView: View {
                                     EnableAzooKeyViewImage(.initSettingGlobeTap)
                                 }
                             }
-                            EnableAzooKeyViewText("azooKeyをお楽しみください！", with: "star.fill")
+                            EnableAzooKeyViewText("Copakyをお楽しみください！", with: "star.fill")
                             if !showDoneMessage {
                                 CenterAlignedView {
                                     EnableAzooKeyViewButton("始める", systemName: "arrowshape.turn.up.right.fill") {

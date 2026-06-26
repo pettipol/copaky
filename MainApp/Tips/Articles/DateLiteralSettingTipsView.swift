@@ -10,7 +10,7 @@ struct DateLiteralSettingTipsView: View {
             }
             TipsContentParagraph {
                 Text("手順")
-                Text("1. 設定 → ユーザ辞書 → azooKeyユーザ辞書 を開く")
+                Text("1. 設定 → ユーザ辞書 → Copakyユーザ辞書 を開く")
                 Text("2. 右上の「追加する」を押す")
                 Text("3. 編集画面で「時刻・ランダム変換」をオンにする")
                 Text("4. 「時刻」を選び、プリセット（yyyy/MM/dd, HH:mm など）かカスタム書式を入力する")
@@ -28,7 +28,7 @@ struct DateLiteralSettingTipsView: View {
             TipsContentParagraph {
                 Text("ランダム値を使う場合は「ランダム」を選んで、整数/小数/文字列から選び範囲や内容を設定します。")
             }
-            NavigationLink("azooKeyユーザ辞書") {
+            NavigationLink("Copakyユーザ辞書") {
                 AzooKeyUserDictionaryView()
             }
         }

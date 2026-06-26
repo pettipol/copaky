@@ -195,7 +195,7 @@ struct OpenSourceSoftwaresLicenseView: View {
                 HStack {
                     FunnyAzooKeyIcon()
                     Spacer()
-                    Text("azooKeyを使ってくれてありがとう！")
+                    Text("Copakyを使ってくれてありがとう！")
                 }
             }
         }

@@ -158,7 +158,7 @@ public enum AzooKeyMessageProvider: ApplicationSpecificKeyboardViewMessageProvid
             MessageData(
                 id: .ver2_1_emoji_tab,
                 title: "お知らせ",
-                description: "azooKeyで絵文字タブが使えるようになりました。本体アプリを開き、タブバーに絵文字タブを追加しますか？",
+                description: "Copakyで絵文字タブが使えるようになりました。本体アプリを開き、タブバーに絵文字タブを追加しますか？",
                 button: .two(primary: .openContainerURL(text: "追加", url: "copaky://", autoDone: false), secondary: .later),
                 precondition: {
                     true

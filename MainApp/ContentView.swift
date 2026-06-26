@@ -77,7 +77,7 @@ struct ContentView: View {
             }
             .onOpenURL { url in
                 if url.scheme == "copaky" {
-                    // Deep link handling for azooKey scheme
+                    // Deep link handling for copaky scheme
                     let host = url.host?.lowercased()
                     let last = url.lastPathComponent.lowercased()
                     if host == "settings" && last == "zenzai" {
@@ -87,8 +87,8 @@ struct ContentView: View {
                         return
                     }
                 }
-                // Non-azooKey scheme: treat as file import
-                if url.scheme != "azooKey" {
+                // Non-copaky scheme: treat as file import
+                if url.scheme != "copaky" {
                     importFileURL = url
                 }
             }
