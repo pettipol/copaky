@@ -1,61 +1,76 @@
-# azooKey
+# Copaky
 
-azooKeyはiOS / iPadOS向けの日本語キーボードアプリです。Swiftで実装され、「ニューラルかな漢字変換システム Zenzai」を含む独自開発の高精度変換エンジン、ライブ変換、さらにカスタムキー・カスタムタブなどのユニークなカスタマイズ機能を提供します。
+**Copaky** is a privacy-focused Japanese keyboard for iOS / iPadOS, with an **offline clipboard manager**.
+It is a fork of [azooKey](https://github.com/azooKey/azooKey) (MIT): it keeps azooKey's high-quality
+Japanese conversion engine while reworking the clipboard, privacy, and telemetry behaviour around a strict
+**on-device, no-network** model.
 
-azooKeyは[App Store](https://apps.apple.com/jp/app/azookey-%E8%87%AA%E7%94%B1%E8%87%AA%E5%9C%A8%E3%81%AA%E3%82%AD%E3%83%BC%E3%83%9C%E3%83%BC%E3%83%89%E3%82%A2%E3%83%97%E3%83%AA/id1542709230)で公開しています。
+> **Status: private / pre-release.** Not on the App Store yet. Real-device validation (memory/RSS budget,
+> `UIPasteControl` paste flow) and the security pass are still pending; the repository is private for now.
 
-azooKeyの変換エンジンについては[AzooKeyKanaKanjiConverter](https://github.com/azooKey/AzooKeyKanaKanjiConverter)を参照ください。
+## Based on azooKey
 
-azooKeyのmacOS版については[azooKey-Desktop](https://github.com/azooKey/azooKey-Desktop)を参照ください。
+Copaky is built on the work of **Keita Miwa (ensan)** and the azooKey contributors. Most of the keyboard —
+the UI, the kana-kanji conversion, the custom keys/tabs — comes from azooKey. Please support and refer to
+the upstream project:
 
-## コミュニティ＆ベータ版
+- azooKey — https://github.com/azooKey/azooKey
+- Conversion engine, AzooKeyKanaKanjiConverter — https://github.com/azooKey/AzooKeyKanaKanjiConverter
+- macOS version, azooKey-Desktop — https://github.com/azooKey/azooKey-Desktop
 
-azooKeyの開発に参加したい方、使い方に質問がある方、要望や不具合報告がある方は、ぜひ[azooKeyのDiscordサーバ](https://discord.gg/dY9gHuyZN5)にご参加ください。
+See [CREDITS.md](./CREDITS.md) for the full attribution and third-party licenses.
 
-開発中のベータ版は[TestFlight](https://testflight.apple.com/join/x6TKEeB2)で利用できます。フィードバックをDiscordやIssue等でお寄せください。
+## Features
 
-## 開発ガイド
-パフォーマンス改善、バグ修正、機能追加などのPull Requestを歓迎します。機能追加の場合は事前にIssueで議論した方がスムーズです。
+- **Japanese IME** — azooKey's conversion engine (live conversion, custom keys / custom tabs).
+- **Offline clipboard manager** — a privacy-compliant, **user-initiated** clipboard history. It detects
+  *that* the pasteboard changed (metadata only — no "pasted from…" banner) and reads/stores the value only
+  on an explicit user action. Password / secure fields are never captured.
+- **QWERTY English** layout alongside Japanese.
+- **On-device only** — the keyboard extension makes **no network calls**; clipboard history lives in the
+  App Group container. No telemetry.
 
-開発は基本的に`main`で行います。新規にPRを作成する場合、まずこのレポジトリをフォークし、`main`からブランチを切ってください。
+## What Copaky changes vs. azooKey
 
-[Let's Contribute](docs/CONTRIBUTING.md)も合わせてお読みください。
+- Privacy-first clipboard redesign (DETECT / CAPTURE split, secure-field guard, item-size cap, 7-day prune).
+- Network paths in the keyboard extension are stubbed → offline.
+- Telemetry / "contribution" reporting is disabled (no data collection).
+- Rebrand azooKey → Copaky (bundle id, App Group, URL scheme, display name, UI text) **while keeping all
+  azooKey credits**.
+- The neural **Zenzai** model (`zenz`, CC-BY-SA-4.0) is **not bundled** and Zenzai is disabled by default
+  (memory budget for a keyboard extension).
 
-### ビルド・利用方法
+## Build
 
-Apple Developer Account（無料）が必要です。開発環境は最新のXcodeを利用してください。
+Requires a recent **Xcode** and a (free) Apple Developer account. The project uses git submodules.
 
-1. azooKeyを開発環境にクローンします。azooKeyはサブモジュールを利用しているため、`--recursive`オプションを必ず追加してください。
+```sh
+git clone --recursive <repo-url>
+cd azooKey
+open azooKey.xcodeproj      # then build & run the "MainApp" scheme
+```
 
-   ```
-   git clone https://github.com/azooKey/azooKey --recursive
-   ```
+From the command line (iOS Simulator):
 
-1. `azooKey.xcodeproj`を開き、Xcodeの指示に従って「Run (Command+R)」を実行してください。
+```sh
+xcodebuild build -project azooKey.xcodeproj -scheme MainApp \
+  -destination 'platform=iOS Simulator,name=iPhone 17' \
+  CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+```
 
-1. アプリを開くとキーボードのインストール方法が説明されるので、従ってください。
+## Local-first CI
 
-### テスト方法
-[Document](docs/tests.md)をご覧ください。
+This is an iOS / UIKit app (it cannot build on free Linux runners), so hosted **macOS** CI is billed 10×.
+On a private, single-developer repo with a capable Mac, the gate is **local**:
 
-### 辞書の変更
+- [`scripts/ci-local.sh`](./scripts/ci-local.sh) — mirrors build + the full test suite (*green here ==
+  green*). `--fast` runs build + the clipboard tests only.
+- Pre-push hook: `git config core.hooksPath .githooks` (runs the fast gate before every push; bypass with
+  `git push --no-verify`).
+- The GitHub Actions workflows are kept but set to **`workflow_dispatch`** (manual) to avoid burning
+  Actions minutes. See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
-azooKeyの辞書ファイルは任意に置き換えることができます。`azooKey_dictionary_storage`を任意のcommitにチェックアウトすることで、過去のバージョンの辞書を利用できます。また、[Google Drive](https://drive.google.com/drive/folders/1Kh7fgMFIzkpg7YwP3GhWTxFkXI-yzT9E?usp=sharing)ではさらに古いバージョンの辞書データも配布しています。
+## License
 
-### さらに詳しく
-
-`docs/`内の[Document](./docs/overview.md)をご覧ください。
-
-不明な点は気軽にIssue等でご質問ください。
-
-## 今後のリリース
-* 現在、v3.0.1に向けた作業を行っています。
-
-## azooKeyを支援する
-GitHub Sponsorsをご利用ください。
-
-## ライセンス
-Copyright (c) 2020-2025 Keita Miwa (ensan).
-
-azooKeyはMIT Licenseでライセンスされています。詳しくは[LICENSE](./LICENSE)をご覧ください。
-
+Copaky is released under the **MIT License** — see [LICENSE](./LICENSE). It incorporates azooKey
+(MIT, © Keita Miwa / ensan) and other third-party components listed in [CREDITS.md](./CREDITS.md).
