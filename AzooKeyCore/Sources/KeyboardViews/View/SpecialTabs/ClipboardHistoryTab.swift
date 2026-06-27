@@ -84,7 +84,10 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
     private func handleTileInput(_ item: ClipboardHistoryItem) {
         switch item.content {
         case .text(let string):
-            action.registerAction(.input(string), variableStates: variableStates)
+            // simplyInsert: true → inserimento diretto come paste(), SENZA passare per la conversione
+            // kana-kanji (che costruirebbe un lattice su tutta la stringa, fino a 50k → hang/OOM
+            // nell'estensione). Sicurezza/robustezza: vedi Sec1.
+            action.registerAction(.input(string, simplyInsert: true), variableStates: variableStates)
             variableStates.undoAction = .init(action: .replaceLastCharacters([string: ""]), textChangedCount: variableStates.textChangedCount)
             KeyboardFeedback<Extension>.click()
         }
@@ -310,11 +313,14 @@ private struct ClipboardTileView<Extension: ApplicationSpecificKeyboardViewExten
 }
 
 private struct TextTileContent: View {
+    /// Solo i primi N caratteri vengono renderizzati: il costo di layout di SwiftUI `Text` non deve
+    /// scalare con la lunghezza memorizzata (fino a 50k). L'input alla pressione usa `item.content` intero.
+    static let displayPreviewLimit = 280
     let string: String
     let textColor: Color
 
     var body: some View {
-        Text(string)
+        Text(String(string.prefix(Self.displayPreviewLimit)))
             .font(.system(size: 12))
             .foregroundStyle(textColor)
             .lineLimit(5)

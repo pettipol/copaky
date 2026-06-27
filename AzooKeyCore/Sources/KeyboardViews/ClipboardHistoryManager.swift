@@ -66,6 +66,12 @@ public struct ClipboardHistoryManager {
 
     /// Lunghezza massima (in caratteri) di un singolo elemento, per non saturare il container condiviso.
     static let maxItemCharacterCount = 50_000
+    /// Cap in byte UTF-8 del singolo elemento: difende dai "bomb" ZWJ/combining (pochi grapheme
+    /// cluster ma molti scalari/byte), che il solo cap a caratteri non fermerebbe.
+    static let maxItemByteCount = 256 * 1024
+    /// Tetto sui byte grezzi del file di cronologia: non deserializzare blob enormi (anti-tamper)
+    /// nella memoria stretta dell'estensione tastiera.
+    static let maxRawFileBytes = 4 * 1024 * 1024
 
     @MainActor private var enabled: Bool {
         config.enabled
@@ -146,8 +152,9 @@ public struct ClipboardHistoryManager {
             self.hasPendingClipboard = false
             return
         }
-        // Cap dimensione del singolo elemento: non memorizzare blob enormi nel container condiviso.
-        guard string.count <= Self.maxItemCharacterCount else {
+        // Cap dimensione del singolo elemento (caratteri E byte): non memorizzare blob enormi né
+        // "bomb" ZWJ/combining nel container condiviso.
+        guard string.count <= Self.maxItemCharacterCount, string.utf8.count <= Self.maxItemByteCount else {
             self.previousChangedCount = currentCount
             self.hasPendingClipboard = false
             return
@@ -204,7 +211,25 @@ public struct ClipboardHistoryManager {
             }
             return []
         }
-        let items = try JSONDecoder().decode([ClipboardHistoryItem].self, from: encoded)
+        // Guardia anti-tamper: un file manomesso/gonfiato non deve essere deserializzato per intero
+        // nella memoria stretta dell'estensione.
+        guard encoded.count <= Self.maxRawFileBytes else {
+            debug("ClipboardHistoryManager.load: history file oversized, ignoring", encoded.count)
+            return []
+        }
+        var items = try JSONDecoder().decode([ClipboardHistoryItem].self, from: encoded)
+        // I cap sono invarianti veri, indipendenti da come è stato prodotto il file: scarta gli item
+        // sovradimensionati e applica `maxCount` anche in lettura (non solo in cattura).
+        items.removeAll { item in
+            switch item.content {
+            case .text(let s):
+                return s.count > Self.maxItemCharacterCount || s.utf8.count > Self.maxItemByteCount
+            }
+        }
+        items.sort(by: >)
+        if items.count > config.maxCount {
+            items = Array(items.prefix(config.maxCount))
+        }
         return items
     }
 

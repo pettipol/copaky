@@ -118,4 +118,17 @@ final class ClipboardHistoryManagerTests: XCTestCase {
 
         XCTAssertTrue(manager.items.isEmpty, "Gli elementi oltre il cap dimensione non devono essere memorizzati")
     }
+
+    @MainActor
+    func testCaptureSkipsBytewiseHugeItemWithinCharCap() {
+        // "Bomb" ZWJ/emoji: pochi grapheme cluster (entro il cap caratteri) ma molti byte UTF-8.
+        let family = "👨‍👩‍👧‍👦" // 1 grapheme cluster, ~25 byte
+        let bomb = String(repeating: family, count: 11_000)
+        XCTAssertLessThanOrEqual(bomb.count, ClipboardHistoryManager.maxItemCharacterCount,
+                                 "Il cap a CARATTERI non deve scattare: dev'essere il cap a BYTE a fermare")
+        XCTAssertGreaterThan(bomb.utf8.count, ClipboardHistoryManager.maxItemByteCount)
+        var manager = makeManager(clipboard: FakeClipboardSource(changeCount: 1, hasStrings: true, string: bomb))
+        manager.captureCurrentClipboard(isSecureEntry: false)
+        XCTAssertTrue(manager.items.isEmpty, "Entro il cap caratteri ma oltre il cap byte → l'elemento va rifiutato")
+    }
 }
