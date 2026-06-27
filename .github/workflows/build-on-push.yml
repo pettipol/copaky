@@ -1,8 +1,9 @@
 name: Build on push
 
-on: 
-  push:
-  pull_request:
+on:
+  # Copaky: disabled — this fired a full Release build on macOS for EVERY push/PR on any
+  # branch (heaviest cost). Replaced by local scripts/ci-local.sh. (was: push + pull_request)
+  workflow_dispatch:
 
 jobs:
   build:

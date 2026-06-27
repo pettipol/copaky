@@ -5,10 +5,8 @@
 name: Upload build to App Store Connect
 
 on:
+  # Copaky: App Store upload is manual-only (needs signing/secrets; pre-public). (was: + push on "develop")
   workflow_dispatch:
-  push:
-    branches:
-      - develop
 
 jobs:
   build_and_upload:

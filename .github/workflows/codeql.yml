@@ -12,12 +12,10 @@
 name: "CodeQL"
 
 on:
-  push:
-    branches: [ "develop" ]
-  pull_request:
-    branches: [ "develop" ]
-  schedule:
-    - cron: '32 19 * * 4'
+  # Copaky: scheduled/auto CodeQL disabled (swift analysis runs on macOS, 10x billing).
+  # Run manually before a public release; in the meantime security is covered locally via
+  # /security-review (Sec1). (was: push/pull_request on "develop" + weekly cron)
+  workflow_dispatch:
 
 jobs:
   analyze:

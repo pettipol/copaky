@@ -1,21 +1,24 @@
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
+# Dependabot version updates.
+# Copaky: cadence reduced daily -> monthly to cut PR noise on a private solo repo.
+# (Dependabot itself is free; with the CI workflows now workflow_dispatch-only, its PRs
+# no longer trigger paid macOS runs — monthly just keeps the PR list quiet.)
 # https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
-
 version: 2
 updates:
-  - package-ecosystem: "github-actions" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  - package-ecosystem: "github-actions" # workflow action versions (low value while CI is manual)
+    directory: "/"
     schedule:
-      interval: "daily"
+      interval: "monthly"
+    open-pull-requests-limit: 1
 
-  - package-ecosystem: "swift" # See documentation for possible values
-    directory: "/AzooKeyCore" # Location of package manifests
+  - package-ecosystem: "swift" # Package.swift deps (keep for security updates)
+    directory: "/AzooKeyCore"
     schedule:
-      interval: "daily"
+      interval: "monthly"
+    open-pull-requests-limit: 2
 
-  - package-ecosystem: "gitsubmodule" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  - package-ecosystem: "gitsubmodule"
+    directory: "/"
     schedule:
-      interval: "daily"
+      interval: "monthly"
+    open-pull-requests-limit: 1

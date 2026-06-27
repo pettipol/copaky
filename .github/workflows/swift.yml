@@ -4,10 +4,10 @@
 name: Swift
 
 on:
-  push:
-    branches: [ "main", "develop" ]
-  pull_request:
-    branches: [ "main", "develop" ]
+  # Copaky: hosted macOS CI disabled (macos-15 = 10x billing) — the local gate is
+  # scripts/ci-local.sh + the pre-push hook. Run manually from the Actions tab if needed.
+  # (was: push/pull_request on "main" and "develop")
+  workflow_dispatch:
 
 jobs:
   build:
