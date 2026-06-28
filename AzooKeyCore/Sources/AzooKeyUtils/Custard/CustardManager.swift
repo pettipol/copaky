@@ -19,7 +19,6 @@ public struct CustardInternalMetaData: Codable {
     }
 
     public var origin: Origin
-    public var shareLink: String?
 
     public enum Origin: String, Codable {
         case userMade
@@ -197,15 +196,6 @@ public struct CustardManager: CustardManagerProtocol {
         self.save()
     }
 
-    public func loadCustardShareLink(custardId: String) -> String? {
-        self.index.metadata[custardId]?.shareLink
-    }
-
-    public mutating func saveCustardShareLink(custardId: String, shareLink: String) {
-        self.index.metadata[custardId]?.shareLink = shareLink
-        self.save()
-    }
-
     public mutating func saveTabBarData(tabBarData: TabBarData) throws {
         let encoder = JSONEncoder()
         let data = try encoder.encode(tabBarData)
@@ -243,8 +233,7 @@ public struct CustardManager: CustardManagerProtocol {
             count += 1
         }
 
-        var metadata = self.index.metadata[identifier] ?? .init(origin: .userMade)
-        metadata.shareLink = nil
+        let metadata = self.index.metadata[identifier] ?? .init(origin: .userMade)
 
         var custard = try self.custard(identifier: identifier)
         custard.identifier = newIdentifier
@@ -260,8 +249,7 @@ public struct CustardManager: CustardManagerProtocol {
         if self.index.availableCustards.contains(newIdentifier) {
             throw CustardManagerError.duplicateIdentifier
         }
-        var metadata = self.index.metadata[oldIdentifier] ?? .init(origin: .userMade)
-        metadata.shareLink = nil
+        let metadata = self.index.metadata[oldIdentifier] ?? .init(origin: .userMade)
         var custard = try self.custard(identifier: oldIdentifier)
         custard.identifier = newIdentifier
         custard.metadata.display_name = newIdentifier
