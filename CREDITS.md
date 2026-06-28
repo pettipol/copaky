@@ -1,14 +1,17 @@
 # Credits & Third-Party Licenses
 
-Copaky is a fork of **azooKey** and would not exist without it. The authoritative, per-component license
-texts are bundled in the app under **Settings → オープンソースソフトウェア (Acknowledgements)**; this file is a
-consolidated summary.
+*English · [日本語](./CREDITS.ja.md)*
+
+Copaky is an **independent project built on azooKey** and would not exist without it. The authoritative,
+per-component license texts are bundled in the app under **Settings → オープンソースソフトウェア
+(Acknowledgements)**; this file is a consolidated summary.
 
 ## Base project
 
 - **azooKey** — © Keita Miwa (ensan) and contributors. **MIT License.**
   https://github.com/azooKey/azooKey
-  Copaky reuses azooKey's keyboard UI, Japanese input, and customization features.
+  Copaky reuses azooKey's keyboard UI, Japanese input, and customization features, with full credit and
+  gratitude to the upstream project.
 
 ## Core engine & libraries
 
@@ -21,10 +24,12 @@ consolidated summary.
 | [Swift Collections](https://github.com/apple/swift-collections) | Utilities | Apache-2.0 |
 | Swift Numerics / swift-argument-parser | Utilities | Apache-2.0 |
 | swift-transformers (tokenizers / Jinja) | Tokenization support | see upstream (Apache-2.0) |
-| [llama.cpp](https://github.com/ggerganov/llama.cpp) | CPU inference for the optional **Zenzai** neural conversion | MIT |
+| [llama.cpp](https://github.com/ggerganov/llama.cpp) | CPU inference for **Zenzai** neural conversion | MIT |
 
-> **Zenzai model:** the `zenz` GGUF model is **CC-BY-SA-4.0**. It is **not bundled** with Copaky and Zenzai
-> is **disabled by default** (memory budget for a keyboard extension).
+> **Zenzai is deferred to v2.** Neural conversion is **not part of Copaky v0.1**: v0.1 uses azooKey's classic
+> (non-neural) conversion. The `zenz` GGUF model (**CC-BY-SA-4.0**) is **not bundled** with v0.1. The
+> `llama.cpp` dependency is still linked through the converter package (the `ZenzaiCPU` trait) but is **not
+> invoked** in v0.1; full Zenzai integration is planned for v2.
 
 ## Dictionary & linguistic data
 

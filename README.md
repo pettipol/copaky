@@ -1,18 +1,22 @@
 # Copaky
 
-**Copaky** is a privacy-focused Japanese keyboard for iOS / iPadOS, with an **offline clipboard manager**.
-It is a fork of [azooKey](https://github.com/azooKey/azooKey) (MIT): it keeps azooKey's high-quality
-Japanese conversion engine while reworking the clipboard, privacy, and telemetry behaviour around a strict
-**on-device, no-network** model.
+*English · [日本語](./README.ja.md)*
 
-> **Status: private / pre-release.** Not on the App Store yet. Real-device validation (memory/RSS budget,
-> `UIPasteControl` paste flow) and the security pass are still pending; the repository is private for now.
+**Copaky** is a privacy-focused Japanese keyboard for iOS / iPadOS, with an **offline clipboard manager**.
+It is an **independent project** built on — and crediting — [azooKey](https://github.com/azooKey/azooKey)
+(MIT): it keeps azooKey's high-quality Japanese conversion engine while reworking the clipboard, privacy,
+and telemetry behaviour around a strict **on-device, no-network** model.
+
+> **Status: private / pre-release (v0.1).** Not on the App Store yet. Real-device validation (memory/RSS
+> budget, `UIPasteControl` paste flow) and the security pass are still pending; the repository is private
+> for now.
 
 ## Based on azooKey
 
 Copaky is built on the work of **Keita Miwa (ensan)** and the azooKey contributors. Most of the keyboard —
-the UI, the kana-kanji conversion, the custom keys/tabs — comes from azooKey. Please support and refer to
-the upstream project:
+the UI, the kana-kanji conversion, the custom keys/tabs — comes from azooKey. Copaky is an independent
+project with its own identity, released with gratitude and full credit to the upstream work. Please support
+and refer to the upstream project:
 
 - azooKey — https://github.com/azooKey/azooKey
 - Conversion engine, AzooKeyKanaKanjiConverter — https://github.com/azooKey/AzooKeyKanaKanjiConverter
@@ -27,18 +31,21 @@ See [CREDITS.md](./CREDITS.md) for the full attribution and third-party licenses
   *that* the pasteboard changed (metadata only — no "pasted from…" banner) and reads/stores the value only
   on an explicit user action. Password / secure fields are never captured.
 - **QWERTY English** layout alongside Japanese.
-- **On-device only** — the keyboard extension makes **no network calls**; clipboard history lives in the
-  App Group container. No telemetry.
+- **Offline-true (v0.1)** — **neither** the keyboard extension **nor** the companion app makes any network
+  calls. Custards are imported from local files only (no remote download), and there is no remote dictionary
+  fetch. Clipboard history lives in the App Group container. No telemetry.
 
 ## What Copaky changes vs. azooKey
 
 - Privacy-first clipboard redesign (DETECT / CAPTURE split, secure-field guard, item-size cap, 7-day prune).
-- Network paths in the keyboard extension are stubbed → offline.
-- Telemetry / "contribution" reporting is disabled (no data collection).
+- **Offline-true**: all network code is **removed** across the app — keyboard *and* companion (GitHub
+  hotfix-dictionary fetch, remote custard download, remote custard sharing) — not merely stubbed.
+- Telemetry / "contribution" reporting is **removed** (no data collection).
 - Rebrand azooKey → Copaky (bundle id, App Group, URL scheme, display name, UI text) **while keeping all
   azooKey credits**.
-- The neural **Zenzai** model (`zenz`, CC-BY-SA-4.0) is **not bundled** and Zenzai is disabled by default
-  (memory budget for a keyboard extension).
+- **Zenzai (neural conversion) is deferred to v2** — it is **not part of v0.1**. v0.1 uses azooKey's classic
+  (non-neural) kana-kanji conversion. The `zenz` GGUF model (CC-BY-SA-4.0) is **not bundled**, so the v0.1
+  extension stays light and ships no share-alike weights in the App Store binary.
 
 ## Build
 
