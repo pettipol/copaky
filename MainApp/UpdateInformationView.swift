@@ -14,18 +14,18 @@ import SwiftUI
 struct UpdateInformationView: View {
     var body: some View {
         Form {
-            VersionView("1.0", releaseDate: "近日公開予定") {
-                ParagraphView("Copaky をリリースしました。") {
-                    "azooKey（MITライセンス）をベースにした、完全オフラインの日本語入力キーボードです"
-                    "キーボード上でクリップボードの履歴を呼び出せます。履歴はこの端末内にのみ保存されます"
+            VersionView("0.1", releaseDate: "近日公開予定") {
+                ParagraphView("Copaky の最初のプレビュー版です。") {
+                    "オフラインのクリップボード履歴をキーボードに統合した、プライバシー優先の日本語入力です"
+                    "コピーした内容はこの端末内にのみ保存され、外部には一切送信されません"
                 }
-                ParagraphView("プライバシーを最優先に設計しました。") {
-                    "完全オフラインで動作します。テレメトリや変換・使用状況などのデータを外部に送信することは一切ありません"
+                ParagraphView("完全オフラインで動作します。") {
+                    "テレメトリや変換・使用状況などのデータを外部に送信することはありません"
                     "クリップボードの読み取りは、ユーザの操作があったときにのみ行います"
-                    "フルアクセスがなくても日本語入力は利用できます（クリップボード履歴の保存にはフルアクセスが必要です）"
+                    "フルアクセスがなくても日本語入力は使えます（クリップボード履歴の保存にはフルアクセスが必要です）"
                 }
             }
-            Section(footer: Text("Copaky は azooKey（オープンソース・MIT）をベースにしています。高精度なかな漢字変換など入力の中核は azooKey の成果です。")) {
+            Section(footer: Text("Copaky は独立したプロジェクトです。高精度なかな漢字変換など入力の中核はオープンソースの azooKey（MIT）を基盤としており、その成果に感謝します。")) {
                 FallbackLink("View azooKey on GitHub", destination: URL(string: "https://github.com/azooKey/azooKey")!)
             }
         }.navigationBarTitle(Text("更新履歴"), displayMode: .inline)
