@@ -24,7 +24,6 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
     // 即時変数
     private var tasks: [(type: LongpressActionType, task: Task<Void, any Error>)] = []
     private var tempTextData: (left: String, center: String, right: String)?
-    private var pendingReportDismissTask: Task<Void, Never>?
 
     // キーボードを閉じる際に呼び出す
     // inputManagerはキーボードを閉じる際にある種の操作を行う
@@ -113,26 +112,6 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
         }
     }
 
-    @MainActor override func notifyReportWrongConversion(_ candidate: any ResultViewItemData, index: Int?, variableStates: VariableStates) async {
-        await handleReportWrongConversion(candidate, index: index, variableStates: variableStates)
-    }
-
-    @MainActor override func prepareReportSuggestion(candidate: any ResultViewItemData, index: Int, variableStates: VariableStates) {
-        handlePrepareReportSuggestion(candidate: candidate, index: index, variableStates: variableStates)
-    }
-
-    @MainActor override func reportSuggestion(_ content: ReportContent, variableStates: VariableStates) async -> Bool {
-        await handleReportSuggestion(content, variableStates: variableStates)
-    }
-
-    @MainActor override func presentReportDetail(_ content: ReportContent, variableStates: VariableStates) {
-        handlePresentReportDetail(content, variableStates: variableStates)
-    }
-
-    @MainActor override func dismissReportDetail(variableStates: VariableStates) {
-        handleDismissReportDetail(variableStates: variableStates)
-    }
-
     private func showResultView(variableStates: VariableStates) {
         variableStates.barState = .none
     }
@@ -140,7 +119,6 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
     @MainActor
     private func textEditingActionDidBegin(variableStates: VariableStates) {
         self.showResultView(variableStates: variableStates)
-        self.dismissReportInterfacesIfNeeded(variableStates: variableStates)
     }
 
     @MainActor private func shiftStateOff(variableStates: VariableStates) {
@@ -226,7 +204,6 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
             }
 
         case let .setCursorBar(operation):
-            self.dismissReportInterfacesIfNeeded(variableStates: variableStates)
             let (left, center, right) = self.inputManager.getSurroundingText()
             variableStates.setSurroundingText(leftSide: left, center: center, rightSide: right)
             switch operation {
@@ -270,14 +247,12 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
             variableStates.resultModel.setSelectionRequest(selection)
         case let .moveTab(type):
             // タブ移動ではシフトを解除しない
-            self.dismissReportInterfacesIfNeeded(variableStates: variableStates)
             variableStates.setTab(type)
 
         case let .setUpsideComponent(type):
             self.applyUpsideComponent(type, variableStates: variableStates)
 
         case let .setTabBar(operation):
-            self.dismissReportInterfacesIfNeeded(variableStates: variableStates)
             switch operation {
             case .on:
                 variableStates.barState = .tab
@@ -386,14 +361,6 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
             guard let variableStates else {
                 return
             }
-            if component == nil {
-                variableStates.reportSuggestionState?.clearTimestamp()
-                self?.pendingReportDismissTask?.cancel()
-                self?.pendingReportDismissTask = nil
-            } else if case .reportSuggestion = component {
-                self?.pendingReportDismissTask?.cancel()
-                self?.pendingReportDismissTask = nil
-            }
             variableStates.upsideComponent = component
             variableStates.setHasUpsideComponent(variableStates.upsideComponent != nil)
             self?.delegate?.updateScreenHeight()
@@ -459,44 +426,6 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
             actions = actions[(firstIndex + 1)...]
         }
         self.runActionBlock(actionBlock: actions, variableStates: variableStates)
-    }
-
-    @MainActor
-    private func dismissReportInterfacesIfNeeded(variableStates: VariableStates) {
-        if case .reportSuggestion = variableStates.upsideComponent, let reportSuggestionState = variableStates.reportSuggestionState {
-            let minimumDisplayInterval: TimeInterval = 3  // 3秒
-            let presentedAt = reportSuggestionState.presentedAt ?? Date()
-            let elapsed = Date().timeIntervalSince(presentedAt)
-            if elapsed >= minimumDisplayInterval {
-                self.performReportDismiss(variableStates: variableStates)
-            } else {
-                pendingReportDismissTask?.cancel()
-                pendingReportDismissTask = Task { @MainActor [weak self, weak variableStates] in
-                    // 3秒程度表示しておく
-                    try? await Task.sleep(for: .seconds(3))
-                    guard let self, let variableStates else {
-                        return
-                    }
-                    self.performReportDismiss(variableStates: variableStates)
-                }
-            }
-        } else {
-            pendingReportDismissTask?.cancel()
-            pendingReportDismissTask = nil
-            if variableStates.reportDetailState != nil {
-                variableStates.reportDetailState = nil
-            }
-        }
-    }
-
-    @MainActor
-    private func performReportDismiss(variableStates: VariableStates) {
-        pendingReportDismissTask?.cancel()
-        pendingReportDismissTask = nil
-        self.applyUpsideComponent(nil, variableStates: variableStates)
-        if variableStates.reportDetailState != nil {
-            variableStates.reportDetailState = nil
-        }
     }
 
     @MainActor
@@ -648,9 +577,6 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
         let b_left = self.inputManager.adjustLeftString(tempLeft)
 
         let hasSomethingChanged = a_left != b_left || a_center != b_center || a_right != b_right
-        if hasSomethingChanged {
-            dismissReportInterfacesIfNeeded(variableStates: variableStates)
-        }
         let a_wholeText = a_left + a_center + a_right
         // ライブ変換を行っていて入力中の場合、まずは確定してから話を進める
         if !self.inputManager.composingText.isEmpty && !self.inputManager.isSelected && self.inputManager.liveConversionManager.enabled && hasSomethingChanged {

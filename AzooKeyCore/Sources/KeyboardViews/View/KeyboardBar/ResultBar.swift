@@ -174,7 +174,6 @@ struct ResultBar<Extension: ApplicationSpecificKeyboardViewExtension>: View {
     }
 
     private func pressed(_ data: ResultData) {
-        self.action.prepareReportSuggestion(candidate: data.candidate, index: data.id, variableStates: variableStates)
         self.action.notifyComplete(data.candidate, variableStates: variableStates)
     }
 
@@ -207,20 +206,6 @@ struct ResultContextMenuView: View {
             Button("この候補の学習をリセットする", systemImage: "clear") {
                 action.notifyForgetCandidate(candidate, variableStates: variableStates)
             }
-        }
-        Section(SemiStaticStates.shared.hasFullAccess ? "フィードバックを送信" : "フルアクセスが必要です") {
-            Button("意図した変換ではない", systemImage: "exclamationmark.bubble") {
-                Task { @MainActor in
-                    await action.notifyReportWrongConversion(candidate, index: index, variableStates: variableStates)
-                }
-            }
-            .disabled(!SemiStaticStates.shared.hasFullAccess)
-            Button("欲しい変換がない", systemImage: "questionmark.bubble") {
-                Task { @MainActor in
-                    await action.notifyReportWrongConversion(candidate, index: index, variableStates: variableStates)
-                }
-            }
-            .disabled(!SemiStaticStates.shared.hasFullAccess)
         }
         #if DEBUG
         Button("デバッグ情報を表示する", systemImage: "ladybug.fill") {

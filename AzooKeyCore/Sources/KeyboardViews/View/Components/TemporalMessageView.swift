@@ -62,5 +62,5 @@ struct TemporalMessageView: View {
 }
 
 #Preview {
-    TemporalMessageView(message: .doneReportWrongConversion, isPresented: .init(get: { true }, set: { _ in }))
+    TemporalMessageView(message: .doneForgetCandidate, isPresented: .init(get: { true }, set: { _ in }))
 }

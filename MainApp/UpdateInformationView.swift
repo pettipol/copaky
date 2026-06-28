@@ -28,9 +28,6 @@ struct UpdateInformationView: View {
                             "片手モードが再起動時に解除される問題を修正しました"
                         }
                     }
-                    NavigationLink("azooKeyの開発に協力") {
-                        ContributionDetailView()
-                    }
                     VersionView("3.0.1", releaseDate: "2025年09月30日") {
                         ParagraphView("機能を改善しました。") {
                             "iOS 26の新しいデザインに本体アプリが対応しました"
@@ -211,9 +208,6 @@ struct UpdateInformationView: View {
                             "タブバーを変換候補欄の長押しで表示できない不具合を修正しました"
                             "辞書に不足していた単語を複数追加しました"
                         }
-                    }
-                    NavigationLink("変換候補の追加") {
-                        ShareWordView()
                     }
                     VersionView("2.1", releaseDate: "2023年04月09日") {
                         ParagraphView("新しい機能を追加しました。") {

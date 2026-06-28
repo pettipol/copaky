@@ -53,16 +53,4 @@ public enum SharedStore {
         }
     }
 
-    public enum ShareThisWordOptions: String, Sendable {
-        case 人・動物・会社などの名前
-        case 場所・建物などの名前
-        case 五段活用
-    }
-
-    public static func sendSharedWord(word: String, ruby: String, note: String? = nil, options: [ShareThisWordOptions]) async -> Bool {
-        // Disabilitato per conformità offline completa (SviluppoTastieraOpen).
-        // Ritorna false: nessuna condivisione è avvenuta, lo stato locale non deve risultare "condiviso".
-        debug("SharedStore.sendSharedWord disabilitato offline-only")
-        return false
-    }
 }

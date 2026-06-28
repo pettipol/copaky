@@ -28,11 +28,6 @@ public final class VariableStates: ObservableObject {
         self.tabManager = TabManager(config: tabManagerConfig)
         self.clipboardHistoryManager = ClipboardHistoryManager(config: clipboardHistoryManagerConfig)
         self.keyboardInternalSettingManager = KeyboardInternalSettingManager(userDefaults: userDefaults)
-        self.reportSuggestionState = if let sharedUserDefaults {
-            ReportSuggestionState(storageUserDefaults: sharedUserDefaults)
-        } else {
-            nil
-        }
         if let interfaceWidth {
             self.setInterfaceSize(orientation: orientation ?? .vertical, screenWidth: interfaceWidth)
         } else if let orientation {
@@ -188,8 +183,6 @@ public final class VariableStates: ObservableObject {
 
     @Published public var temporalMessage: TemporalMessage?
 
-    @Published public var reportSuggestionState: ReportSuggestionState?
-    @Published public var reportDetailState: ReportDetailState?
 
     public func setSurroundingText(leftSide: String, center: String, rightSide: String) {
         self.surroundingText.leftSideText = leftSide

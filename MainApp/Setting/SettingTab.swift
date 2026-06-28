@@ -190,13 +190,6 @@ struct SettingTabView: View {
                 }
                 .inheritSearchKeys()
 
-                // Copaky: the contribution/misconversion-reporting feature sends data to a server,
-                // but the network path is disabled offline (SharedStore.sendSharedWord is a no-op).
-                // Hidden here to avoid azooKey branding + a false data-collection claim; the whole
-                // dead reporting subsystem is slated for removal in S1.
-                // ContributionSettingsSection()
-                //     .searchKeys("協力", "レポート", "誤変換")
-
                 Section("カスタムタブ") {
                     NavigationLink("カスタムタブの管理") {
                         ManageCustardView(manager: $appStates.custardManager, path: $path)

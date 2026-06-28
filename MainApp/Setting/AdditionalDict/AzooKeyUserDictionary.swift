@@ -175,9 +175,6 @@ private struct UserDictionaryDataEditor: CancelableEditor {
         }
     }
 
-    @State private var shareThisWord = false
-    @State private var showConfirmationDialogue = false
-    @State private var sending = false
     @FocusState private var focusOnWordField: Bool?
 
     @ViewBuilder
@@ -197,12 +194,6 @@ private struct UserDictionaryDataEditor: CancelableEditor {
 
     var body: some View {
         Form {
-            if sending {
-                HStack {
-                    Text("申請中です")
-                    ProgressView()
-                }
-            }
             Section(header: Text("読みと単語"), footer: Text("\(systemImage: "doc.on.clipboard")を長押しでペースト")) {
                 HStack {
                     wordField
@@ -258,39 +249,6 @@ private struct UserDictionaryDataEditor: CancelableEditor {
                     templateLiteralData = template
                 }
             }
-            if !item.data.isTemplateMode,
-               self.base.0.data.shared != true || (self.base.0.data != self.item.data) {
-                Toggle(isOn: $shareThisWord) {
-                    HStack {
-                        Text("この単語をシェアする")
-                        HelpAlertButton(title: "この単語をシェアする", explanation: "この単語を他のユーザにも共有することを申請します。\n個人情報を含む単語は申請しないでください。")
-                    }
-                }
-                .toggleStyle(.switch)
-            }
-        }
-        .sheet(isPresented: $showConfirmationDialogue) {
-            UserDictionaryShareConfirmationView(
-                saveWithShareAction: { note in
-                    Task {
-                        // わずかな時間待機する
-                        self.sending = true
-                        let data = self.item.makeStableData()
-                        let success = await self.sendSharedWord(data: data, note: note)
-                        self.item.data.shared = success
-                        try await Task.sleep(nanoseconds: 1_000_000)
-                        self.saveAndDismiss()
-                        self.sending = false
-                    }
-                },
-                saveWithoutShareAction: self.saveAndDismiss
-            )
-            .padding()
-            .padding(.horizontal)
-            .interactiveDismissDisabled()
-            .presentationDetents([.medium, .large])
-            .disabled(self.sending)
-            .presentationBackground(.thinMaterial)
         }
         .navigationTitle(Text("ユーザ辞書を編集"))
         .navigationBarTitleDisplayMode(.inline)
@@ -299,11 +257,7 @@ private struct UserDictionaryDataEditor: CancelableEditor {
             leading: EditCancelButton(confirmationRequired: false, action: cancel),
             trailing: EditConfirmButton(.done) {
                 if item.error == nil {
-                    if self.shareThisWord {
-                        self.showConfirmationDialogue = true
-                    } else {
-                        self.saveAndDismiss()
-                    }
+                    self.saveAndDismiss()
                 }
             }
         )
@@ -344,60 +298,4 @@ private struct UserDictionaryDataEditor: CancelableEditor {
         }
     }
 
-    private func sendSharedWord(data: UserDictionaryData, note: String) async -> Bool {
-        var options: [SharedStore.ShareThisWordOptions] = []
-        if data.isPersonName {
-            options.append(.人・動物・会社などの名前)
-        }
-        if data.isPlaceName {
-            options.append(.場所・建物などの名前)
-        }
-        if data.isVerb {
-            options.append(.五段活用)
-        }
-
-        return await SharedStore.sendSharedWord(word: data.word, ruby: data.ruby, note: note, options: options)
-    }
-}
-
-private struct UserDictionaryShareConfirmationView: View {
-    var saveWithShareAction: (String) -> Void
-    var saveWithoutShareAction: () -> Void
-
-    @State private var note: String = ""
-    var body: some View {
-        VStack {
-            Label("単語をシェアします", systemImage: "exclamationmark.triangle")
-                .font(.title2)
-                .bold()
-                .padding(.bottom)
-            Text("シェアすると、不特定多数のユーザがこの単語を閲覧できます。個人情報を含む単語を絶対にシェアしないでください。")
-                .font(.callout)
-                .lineLimit(nil)
-            TextField("備考", text: $note, axis: .vertical)
-                .textFieldStyle(.roundedBorder)
-                .padding(.vertical)
-
-            var secondaryColor: AnyShapeStyle {
-                if #available(iOS 17, *) {
-                    AnyShapeStyle(.blue.secondary)
-                } else {
-                    AnyShapeStyle(.blue)
-                }
-            }
-            Button("シェアせずに保存", role: .cancel) {
-                self.saveWithoutShareAction()
-            }
-            .foregroundStyle(.white)
-            .font(.headline)
-            .fontWeight(.regular)
-            .buttonStyle(LargeButtonStyle(backgroundStyle: secondaryColor))
-            Button("シェアして保存") {
-                self.saveWithShareAction(note)
-            }
-            .foregroundStyle(.white)
-            .font(.headline)
-            .buttonStyle(LargeButtonStyle(backgroundColor: .blue))
-        }
-    }
 }
