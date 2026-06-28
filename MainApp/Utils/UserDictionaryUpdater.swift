@@ -179,7 +179,11 @@ struct UserDictionaryUpdater {
         }
 
         // 書き出し先と設定
-        let directoryURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedStore.appGroupKey)!
+        // Copaky: fail-soft — abort the export instead of crashing if the App Group container is unavailable.
+        guard let directoryURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedStore.appGroupKey) else {
+            debug("container is unavailable, skip dictionary export")
+            return
+        }
         // charID を利用（既存のマッピングを維持）
         let cmap = self.char2UInt8
 

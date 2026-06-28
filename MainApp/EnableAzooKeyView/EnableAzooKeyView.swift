@@ -100,11 +100,6 @@ struct EnableAzooKeyView: View {
                                 EnableAzooKeyViewText("ライブ変換を使用しますか？", with: "character.cursor.ibeam")
                                 BoolSettingView(.liveConversion)
                             }
-                            Group {
-                                Divider()
-                                EnableAzooKeyViewText("Zenzai（高性能端末向けの高精度なニューラルかな漢字変換システム）を使用しますか？", with: "z.square.fill")
-                                BoolSettingView(.zenzaiEnable)
-                            }
                             Divider()
                             EnableAzooKeyViewText("設定は「設定タブ」でいつでも変えられます", with: "gearshape")
                             CenterAlignedView {

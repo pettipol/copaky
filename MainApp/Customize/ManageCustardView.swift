@@ -18,7 +18,10 @@ private enum AlertType: Equatable {
     case overlapCustard(custard: Custard)
 }
 
-private struct CustardDownloaderState: Sendable {
+// Copaky: offline-true (v0.1). Custom-tab import is local-only — community-library download (netlify),
+// paste-a-URL download and the dead `custard.azookey.com` remote path have been removed. No network I/O.
+// Copaky: オフライン徹底（v0.1）。カスタムタブの読み込みはローカルファイルのみ（コミュニティDL・URL取得は削除）。
+private struct CustardImporterState: Sendable {
     enum ImportError: Error {
         case invalidURL
         case invalidData
@@ -38,7 +41,6 @@ private struct CustardDownloaderState: Sendable {
 
     enum ProcessState: Error {
         case none
-        case getURL
         case getFile
         case processFile
 
@@ -46,7 +48,6 @@ private struct CustardDownloaderState: Sendable {
             switch self {
             case .none: return nil
             case .getFile: return "ファイルを取得中"
-            case .getURL: return "URLを取得中"
             case .processFile: return "ファイルを処理中"
             }
         }
@@ -94,24 +95,14 @@ private struct CustardDownloaderState: Sendable {
         return nil
     }
 
-    func resolveURL(_ url: URL) -> URL {
-        if url.host == "custard.azookey.com" {
-            // 以下の形式にマッチする場合、/tab/<UUID>を/api/tab/<UUID>に置換
-            // 例: https://custard.azookey.com/tab/XXXX → https://custard.azookey.com/api/tab/XXXX
-            // /tab/<UUID>は将来的にhtml形式で描画される可能性があるため
-            var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
-            if let path = components?.path, path.hasPrefix("/tab/") {
-                components?.path = path.replacingOccurrences(of: "/tab/", with: "/api/tab/")
-                if let newURL = components?.url {
-                    return newURL
-                }
-            }
-        }
-        return url
-    }
-
-    mutating func validateURL(_ url: URL) -> Bool {
+    mutating func validateLocalURL(_ url: URL) -> Bool {
         self.processState = .getFile
+        // Copaky: local files only — reject anything that is not a file:// URL (no network fetch).
+        guard url.isFileURL else {
+            self.processState = .none
+            self.failureData = .invalidURL
+            return false
+        }
         guard !url.absoluteString.hasPrefix("file:///") || url.startAccessingSecurityScopedResource() else {
             self.processState = .none
             self.failureData = .invalidURL
@@ -121,25 +112,15 @@ private struct CustardDownloaderState: Sendable {
     }
 
     mutating func failGetData(error: any Error) {
-        debug("downloadAsync error", error)
+        debug("importCustard error", error)
         self.failureData = .invalidData
         self.processState = .none
     }
 }
 
-private struct WebCustardList: Codable {
-    struct Item: Codable {
-        var name: String
-        var file: String
-    }
-    var last_update: String
-    var custards: [Item]
-}
-
 @MainActor
 struct ManageCustardView: View {
-    @State private var downloaderState = CustardDownloaderState()
-    @State private var urlString: String = ""
+    @State private var importerState = CustardImporterState()
     @State private var showAlert = false
     @State private var alertType: AlertType?
     @State private var showDeleteAlert = false
@@ -150,10 +131,7 @@ struct ManageCustardView: View {
     @State private var showDuplicateNameAlert = false
     @Binding private var manager: CustardManager
     @Binding private var path: [CustomizeTabView.Path]
-    @State private var webCustards: WebCustardList = .init(last_update: "", custards: [])
     @State private var showDocumentPicker = false
-    @State private var showURLImportAlert = false
-    @State private var showRecommendedImportDialog = false
     @State private var selectedDocument: Data = Data()
     @State private var addTabBar = true
     init(manager: Binding<CustardManager>, path: Binding<[CustomizeTabView.Path]>) {
@@ -238,14 +216,8 @@ struct ManageCustardView: View {
                 } label: {
                     Label("カスタムタブの作成", systemImage: "keyboard")
                 }
-                Button("おすすめから読み込む", systemImage: "star") {
-                    showRecommendedImportDialog = true
-                }
                 Button("iCloudから読み込む", systemImage: "icloud.and.arrow.down") {
                     showDocumentPicker = true
-                }
-                Button("URLから読み込む", systemImage: "link.badge.plus") {
-                    showURLImportAlert = true
                 }
             } label: {
                 Image(systemName: "plus")
@@ -253,32 +225,10 @@ struct ManageCustardView: View {
         }
     }
 
-    @ViewBuilder
-    private func recommendedTabList(dismissSheetOnSelect: Bool = false) -> some View {
-        ForEach(webCustards.custards, id: \.file) {item in
-            HStack {
-                Button {
-                    if dismissSheetOnSelect {
-                        showRecommendedImportDialog = false
-                    }
-                    Task {
-                        await self.downloadAsync(from: "https://azookey.netlify.app/static/custard/\(item.file)")
-                    }
-                } label: {
-                    Image(systemName: "square.and.arrow.down")
-                        .foregroundStyle(.accentColor)
-                        .padding(.horizontal, 5)
-                }
-                Text(verbatim: item.name)
-            }
-        }
-    }
-
     var body: some View {
         Form {
             self.tabList
-                .onAppear(perform: {self.loadWebCustard()})
-            if let custards = self.downloaderState.custards {
+            if let custards = self.importerState.custards {
                 ForEach(custards, id: \.identifier) {custard in
                     Section(header: Text("読み込んだタブ")) {
                         Text("「\(custard.metadata.display_name)(\(custard.identifier))」の読み込みに成功しました")
@@ -297,17 +247,16 @@ struct ManageCustardView: View {
                     }
                 }
                 Button("キャンセル") {
-                    urlString = ""
                     selectedDocument = Data()
-                    self.downloaderState.reset()
+                    self.importerState.reset()
                 }
                 .foregroundStyle(.red)
 
             } else {
-                if let text = self.downloaderState.processState.description {
+                if let text = self.importerState.processState.description {
                     ProgressView(text)
                 }
-                if let failure = self.downloaderState.failureData {
+                if let failure = self.importerState.failureData {
                     HStack {
                         Image(systemName: "exclamationmark.triangle")
                         Text(failure.description).foregroundStyle(.red)
@@ -384,39 +333,12 @@ struct ManageCustardView: View {
         .alert("名前が重複しています", isPresented: $showDuplicateNameAlert) {
             Button("OK", role: .cancel) {}
         }
-        .alert("URLから読み込む", isPresented: $showURLImportAlert) {
-            TextField("URLを入力", text: $urlString)
-            Button("読み込む") {
-                Task {
-                    await self.downloadAsync(from: urlString)
-                }
-            }
-            Button("キャンセル", role: .cancel) {}
-        } message: {
-            Text("カスタムタブファイルのURLを入力してください。")
-        }
-        .sheet(isPresented: $showRecommendedImportDialog) {
-            NavigationStack {
-                List {
-                    self.recommendedTabList(dismissSheetOnSelect: true)
-                }
-                .navigationTitle("おすすめから読み込む")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("閉じる") {
-                            showRecommendedImportDialog = false
-                        }
-                    }
-                }
-            }
-        }
         .fileImporter(isPresented: $showDocumentPicker, allowedContentTypes: ["txt", "custard", "json"].compactMap {UTType(filenameExtension: $0, conformingTo: .text)}) {result in
             switch result {
             case let .success(url):
                 if url.startAccessingSecurityScopedResource() {
                     Task {
-                        await self.downloadAsync(from: url)
+                        await self.importCustard(from: url)
                     }
                 } else {
                     debug("error: 不正なURL)")
@@ -427,37 +349,26 @@ struct ManageCustardView: View {
         }
     }
 
-    func downloadAsync(from urlString: String) async {
-        self.downloaderState.processState = .getURL
-        guard let url = URL(string: urlString) else {
-            self.downloaderState.failureData = .invalidURL
-            self.downloaderState.processState = .none
-            return
-        }
-        await self.downloadAsync(from: url)
-    }
-
-    func downloadAsync(from url: URL) async {
-        let url = self.downloaderState.resolveURL(url)
-        guard self.downloaderState.validateURL(url) else {
+    func importCustard(from url: URL) async {
+        // Copaky: offline-true — read the custard from a local file only, no network fetch.
+        guard self.importerState.validateLocalURL(url) else {
             return
         }
         do {
-            let (data, _) = try await URLSession.shared.data(from: url)
-            self.downloaderState.custards = self.downloaderState.process(data: data)
+            let data = try Data(contentsOf: url)
+            self.importerState.custards = self.importerState.process(data: data)
         } catch {
-            self.downloaderState.failGetData(error: error)
+            self.importerState.failGetData(error: error)
         }
     }
 
     private func saveCustard(custard: Custard) {
         do {
             try manager.saveCustard(custard: custard, metadata: .init(origin: .imported), updateTabBar: addTabBar)
-            self.downloaderState.finish(custard: custard)
+            self.importerState.finish(custard: custard)
             MainAppFeedback.success()
-            if self.downloaderState.isFinished {
-                self.downloaderState.reset()
-                urlString = ""
+            if self.importerState.isFinished {
+                self.importerState.reset()
                 selectedDocument = Data()
             }
         } catch {
@@ -493,27 +404,12 @@ struct ManageCustardView: View {
             self.showDeleteAlert = true
         }
     }
-
-    private func loadWebCustard() {
-        guard let url = URL(string: "https://azooKey.netlify.app/static/custard/all") else {
-            return
-        }
-        Task {
-            let result = try await URLSession.shared.data(from: url).0
-            let decoder = JSONDecoder()
-            guard let decodedResponse = try? decoder.decode(WebCustardList.self, from: result) else {
-                debug("Failed to load https://azooKey.netlify.app/static/custard/all")
-                return
-            }
-            self.webCustards = decodedResponse
-        }
-    }
 }
 
 // FIXME: ファイルを保存もキャンセルもしない状態で2つ目のファイルを読み込むとエラーになる
 @MainActor
 struct URLImportCustardView: View {
-    @State private var downloaderState = CustardDownloaderState()
+    @State private var importerState = CustardImporterState()
     @State private var showAlert = false
     @State private var alertType: AlertType?
     @Binding private var manager: CustardManager
@@ -527,7 +423,7 @@ struct URLImportCustardView: View {
 
     var body: some View {
         Form {
-            if let custards = self.downloaderState.custards {
+            if let custards = self.importerState.custards {
                 ForEach(custards, id: \.identifier) {custard in
                     Section(header: Text("読み込んだタブ")) {
                         Text("「\(custard.metadata.display_name)(\(custard.identifier))」の読み込みに成功しました")
@@ -546,29 +442,29 @@ struct URLImportCustardView: View {
                     }
                 }
                 Button("キャンセル") {
-                    self.downloaderState.reset()
+                    self.importerState.reset()
                     url = nil
                 }
                 .foregroundStyle(.red)
-            } else if let text = self.downloaderState.processState.description {
+            } else if let text = self.importerState.processState.description {
                 Section(header: Text("読み込み中")) {
                     ProgressView(text)
                     Button("閉じる") {
-                        self.downloaderState.reset()
+                        self.importerState.reset()
                         url = nil
                     }
                     .foregroundStyle(.accentColor)
                 }
             } else {
                 Section(header: Text("読み込み失敗")) {
-                    if let failure = self.downloaderState.failureData {
+                    if let failure = self.importerState.failureData {
                         HStack {
                             Image(systemName: "exclamationmark.triangle")
                             Text(failure.description).foregroundStyle(.red)
                         }
                     }
                     Button("閉じる") {
-                        self.downloaderState.reset()
+                        self.importerState.reset()
                         url = nil
                     }
                     .foregroundStyle(.accentColor)
@@ -578,8 +474,8 @@ struct URLImportCustardView: View {
         .task {
             if let url {
                 debug("URLImportCustardView", url)
-                self.downloaderState.reset()
-                await self.downloadAsync(from: url)
+                self.importerState.reset()
+                await self.importCustard(from: url)
             }
         }
         .alert("注意", isPresented: $showAlert, presenting: alertType) { alertType in
@@ -603,10 +499,10 @@ struct URLImportCustardView: View {
     private func saveCustard(custard: Custard) {
         do {
             try manager.saveCustard(custard: custard, metadata: .init(origin: .imported), updateTabBar: addTabBar)
-            self.downloaderState.finish(custard: custard)
+            self.importerState.finish(custard: custard)
             MainAppFeedback.success()
-            if self.downloaderState.isFinished {
-                self.downloaderState.reset()
+            if self.importerState.isFinished {
+                self.importerState.reset()
                 url = nil
             }
         } catch {
@@ -614,16 +510,16 @@ struct URLImportCustardView: View {
         }
     }
 
-    private func downloadAsync(from url: URL) async {
-        let url = self.downloaderState.resolveURL(url)
-        guard self.downloaderState.validateURL(url) else {
+    private func importCustard(from url: URL) async {
+        // Copaky: offline-true — read the custard from a local file only, no network fetch.
+        guard self.importerState.validateLocalURL(url) else {
             return
         }
         do {
-            let (data, _) = try await URLSession.shared.data(from: url)
-            self.downloaderState.custards = self.downloaderState.process(data: data)
+            let data = try Data(contentsOf: url)
+            self.importerState.custards = self.importerState.process(data: data)
         } catch {
-            self.downloaderState.failGetData(error: error)
+            self.importerState.failGetData(error: error)
         }
     }
 }

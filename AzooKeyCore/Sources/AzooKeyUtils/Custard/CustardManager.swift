@@ -79,7 +79,8 @@ public struct CustardManager: CustardManagerProtocol {
     }
 
     private static func fileURL(name: String) -> URL {
-        let directoryPath = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedStore.appGroupKey)!
+        // Copaky: fail-soft — fall back to a temporary directory instead of crashing if the container is unavailable.
+        let directoryPath = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedStore.appGroupKey) ?? FileManager.default.temporaryDirectory
         let url = directoryPath.appendingPathComponent(directoryName + name)
         return url
     }

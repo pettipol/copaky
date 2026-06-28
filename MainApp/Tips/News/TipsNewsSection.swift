@@ -42,9 +42,6 @@ struct TipsNewsSection: View {
             }
         }
         Section("新機能") {
-            IconNavigationLink("「ニューラルかな漢字変換システム Zenzai」を導入しました", systemImage: "z.square.fill", style: AngularGradient(colors: [.red, .blue], center: .center)) {
-                ZenzaiIntroductionNews()
-            }
             if needFlickDakutenKeyNews {
                 IconNavigationLink("日本語フリックのカスタムキーで「濁点化」をサポート", systemImage: "bolt", imageColor: .orange) {
                     FlickDakutenKeyNews()

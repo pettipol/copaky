@@ -11,7 +11,6 @@ import KeyboardViews
 
 public enum MessageIdentifier: String, CaseIterable, MessageIdentifierProtocol {
     case mock = "mock_alert_2022_09_16_03"
-    case ver3_0_zenzai_introduction = "ver3.0_zenzai_introduction"
     case iOS26_4_new_emoji = "iOS_26_4_new_emoji_commit"                    // MARK: frozen
     case iOS18_4_new_emoji = "iOS_18_4_new_emoji_commit"                    // MARK: frozen
     case iOS17_4_new_emoji = "iOS_17_4_new_emoji_commit"                    // MARK: frozen
@@ -37,7 +36,7 @@ public enum MessageIdentifier: String, CaseIterable, MessageIdentifierProtocol {
         switch self {
         case .ver1_9_user_dictionary_update, .ver2_1_emoji_tab:
             return true
-        case .iOS26_4_new_emoji, .iOS18_4_new_emoji, .iOS17_4_new_emoji, .mock, .ver3_0_zenzai_introduction:
+        case .iOS26_4_new_emoji, .iOS18_4_new_emoji, .iOS17_4_new_emoji, .mock:
             return false
         }
     }
@@ -54,19 +53,6 @@ public enum AzooKeyMessageProvider: ApplicationSpecificKeyboardViewMessageProvid
 
     public static var messages: [MessageData<MessageIdentifier>] {
         [
-            MessageData(
-                id: .ver3_0_zenzai_introduction,
-                title: "Zenzaiを導入しました",
-                description: "ニューラル言語モデルを用いた最先端の高精度なかな漢字変換システム「Zenzai」を設定から有効化できます。",
-                button: .two(primary: .openContainerURL(text: "設定する", url: "copaky://settings/zenzai", autoDone: true), secondary: .later),
-                precondition: {
-                    true
-                },
-                silentDoneCondition: {
-                    EnableZenzai.value
-                },
-                containerAppShouldMakeItDone: { false }
-            ),
             MessageData(
                 id: .iOS26_4_new_emoji,
                 title: "お知らせ",
@@ -137,7 +123,10 @@ public enum AzooKeyMessageProvider: ApplicationSpecificKeyboardViewMessageProvid
                 button: .one(.openContainerURL(text: "更新", url: "copaky://", autoDone: false)),
                 precondition: {
                     // ユーザ辞書に登録があるのが条件。
-                    let directoryPath = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedStore.appGroupKey)!
+                    // Copaky: fail-soft — if the App Group container is unavailable, don't surface the message.
+                    guard let directoryPath = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedStore.appGroupKey) else {
+                        return false
+                    }
                     let binaryFilePath = directoryPath.appendingPathComponent("user.louds", isDirectory: false).path
                     return FileManager.default.fileExists(atPath: binaryFilePath)
                 },
@@ -150,7 +139,10 @@ public enum AzooKeyMessageProvider: ApplicationSpecificKeyboardViewMessageProvid
                 },
                 containerAppShouldMakeItDone: {
                     // ユーザ辞書に登録がない場合はDoneにして良い。
-                    let directoryPath = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedStore.appGroupKey)!
+                    // Copaky: fail-soft — if the container is unavailable there is nothing to migrate, mark as done.
+                    guard let directoryPath = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedStore.appGroupKey) else {
+                        return true
+                    }
                     let binaryFilePath = directoryPath.appendingPathComponent("user.louds", isDirectory: false).path
                     return !FileManager.default.fileExists(atPath: binaryFilePath)
                 }

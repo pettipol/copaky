@@ -51,11 +51,7 @@ struct ContentView: View {
                 }
             }
             .task {
-                do {
-                    try await HotfixDictionaryV1.updateIfRequired()
-                } catch {
-                    print(error)
-                }
+                // Copaky: offline-true — no remote hotfix-dictionary update on launch.
                 UserDictionaryMigrationRunner.runIfNeeded()
             }
             .fullScreenCover(isPresented: $appStates.requireFirstOpenView, content: {
@@ -76,18 +72,7 @@ struct ContentView: View {
                 }
             }
             .onOpenURL { url in
-                if url.scheme == "copaky" {
-                    // Deep link handling for copaky scheme
-                    let host = url.host?.lowercased()
-                    let last = url.lastPathComponent.lowercased()
-                    if host == "settings" && last == "zenzai" {
-                        // Switch to Settings tab and request navigation to Zenzai settings
-                        selection = .settings
-                        appStates.deepLink = .settingsZenzai
-                        return
-                    }
-                }
-                // Non-copaky scheme: treat as file import
+                // Copaky: copaky:// deep links are no longer used; treat external URLs as file imports.
                 if url.scheme != "copaky" {
                     importFileURL = url
                 }
@@ -99,7 +84,7 @@ struct ContentView: View {
             ForEach(messageManager.necessaryMessages, id: \.id) {data in
                 if messageManager.requireShow(data.id) {
                     switch data.id {
-                    case .mock, .ver3_0_zenzai_introduction:
+                    case .mock:
                         EmptyView()
                     case .ver2_1_emoji_tab:
                         DataUpdateView(id: data.id, manager: $messageManager) {

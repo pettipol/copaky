@@ -97,11 +97,6 @@ fileprivate extension CustardInternalMetaData.Origin {
     }
 }
 
-private struct ExportedCustardData {
-    let data: Data
-    let fileIdentifier: String
-}
-
 private final class ShareURL {
     private(set) var url: URL?
 
@@ -118,26 +113,7 @@ struct CustardInformationView: View {
     @State private var showActivityView = false
     @State private var exportedData = ShareURL()
     @State private var added = false
-    @State private var copied = false
     @EnvironmentObject private var appStates: MainAppStates
-
-    @AppStorage("is_first_time_use_custard_share_link_v2.4.2") private var isFirstTimeUseCustardShareLink: Bool = true
-    @State private var uploadTargetCustard: IdentifiableWrapper<Custard, String>?
-
-    struct CustardShareLinkState {
-        var processing = false
-        var result: Result<URL, CustardShareHelper.ShareError>?
-    }
-
-    @State private var shareLinkState = CustardShareLinkState()
-
-    struct CustardShareImage: Identifiable {
-        var id = UUID()
-        var image: UIImage
-        var url: URL
-    }
-
-    @State private var shareImage: CustardShareImage?
 
     init(custard: Custard, path: Binding<[CustomizeTabView.Path]> = .constant([])) {
         self.initialCustard = custard
@@ -228,6 +204,9 @@ struct CustardInformationView: View {
                     }
                 }
             }
+            // Copaky: offline-true (v0.1) — local file sharing only. The remote "share link" feature
+            // (upload to custard.azookey.com) has been removed; export the tab as a .json file instead.
+            // Copaky: オフライン徹底（v0.1）。共有はローカルのファイル書き出しのみ（クラウド共有リンクは削除）。
             Button("ファイルを共有") {
                 guard let encoded = try? JSONEncoder().encode(custard) else {
                     debug("書き出しに失敗")
@@ -246,214 +225,13 @@ struct CustardInformationView: View {
                     return
                 }
             }
-            Section(footer: Text("共有用リンクは30日間アクセスがない場合に失効します")) {
-                if let result = shareLinkState.result {
-                    switch result {
-                    case .success(let url):
-                        Button("リンクをコピー", systemImage: copied ? "checkmark" : "doc.on.doc") {
-                            UIPasteboard.general.string = url.absoluteString
-                            MainAppFeedback.success()
-                            self.copied = true
-                            Task {
-                                try await Task.sleep(nanoseconds: 3_000_000_000)
-                                self.copied = false
-                            }
-                        }
-                        .disabled(copied)
-                        Text(verbatim: url.absoluteString)
-                            .monospaced()
-                        Button("リンクをシェア", systemImage: "square.and.arrow.up") {
-                            let renderer = ImageRenderer(content: keyboardPreview)
-                            renderer.scale = 3.0
-                            if let image = renderer.uiImage {
-                                self.shareImage = .init(image: image, url: url)
-                            }
-                        }
-                    case .failure(let failure):
-                        Label(failure.errorDescription ?? "共有に失敗しました", systemImage: "exclamationmark.triangle")
-                            .foregroundStyle(.red)
-                    }
-                } else {
-                    HStack {
-                        Button("共有用リンクを発行") {
-                            if self.isFirstTimeUseCustardShareLink {
-                                // 初回のみ、確認画面を表示する
-                                self.uploadTargetCustard = IdentifiableWrapper(custard, id: \.identifier)
-                            } else {
-                                self.uploadCustard(custard)
-                            }
-                        }
-                        .disabled(self.shareLinkState.processing)
-                        if shareLinkState.processing {
-                            ProgressView()
-                        }
-                    }
-                    .sheet(item: $uploadTargetCustard) { custard in
-                        UploadConfirmationView {
-                            self.uploadCustard(custard.value)
-                            self.isFirstTimeUseCustardShareLink = false
-                        } dismiss: {
-                            self.uploadTargetCustard = nil
-                        }
-                        .presentationDetents([.medium])
-                    }
-                }
-            }
         }
         .navigationBarTitle(Text("カスタムタブの情報"), displayMode: .inline)
-        .task {
-            self.shareLinkState.processing = true
-            let link = self.appStates.custardManager.loadCustardShareLink(custardId: custard.identifier)
-            // linkの有効性をチェックする
-            if let link, let url = URL(string: link), await CustardShareHelper.verifyShareLink(url) {
-                self.shareLinkState = .init(result: .success(url))
-            }
-            self.shareLinkState.processing = false
-        }
         .sheet(isPresented: self.$showActivityView, content: {
             ActivityView(
                 activityItems: [exportedData.url].compactMap {$0},
                 applicationActivities: nil
             )
         })
-        .sheet(
-            item: $shareImage,
-            content: { item in
-                ActivityView(
-                    activityItems: [
-                        TextActivityItem(
-                            "Copakyでカスタムタブを作りました！",
-                            hashtags: ["#Copaky"],
-                            links: [item.url.absoluteString]
-                        ),
-                        ImageActivityItem(item.image),
-                    ],
-                    applicationActivities: nil
-                )
-            }
-        )
-    }
-
-    private func uploadCustard(_ custard: Custard) {
-        self.shareLinkState.processing = true
-        Task {
-            do {
-                let (url, deleteToken) = try await CustardShareHelper.upload(custard)
-                self.shareLinkState.result = .success(url)
-                self.appStates.custardManager.saveCustardShareLink(custardId: custard.identifier, shareLink: url.absoluteString)
-                // Save deletion token securely in Keychain
-                KeychainHelper.saveDeleteToken(deleteToken, for: custard.identifier)
-            } catch let error as CustardShareHelper.ShareError {
-                self.shareLinkState.result = .failure(error)
-            }
-            self.shareLinkState.processing = false
-        }
-    }
-}
-
-private struct UploadConfirmationView: View {
-    var onConfirmation: () -> Void
-    var dismiss: () -> Void
-
-    @State private var acceptTermsOfService = false
-
-    var body: some View {
-        Form {
-            Section {
-                Text("共有リンクを発行すると、不特定の第三者があなたのカスタムタブを使えるようになります。")
-                Text("共有リンクは、最後のダウンロードから30日程度で失効します。")
-            }
-            Section(footer: Text("[\(systemImage: "arrow.up.forward.square")利用規約](https://azookey.com/TermsOfService)を確認してください")) {
-                Toggle("利用規約に同意します", isOn: $acceptTermsOfService)
-                    .toggleStyle(CheckboxToggleStyle())
-            }
-            Section {
-                Button("キャンセル", systemImage: "xmark", role: .cancel) {
-                    self.dismiss()
-                }
-                Button("共有用リンクを発行", systemImage: "square.and.arrow.up") {
-                    self.onConfirmation()
-                    self.dismiss()
-                }
-                .bold(self.acceptTermsOfService)
-                .disabled(!self.acceptTermsOfService)
-            }
-        }
-    }
-}
-
-private struct CheckboxToggleStyle: ToggleStyle {
-    private func makeBodyCore(configuration: Configuration) -> some View {
-        Button {
-            configuration.isOn.toggle()
-        } label: {
-            Label {
-                configuration.label
-            } icon: {
-                Image(systemName: configuration.isOn ? "checkmark.square" : "square")
-            }
-        }
-    }
-    func makeBody(configuration: Configuration) -> some View {
-        if #available(iOS 17, *) {
-            self.makeBodyCore(configuration: configuration)
-                .symbolEffect(.bounce, value: configuration.isOn)
-        } else {
-            self.makeBodyCore(configuration: configuration)
-        }
-    }
-}
-
-// MARK: - Keychain helper (simple wrapper)
-private enum KeychainHelper {
-    private static let service = "azooKey.CustardInformationView.CustardShare"
-
-    /// Save or update the delete token in Keychain (Generic Password).
-    static func saveDeleteToken(_ token: String, for id: String) {
-        let account = "deleteToken_\(id)"
-        guard let data = token.data(using: .utf8) else { return }
-
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
-        ]
-
-        // Delete existing item if any, then add new one
-        SecItemDelete(query as CFDictionary)
-
-        var attrs = query
-        attrs[kSecValueData as String] = data
-        attrs[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
-        SecItemAdd(attrs as CFDictionary, nil)
-    }
-
-    /// Retrieve the delete token (if any) for a given custard ID.
-    static func loadDeleteToken(for id: String) -> String? {
-        let account = "deleteToken_\(id)"
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
-            kSecReturnData as String: kCFBooleanTrue!,
-            kSecMatchLimit as String: kSecMatchLimitOne,
-        ]
-        var result: AnyObject?
-        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
-              let data = result as? Data,
-              let token = String(data: data, encoding: .utf8) else { return nil }
-        return token
-    }
-}
-
-private struct IdentifiableWrapper<T, ID: Hashable>: Identifiable {
-    init(_ value: T, id: @escaping (T) -> ID) {
-        self.value = value
-        self.getId = id
-    }
-    var value: T
-    var getId: (T) -> ID
-    var id: ID {
-        getId(value)
     }
 }

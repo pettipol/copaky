@@ -49,13 +49,18 @@ public struct ThemeIndexManager: Equatable {
     private var index: ThemeIndices
 
     private static func fileURL(name: String) -> URL {
-        let directoryPath = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedStore.appGroupKey)!
+        // Copaky: fail-soft — fall back to a temporary directory instead of crashing if the container is unavailable.
+        let directoryPath = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedStore.appGroupKey) ?? FileManager.default.temporaryDirectory
         let url = directoryPath.appendingPathComponent(name)
         return url
     }
 
     private static func directoryExistCheck() {
-        let directoryPath = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedStore.appGroupKey)!
+        // Copaky: fail-soft — if the container is unavailable, skip the check instead of crashing.
+        guard let directoryPath = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedStore.appGroupKey) else {
+            debug("container is unavailable")
+            return
+        }
         let filePath = directoryPath.appendingPathComponent("themes/").path
         // try! FileManager.default.removeItem(atPath: filePath)
         if !FileManager.default.fileExists(atPath: filePath) {

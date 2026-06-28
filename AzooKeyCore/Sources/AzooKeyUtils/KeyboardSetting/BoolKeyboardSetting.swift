@@ -54,17 +54,6 @@ public extension KeyboardSettingKey where Self == LiveConversionInputMode {
     static var liveConversion: Self { .init() }
 }
 
-public struct EnableZenzai: BoolKeyboardSettingKey {
-    public static let title: LocalizedStringKey = "Zenzaiを有効化"
-    public static let explanation: LocalizedStringKey = "高度な変換アルゴリズム「Zenzai」を利用します。"
-    public static let defaultValue = false
-    public static let key: String = "enable_zenzai"
-}
-
-public extension KeyboardSettingKey where Self == EnableZenzai {
-    static var zenzaiEnable: Self { .init() }
-}
-
 public struct TypographyLetter: BoolKeyboardSettingKey {
     public static let title: LocalizedStringKey = "装飾英字変換"
     public static let explanation: LocalizedStringKey = "英字入力の際に\n「𝕥𝕪𝕡𝕠𝕘𝕣𝕒𝕡𝕙𝕪」のような装飾字体を候補に表示します。"

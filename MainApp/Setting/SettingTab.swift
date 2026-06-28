@@ -134,12 +134,6 @@ struct SettingTabView: View {
                 .inheritSearchKeys()
 
                 Section("変換") {
-                    BoolSettingView(.zenzaiEnable)
-                        .searchKeys("Zenzai")
-                    NavigationLink("Zenzaiについて") {
-                        ZenzaiSettingView()
-                    }
-                    .searchKeys("Zenzai", "エフォート", "詳細設定")
                     BoolSettingView(.englishCandidate)
                         .searchKeys("英単語変換", "変換", "英語", "英語変換")
                     BoolSettingView(.typographyLetter)
@@ -162,23 +156,7 @@ struct SettingTabView: View {
                         AzooKeyUserDictionaryView()
                     }
                     .searchKeys("ユーザ辞書", "追加辞書")
-                    // MARK: ホットフィックスの項目はデバッグ版のみで表示
-                    #if DEBUG
-                    if let cachedTag = HotfixDictionaryV1.cachedTag {
-                        LabeledContent("ホットフィックス") {
-                            Text(cachedTag)
-                                .monospaced()
-                        }
-                        .onTapGesture {
-                            Task {
-                                // タッチされたらアップデートをトリガーする（隠し機能）
-                                try await HotfixDictionaryV1.updateIfRequired(ignoreFrequency: true)
-                            }
-                        }
-                    } else {
-                        Text("Hotfix not found")
-                    }
-                    #endif
+                    // Copaky: offline-true — the remote hotfix-dictionary update UI has been removed.
                 }
                 .inheritSearchKeys()
 
@@ -243,24 +221,11 @@ struct SettingTabView: View {
                     if let custard = try? appStates.custardManager.custard(identifier: identifier) {
                         CustardInformationView(custard: custard, path: $path)
                     }
-                case .zenzaiSettings:
-                    ZenzaiSettingView()
                 }
             }
             .onAppear {
                 if appStates.requestReviewManager.shouldTryRequestReview, appStates.requestReviewManager.shouldRequestReview() {
                     requestReview()
-                }
-                // Handle pending deep link when Settings tab appears
-                if appStates.deepLink == .settingsZenzai {
-                    path.append(.zenzaiSettings)
-                    appStates.deepLink = nil
-                }
-            }
-            .onChange(of: appStates.deepLink) { _, newValue in
-                if newValue == .settingsZenzai {
-                    path.append(.zenzaiSettings)
-                    appStates.deepLink = nil
                 }
             }
         }

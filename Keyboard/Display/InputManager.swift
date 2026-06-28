@@ -102,9 +102,10 @@ final class InputManager {
 
     private static let dictionaryResourceURL = Bundle.main.bundleURL.appendingPathComponent("Dictionary", isDirectory: true)
     private static let memoryDirectoryURL = (try? FileManager.default.url(for: .libraryDirectory, in: .userDomainMask, appropriateFor: nil, create: false)) ?? sharedContainerURL
-    private static let sharedContainerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedStore.appGroupKey)!
-    private static let zenzSmallWeightURL = Bundle.main.bundleURL.appendingPathComponent("zenz-v3.1-small-gguf/ggml-model-Q5_K_M.gguf", isDirectory: false)
-    private static let zenzXsmallWeightURL = Bundle.main.bundleURL.appendingPathComponent("zenz-v3.1-xsmall-gguf/ggml-model-Q5_K_M.gguf", isDirectory: false)
+    // Copaky: fail-soft — fall back to the keyboard's temporary directory instead of crashing if the
+    // App Group container is unavailable (e.g. provisioning/entitlement edge cases). 起動時クラッシュ回避。
+    private static let sharedContainerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedStore.appGroupKey) ?? FileManager.default.temporaryDirectory
+    // Copaky: Zenzai gguf model weights are no longer bundled (feature deferred to v2).
 
     @MainActor private func getConvertRequestOptions(inputStylePreference: InputStyle? = nil) -> ConvertRequestOptions {
         let requireJapanesePrediction: Bool
@@ -132,24 +133,8 @@ final class InputManager {
             providers.append(.typography)
         }
 
-        let zenzaiMode: ConvertRequestOptions.ZenzaiMode
-        @KeyboardSetting(.zenzaiEnable) var zenzaiToggle
-        if zenzaiToggle {
-            @KeyboardSetting(.zenzaiEffort) var effort
-            let (inferenceLimit, weightURL): (Int, URL) = switch effort {
-            case .high: (3, Self.zenzSmallWeightURL)
-            case .medium: (1, Self.zenzSmallWeightURL)
-            case .low: (2, Self.zenzXsmallWeightURL)
-            }
-            zenzaiMode = .on(
-                weight: weightURL,
-                inferenceLimit: inferenceLimit,
-                personalizationMode: nil,
-                versionDependentMode: .v3(.init(leftSideContext: self.getSurroundingText().leftText, maxLeftSideContextLength: 20))
-            )
-        } else {
-            zenzaiMode = .off
-        }
+        // Copaky: Zenzai disabled (feature deferred to v2) — always pass .off to the converter engine.
+        let zenzaiMode: ConvertRequestOptions.ZenzaiMode = .off
 
         return ConvertRequestOptions(
             N_best: 10,
