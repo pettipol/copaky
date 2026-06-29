@@ -8,7 +8,7 @@ struct TermsOfServiceUpdateNews: View {
             TipsContentParagraph {
                 Text("必ずご確認ください。")
             }
-            FallbackLink("利用規約", destination: URL(string: "https://azookey.netlify.app/TermsOfService")!)
+            FallbackLink("利用規約", destination: URL(string: "https://copaky.app/terms.html")!)
         }
         .onAppear {
             self.readTermsOfUseUpdate_2025_05_31 = true

@@ -189,10 +189,10 @@ struct SettingTabView: View {
                         ContactView()
                     }
                     .searchKeys("お問い合わせ", "質問", "連絡", "メール")
-                    FallbackLink("プライバシーポリシー", destination: URL(string: "https://azookey.netlify.app/PrivacyPolicy")!)
+                    FallbackLink("プライバシーポリシー", destination: URL(string: "https://copaky.app/privacy.html")!)
                         .foregroundStyle(.primary)
                         .searchKeys("プライバシーポリシー", "個人情報", "ライセンス")
-                    FallbackLink("利用規約", destination: URL(string: "https://azookey.netlify.app/TermsOfService")!)
+                    FallbackLink("利用規約", destination: URL(string: "https://copaky.app/terms.html")!)
                         .foregroundStyle(.primary)
                         .searchKeys("利用規約", "規約", "ライセンス")
                     NavigationLink("更新履歴") {
