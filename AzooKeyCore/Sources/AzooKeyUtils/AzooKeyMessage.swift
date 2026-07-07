@@ -54,69 +54,6 @@ public enum AzooKeyMessageProvider: ApplicationSpecificKeyboardViewMessageProvid
     public static var messages: [MessageData<MessageIdentifier>] {
         [
             MessageData(
-                id: .iOS26_4_new_emoji,
-                title: "お知らせ",
-                description: "iOS26.4で「🫈 (イエティ)」「🫪 (ゆがんだ顔)」「🫯 (土煙)」などの新しい絵文字が追加されました。本体アプリを開き、データを更新しますか？",
-                button: .two(primary: .openContainerURL(text: "更新", url: "copaky://", autoDone: false), secondary: .later),
-                precondition: {
-                    if #available(iOS 26.4, *) {
-                        return true
-                    } else {
-                        return false
-                    }
-                },
-                silentDoneCondition: {
-                    // ダウンロードがv3.0.3以降の場合はDone
-                    if (SharedStore.initialAppVersion ?? .azooKey_v1_7_1) >= .azooKey_v3_0_3 {
-                        return true
-                    }
-                    return false
-                },
-                containerAppShouldMakeItDone: { false }
-            ),
-            MessageData(
-                id: .iOS18_4_new_emoji,
-                title: "お知らせ",
-                description: "iOS18.4で「🫩 (眠そうな顔)」「🫆 (指紋)」「🫟 (飛び散った液体)」などの新しい絵文字が追加されました。本体アプリを開き、データを更新しますか？",
-                button: .two(primary: .openContainerURL(text: "更新", url: "copaky://", autoDone: false), secondary: .later),
-                precondition: {
-                    if #available(iOS 18.4, *) {
-                        return true
-                    } else {
-                        return false
-                    }
-                },
-                silentDoneCondition: {
-                    // ダウンロードがv2.4.0以降の場合はDone
-                    if (SharedStore.initialAppVersion ?? .azooKey_v1_7_1) >= .azooKey_v2_4_0 {
-                        return true
-                    }
-                    return false
-                },
-                containerAppShouldMakeItDone: { false }
-            ),
-            MessageData(
-                id: .iOS17_4_new_emoji,
-                title: "お知らせ",
-                description: "iOS17.4で「🙂‍↕️️ (うなづく顔)」「🙂‍↔️️ (首を振る顔)」「🐦‍🔥️ (不死鳥)」などの新しい絵文字が追加されました。本体アプリを開き、データを更新しますか？",
-                button: .two(primary: .openContainerURL(text: "更新", url: "copaky://", autoDone: false), secondary: .later),
-                precondition: {
-                    if #available(iOS 17.4, *) {
-                        return true
-                    } else {
-                        return false
-                    }
-                },
-                silentDoneCondition: {
-                    // ダウンロードがv2.2.3以降の場合はDone
-                    if (SharedStore.initialAppVersion ?? .azooKey_v1_7_1) >= .azooKey_v2_2_3 {
-                        return true
-                    }
-                    return false
-                },
-                containerAppShouldMakeItDone: { false }
-            ),
-            MessageData(
                 id: .ver1_9_user_dictionary_update,
                 title: "お願い",
                 description: "内部データの更新のため本体アプリを開いてください。\n更新は数秒で終わります。",
@@ -156,10 +93,11 @@ public enum AzooKeyMessageProvider: ApplicationSpecificKeyboardViewMessageProvid
                     true
                 },
                 silentDoneCondition: {
-                    if (try? CustardManager.load().tabbar(identifier: 0))?.items.contains(where: {$0.actions.contains(.moveTab(.system(.emoji_tab)))}) == true {
-                        return true
-                    }
-                    return false
+                    // Copaky: a fresh install already carries the emoji tab in the DEFAULT tab bar,
+                    // so a throwing `tabbar(identifier:0)` (no saved tab bar yet) must fall back to
+                    // `.default` — otherwise this one-time notice storms on every keyboard load.
+                    let tabbar = (try? CustardManager.load().tabbar(identifier: 0)) ?? .default
+                    return tabbar.items.contains(where: {$0.actions.contains(.moveTab(.system(.emoji_tab)))})
                 },
                 containerAppShouldMakeItDone: { true }
             ),

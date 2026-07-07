@@ -506,10 +506,14 @@ final class CopakyCampaignTests: XCTestCase {
 
         dump(safari, "clipboard-tab-not-found")
         shot("clipboard-tab-not-found")
-        // Fallback: the clipboard MANAGER logic (capture-on-intent, 256KB byte-cap, bytewise-huge skip,
-        // secure-field guard, detect-without-capture, 7-day prune) is covered by the passing
-        // ClipboardHistoryManagerTests; the pasteboard banner is device-only (reports/sim_test_2026-07.md §B).
-        throw XCTSkip("Clipboard tab not reachable via tab-bar navigation on this run; logic covered by ClipboardHistoryManagerTests + device session")
+        // ROOT CAUSE (verified 2026-07-07): this UI test target builds UNSIGNED (CODE_SIGNING_ALLOWED=NO),
+        // so the `group.com.pettipol.copaky` App Group container is NOT provisioned on the Simulator.
+        // CustardManager.fileURL then falls back to a per-process temporaryDirectory, so the tab bar the
+        // MainApp saves in onEnabled never reaches the keyboard process — the pinned clipboard tab item
+        // never appears. Clipboard app↔keyboard coordination (capture/pin/persistence at the UI level) is
+        // therefore only testable on a SIGNED build (device, or a signed Simulator build once a Team ID is
+        // configured). The pure clipboard logic is covered by ClipboardHistoryManagerTests.
+        throw XCTSkip("Clipboard tab needs the App Group container (signed build); unsigned sim has no shared container. Logic covered by ClipboardHistoryManagerTests; e2e pending signed build/device.")
     }
 
     // MARK: - 13 · Byte-cap >256KB without crash (B-05)
