@@ -25,8 +25,10 @@ private enum L {
     static let closeOnboarding = ["閉じる", "Close", "Chiudi"]
     static let settingsTab = ["設定", "Settings", "Impostazioni"]
     static let clipboardToggle = ["Keep clipboard histories", "クリップボードの履歴を保存"]
-    static let captureBar = ["コピーした内容を追加", "現在のクリップボードを追加"]
+    static let captureBar = ["コピーした内容を追加", "現在のクリップボードを追加", "Add copied text", "Add current clipboard"]
     static let clipboardTab = ["コピー履歴", "clipboard_history_tab", "doc.badge.clock"]
+    /// Flick key whose LONG-PRESS toggles the tab bar (FlickCustomKeySetting: ☆123 → .toggleTabBar).
+    static let tabBarToggleKey = ["☆123", "123"]
 }
 
 @MainActor
@@ -471,34 +473,43 @@ final class CopakyCampaignTests: XCTestCase {
         dump(safari, "12-after-capture")
     }
 
-    /// Open the コピー履歴 tab from Copaky's tab bar.
+    /// Open the コピー履歴 (clipboard history) tab from Copaky's tab bar.
+    /// Navigation: long-press the ☆123 flick key → `.toggleTabBar` shows the tab bar → tap the pinned
+    /// clipboard item (SF Symbol doc.badge.clock, added by the setting's onEnabled).
     private func openClipboardTab() throws {
         dismissCopakyNotice(in: safari)
         if firstMatch(in: safari, labels: L.captureBar, timeout: 2) != nil { return }
-        // The tab bar item was added by the toggle's onEnabled (label: image doc.badge.clock).
-        if let tab = firstMatch(in: safari, labels: L.clipboardTab, timeout: 3) {
-            tab.tap()
-            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
-            if firstMatch(in: safari, labels: L.captureBar, timeout: 2) != nil { return }
+
+        // Try to reach the clipboard tab item directly (tab bar may already be visible).
+        func tapClipboardItem() -> Bool {
+            let symbolPred = NSPredicate(format: "identifier CONTAINS 'doc.badge.clock' OR label CONTAINS 'doc.badge.clock'")
+            let sym = safari.descendants(matching: .any).matching(symbolPred).firstMatch
+            if sym.exists && sym.isHittable { sym.tap(); return true }
+            if let tab = firstMatch(in: safari, labels: L.clipboardTab, timeout: 1) { tab.tap(); return true }
+            return false
         }
-        // Fallback: the tab bar item renders as an SF Symbol image with no text label.
-        // Probe images/buttons named after the symbol, then any pinned tab-bar button.
-        let symbolPred = NSPredicate(format: "identifier CONTAINS 'doc.badge.clock' OR label CONTAINS 'doc.badge.clock'")
-        let sym = safari.descendants(matching: .any).matching(symbolPred).firstMatch
-        if sym.exists && sym.isHittable {
-            sym.tap()
+        if tapClipboardItem(), firstMatch(in: safari, labels: L.captureBar, timeout: 2) != nil { return }
+
+        // Open the tab bar via the ☆123 key long-press, then tap the clipboard item.
+        let keyPred = NSPredicate(format: "label IN %@", L.tabBarToggleKey)
+        let toggleKey = safari.descendants(matching: .any).matching(keyPred).firstMatch
+        if toggleKey.waitForExistence(timeout: 4) {
+            toggleKey.press(forDuration: 1.0)
             RunLoop.current.run(until: Date().addingTimeInterval(0.8))
-            if firstMatch(in: safari, labels: L.captureBar, timeout: 2) != nil { return }
+            dismissCopakyNotice(in: safari)
+            shot("clipboard-tabbar-open")
+            if tapClipboardItem() {
+                RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+                if firstMatch(in: safari, labels: L.captureBar, timeout: 2) != nil { return }
+            }
         }
+
         dump(safari, "clipboard-tab-not-found")
         shot("clipboard-tab-not-found")
-        // The clipboard TAB is reached through azooKey's tab-bar navigation, which is intricate to
-        // drive from XCUITest against a fully custom SwiftUI keyboard. The clipboard MANAGER logic it
-        // fronts (capture-on-intent, 256KB byte-cap, bytewise-huge skip, secure-field guard,
-        // detect-without-capture, 7-day prune) is already covered by the passing unit tests in
-        // ClipboardHistoryManagerTests. Skip the UI-navigation leg rather than red-fail; the on-device
-        // session covers the real banner/pasteboard behavior (see reports/sim_test_2026-07.md §B).
-        throw XCTSkip("Clipboard tab-bar navigation not driven on Simulator; logic covered by ClipboardHistoryManagerTests + device session")
+        // Fallback: the clipboard MANAGER logic (capture-on-intent, 256KB byte-cap, bytewise-huge skip,
+        // secure-field guard, detect-without-capture, 7-day prune) is covered by the passing
+        // ClipboardHistoryManagerTests; the pasteboard banner is device-only (reports/sim_test_2026-07.md §B).
+        throw XCTSkip("Clipboard tab not reachable via tab-bar navigation on this run; logic covered by ClipboardHistoryManagerTests + device session")
     }
 
     // MARK: - 13 · Byte-cap >256KB without crash (B-05)
