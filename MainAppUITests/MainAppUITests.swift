@@ -604,4 +604,37 @@ final class CopakyCampaignTests: XCTestCase {
             shot("20-no-candidate")
         }
     }
+
+    // MARK: - 30 · Copaky extension: accent variations on long-press (EN QWERTY)
+
+    /// Switch Copaky's internal tab to English QWERTY via the language-switch key. The key shows the
+    /// TARGET language's shortSymbol (QwertyLanguageSwitchKeyModel.shortSymbol): "A" when currently on
+    /// the Japanese tab, "あ" when already on English (a no-op tap-avoidance case).
+    private func switchToEnglishTab(in app: XCUIApplication) {
+        dismissCopakyNotice(in: app)
+        let toEnglish = app.descendants(matching: .any)["A"]
+        if toEnglish.waitForExistence(timeout: 2) && toEnglish.isHittable {
+            toEnglish.tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+            dismissCopakyNotice(in: app)
+        }
+    }
+
+    /// Copaky extension (QwertyLayoutProvider.abcKeyboard): long-pressing "e" on the EN QWERTY layout
+    /// reveals Western-European accent variations ("è", "é", "ê", "ë"); dragging onto "è" and releasing
+    /// must input it.
+    func test30_accentVariationsOnLongPress() throws {
+        let field = focusField("plain-text")
+        switchToCopaky(in: safari)
+        switchToEnglishTab(in: safari)
+        shot("30-english-tab")
+        let eKey = safari.descendants(matching: .any)["e"]
+        XCTAssertTrue(eKey.waitForExistence(timeout: 4), "Key 'e' not found on Copaky EN keyboard")
+        let variant = safari.descendants(matching: .any)["è"]
+        eKey.press(forDuration: 0.6, thenDragTo: variant)
+        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+        shot("30-after-longpress")
+        let value = field.value as? String ?? ""
+        XCTAssertTrue(value.contains("è"), "Accent variation 'è' was not inserted via long-press (got '\(value)')")
+    }
 }

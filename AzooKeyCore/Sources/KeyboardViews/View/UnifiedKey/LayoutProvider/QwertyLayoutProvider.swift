@@ -207,6 +207,26 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
         func key(_ x: Double, _ y: Double, _ t: String) -> (UnifiedPositionSpecifier, any UnifiedKeyModelProtocol<Extension>) {
             (.init(x: x, y: y), QwertyGeneralKeyModel(labelType: .text(t), pressActions: { _ in [.input(t)] }, longPressActions: { _ in .none }, variations: [], direction: .right, showsTapBubble: true, role: .normal))
         }
+        // Copaky: Western-European accent variations on long-press / 長押しでアクセント記号入力（Copaky 拡張）
+        func v(_ s: String) -> QwertyVariationsModel.VariationElement { .init(label: .text(s), actions: [.input(s)]) }
+        func keyWithVariations(_ x: Double, _ y: Double, _ t: String, variations: [String], direction: VariationsViewDirection) -> (UnifiedPositionSpecifier, any UnifiedKeyModelProtocol<Extension>) {
+            (.init(x: x, y: y), QwertyGeneralKeyModel(labelType: .text(t), pressActions: { _ in [.input(t)] }, longPressActions: { _ in .none }, variations: variations.map(v), direction: direction, showsTapBubble: true, role: .normal))
+        }
+        let accentVariations: [String: (variations: [String], direction: VariationsViewDirection)] = [
+            "e": (["è", "é", "ê", "ë"], .right),
+            "u": (["ù", "ú", "û", "ü"], .left),
+            "i": (["ì", "í", "î", "ï"], .left),
+            "o": (["ò", "ó", "ô", "ö", "õ"], .left),
+            "a": (["à", "á", "â", "ä", "ã"], .right),
+            "n": (["ñ"], .left),
+            "c": (["ç"], .right),
+        ]
+        func accentKey(_ x: Double, _ y: Double, _ t: String) -> (UnifiedPositionSpecifier, any UnifiedKeyModelProtocol<Extension>) {
+            if let accent = accentVariations[t] {
+                return keyWithVariations(x, y, t, variations: accent.variations, direction: accent.direction)
+            }
+            return key(x, y, t)
+        }
         func dotKey() -> any UnifiedKeyModelProtocol<Extension> {
             QwertyGeneralKeyModel(
                 labelType: .text("."),
@@ -228,7 +248,7 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
         var dict: [UnifiedPositionSpecifier: any UnifiedKeyModelProtocol<Extension>] = [:]
         // Row 0
         for (i, c) in ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"].enumerated() {
-            let (pos, mdl) = key(Double(i), 0, c)
+            let (pos, mdl) = accentKey(Double(i), 0, c)
             dict[pos] = mdl
         }
         // Row 1 core letters
@@ -237,19 +257,19 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
         case .leftbottom:
             // No shift on row1; place core letters and dot key at end
             for (i, c) in core {
-                let (pos, mdl) = key(Double(i), 1, c)
+                let (pos, mdl) = accentKey(Double(i), 1, c)
                 dict[pos] = mdl
             }
             dict[.init(x: 9, y: 1)] = dotKey()
         case .left:
             dict[.init(x: 0, y: 1)] = QwertyShiftKeyModel<Extension>()
             for (i, c) in core {
-                let (pos, mdl) = key(Double(i + 1), 1, c)
+                let (pos, mdl) = accentKey(Double(i + 1), 1, c)
                 dict[pos] = mdl
             }
         case .off:
             for (i, c) in core {
-                let (pos, mdl) = key(Double(i), 1, c)
+                let (pos, mdl) = accentKey(Double(i), 1, c)
                 dict[pos] = mdl
             }
             dict[.init(x: 9, y: 1)] = QwertyAaKeyModel<Extension>()
@@ -258,7 +278,7 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
         let tabsAbc = tabKeys()
         dict[.init(x: 0, y: 2, width: 1.4)] = tabsAbc.languageKey
         for (i, c) in ["z", "x", "c", "v", "b", "n", "m"].enumerated() {
-            let (pos, mdl) = key(1.5 + Double(i), 2, c)
+            let (pos, mdl) = accentKey(1.5 + Double(i), 2, c)
             dict[pos] = mdl
         }
         dict[.init(x: 8.6, y: 2, width: 1.4)] = QwertyGeneralKeyModel(

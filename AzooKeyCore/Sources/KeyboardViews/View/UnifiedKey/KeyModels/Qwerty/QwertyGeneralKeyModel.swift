@@ -63,7 +63,21 @@ struct QwertyGeneralKeyModel<Extension: ApplicationSpecificKeyboardViewExtension
 
     func pressActions(variableStates: VariableStates) -> [ActionType] { press(variableStates) }
     func longPressActions(variableStates: VariableStates) -> LongpressActionType { longpress(variableStates) }
-    func variationSpace(variableStates _: VariableStates) -> UnifiedVariationSpace { .linear(variations, direction: direction) }
+    func variationSpace(variableStates: VariableStates) -> UnifiedVariationSpace {
+        // Copaky: 長押しバリエーションのラベルも英語シフト・Caps時は大文字化（actionsはdoAction側で大文字化済み）
+        if shouldUppercaseForEnglish,
+           variableStates.boolStates.isCapsLocked || variableStates.boolStates.isShifted,
+           variableStates.keyboardLanguage == .en_US {
+            let uppercased = variations.map { element -> QwertyVariationsModel.VariationElement in
+                if case let .text(text) = element.label {
+                    return QwertyVariationsModel.VariationElement(label: .text(text.uppercased()), actions: element.actions)
+                }
+                return element
+            }
+            return .linear(uppercased, direction: direction)
+        }
+        return .linear(variations, direction: direction)
+    }
     @MainActor func showsTapBubble(variableStates _: VariableStates) -> Bool { showsBubbleFlag }
 
     func label<ThemeExtension>(width: CGFloat, theme _: ThemeData<ThemeExtension>, states: VariableStates, color: Color?) -> KeyLabel<Extension> where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
