@@ -15,6 +15,10 @@ import UIKit
 struct ThemeIndices: Codable, Equatable {
     static var defaultThemeIndex: Int { 0 }
     static var classicDefaultThemeIndex: Int { -1 }
+    // Copaky: bundled preset themes / Copaky 同梱プリセットテーマ
+    static var copakyLightThemeIndex: Int { -2 }
+    static var copakyDarkThemeIndex: Int { -3 }
+    static var copakyRedThemeIndex: Int { -4 }
     var currentIndices: [Int] = [0]
     var selectedIndex: Int = 0
     var selectedIndex_dark: Int = 0
@@ -102,6 +106,15 @@ public struct ThemeIndexManager: Equatable {
             "Classic"
         case ThemeIndices.defaultThemeIndex:
             "Default"
+        // Copaky: bundled preset themes / Copaky 同梱プリセットテーマ
+        // NOTE: "Default"/"Classic" above are NOT localized (fixed strings, no Localizable.xcstrings entry);
+        //       these follow the same convention rather than introducing orphan catalog keys.
+        case ThemeIndices.copakyLightThemeIndex:
+            "Copaky Light"
+        case ThemeIndices.copakyDarkThemeIndex:
+            "Copaky Dark"
+        case ThemeIndices.copakyRedThemeIndex:
+            "Copaky Red"
         default:
             nil
         }
@@ -114,6 +127,16 @@ public struct ThemeIndexManager: Equatable {
         }
         if index == ThemeIndices.classicDefaultThemeIndex {
             return AzooKeySpecificTheme.default
+        }
+        // Copaky: bundled preset themes / Copaky 同梱プリセットテーマ
+        if index == ThemeIndices.copakyLightThemeIndex {
+            return AzooKeySpecificTheme.copakyLight
+        }
+        if index == ThemeIndices.copakyDarkThemeIndex {
+            return AzooKeySpecificTheme.copakyDark
+        }
+        if index == ThemeIndices.copakyRedThemeIndex {
+            return AzooKeySpecificTheme.copakyRed
         }
         let themeFileURL = Self.fileURL(name: "themes/theme_\(index).theme")
         let data = try Data(contentsOf: themeFileURL)
@@ -180,7 +203,8 @@ public struct ThemeIndexManager: Equatable {
     }
 
     public mutating func remove(index: Int) {
-        if index == 0 {
+        // Copaky: built-in themes (Default/Classic/presets) are never removable — was `index == 0` only.
+        if index <= 0 {
             return
         }
         self.index.currentIndices = self.index.currentIndices.filter {$0 != index}
@@ -202,7 +226,8 @@ public struct ThemeIndexManager: Equatable {
     public var indices: [Int] {
         let indices = index.currentIndices.filter {$0 > 0}.sorted()
         // 負のindexについてはシステム側で並べる
-        return [ThemeIndices.defaultThemeIndex, ThemeIndices.classicDefaultThemeIndex] + indices
+        // Copaky: bundled preset themes / Copaky 同梱プリセットテーマ — built-in群のすぐ後ろに並べる
+        return [ThemeIndices.defaultThemeIndex, ThemeIndices.classicDefaultThemeIndex, ThemeIndices.copakyLightThemeIndex, ThemeIndices.copakyDarkThemeIndex, ThemeIndices.copakyRedThemeIndex] + indices
     }
 
     public var selectedIndex: Int {

@@ -92,4 +92,56 @@ extension AzooKeySpecificTheme: ApplicationSpecificKeyboardViewExtensionLayoutDe
         suggestLabelTextColor: nil,
         keyShadow: nil
     )
+
+    // Copaky: bundled preset themes / Copaky 同梱プリセットテーマ
+    public static let copakyLight = AzooKeyTheme(
+        backgroundColor: .color(Color(.displayP3, red: 0.96, green: 0.96, blue: 0.97)),
+        picture: .none,
+        textColor: .color(Color(.displayP3, white: 0, opacity: 1)),
+        textFont: .regular,
+        resultTextColor: .color(Color(.displayP3, white: 0, opacity: 1)),
+        resultBackgroundColor: .color(Color(.displayP3, red: 0.96, green: 0.96, blue: 0.97)),
+        borderColor: .color(Color(white: 0, opacity: 1)),
+        borderWidth: 0,
+        normalKeyFillColor: .color(Color(.displayP3, white: 1, opacity: 1)),
+        specialKeyFillColor: .color(Color(.displayP3, red: 0.86, green: 0.86, blue: 0.88)),
+        pushedKeyFillColor: .color(Color(.displayP3, red: 0.90, green: 0.90, blue: 0.92)),
+        suggestKeyFillColor: .color(Color(.displayP3, white: 1, opacity: 1)),
+        suggestLabelTextColor: .color(Color(.displayP3, white: 0, opacity: 1)),
+        keyShadow: nil
+    )
+
+    public static let copakyDark = AzooKeyTheme(
+        backgroundColor: .color(Color(.displayP3, red: 0.11, green: 0.11, blue: 0.12)),
+        picture: .none,
+        textColor: .color(Color(.displayP3, white: 1, opacity: 1)),
+        textFont: .regular,
+        resultTextColor: .color(Color(.displayP3, white: 1, opacity: 1)),
+        resultBackgroundColor: .color(Color(.displayP3, red: 0.11, green: 0.11, blue: 0.12)),
+        borderColor: .color(Color(white: 0, opacity: 1)),
+        borderWidth: 0,
+        normalKeyFillColor: .color(Color(.displayP3, red: 0.24, green: 0.24, blue: 0.26)),
+        specialKeyFillColor: .color(Color(.displayP3, red: 0.17, green: 0.17, blue: 0.19)),
+        pushedKeyFillColor: .color(Color(.displayP3, red: 0.32, green: 0.32, blue: 0.34)),
+        suggestKeyFillColor: .color(Color(.displayP3, white: 1, opacity: 1)),
+        suggestLabelTextColor: .color(Color(.displayP3, white: 0, opacity: 1)),
+        keyShadow: nil
+    )
+
+    public static let copakyRed = AzooKeyTheme(
+        backgroundColor: .color(Color(.displayP3, red: 0.06, green: 0.06, blue: 0.07)),
+        picture: .none,
+        textColor: .color(Color(.displayP3, white: 1, opacity: 1)),
+        textFont: .regular,
+        resultTextColor: .color(Color(.displayP3, white: 1, opacity: 1)),
+        resultBackgroundColor: .color(Color(.displayP3, red: 0.06, green: 0.06, blue: 0.07)),
+        borderColor: .color(Color(white: 0, opacity: 1)),
+        borderWidth: 0,
+        normalKeyFillColor: .color(Color(.displayP3, red: 0.16, green: 0.16, blue: 0.17)),
+        specialKeyFillColor: .color(Color(.displayP3, red: 0.78, green: 0.12, blue: 0.12)),
+        pushedKeyFillColor: .color(Color(.displayP3, red: 0.28, green: 0.28, blue: 0.30)),
+        suggestKeyFillColor: .color(Color(.displayP3, white: 1, opacity: 1)),
+        suggestLabelTextColor: .color(Color(.displayP3, white: 0, opacity: 1)),
+        keyShadow: nil
+    )
 }
