@@ -182,7 +182,8 @@ public struct UserDictionaryMigrationCoordinator {
             return (currentEntries, false)
         }
         // Skip for fresh installs on or after nextVersion
-        if let initial = SharedStore.initialAppVersion, initial >= .azooKey_v3_0_1 {
+        // Copaky: isCopakyEra — a 0.x initial install is fresh, there is no legacy dictionary to migrate
+        if let initial = SharedStore.initialAppVersion, initial >= .azooKey_v3_0_1 || initial.isCopakyEra {
             store.set(true, forKey: flagKey)
             return (currentEntries, false)
         }

@@ -68,6 +68,16 @@ public struct AppVersion: Codable, Equatable, Comparable, Hashable, LosslessStri
     }
 }
 public extension AppVersion {
+    /// Copaky: this fork restarted versioning below 1.0 (0.1, 0.2, ...), while the
+    /// upstream azooKey history lives in 1.7.1...3.x. A Copaky-era initial install
+    /// must therefore be treated by every upstream version gate as a fresh install
+    /// on the latest upstream base, never as a pre-1.x legacy azooKey install.
+    /// Copaky: このフォークは 1.0 未満（0.1, 0.2, …）で採番し直しているため、
+    /// 上流のバージョンゲートでは「最新上流での新規インストール」として扱うこと。
+    var isCopakyEra: Bool {
+        majorVersion < 1
+    }
+
     static let azooKey_v3_0_3 = AppVersion("3.0.3")!
     static let azooKey_v3_0_2 = AppVersion("3.0.2")!
     static let azooKey_v3_0_1 = AppVersion("3.0.1")!

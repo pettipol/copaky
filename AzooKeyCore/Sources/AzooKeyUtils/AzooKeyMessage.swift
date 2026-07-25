@@ -69,7 +69,9 @@ public enum AzooKeyMessageProvider: ApplicationSpecificKeyboardViewMessageProvid
                 },
                 silentDoneCondition: {
                     // ダウンロードがv1.9以降の場合はDone
-                    if (SharedStore.initialAppVersion ?? .azooKey_v1_7_1) >= .azooKey_v1_9 {
+                    // Copaky: isCopakyEra — a 0.x initial install is fresh, mark done silently
+                    let initial = SharedStore.initialAppVersion ?? .azooKey_v1_7_1
+                    if initial >= .azooKey_v1_9 || initial.isCopakyEra {
                         return true
                     }
                     return false

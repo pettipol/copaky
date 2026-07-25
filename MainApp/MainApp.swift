@@ -71,7 +71,8 @@ struct MainApp: App {
                         messageManager.done($0.id)
                     }
                     // 設定を上書きする
-                    if let initialVersion = SharedStore.initialAppVersion, initialVersion > .azooKey_v2_2_2 {
+                    // Copaky: isCopakyEra — a 0.x initial install is a fresh install, not a pre-2.2.3 legacy one
+                    if let initialVersion = SharedStore.initialAppVersion, initialVersion > .azooKey_v2_2_2 || initialVersion.isCopakyEra {
                         // Version 2.2.3以降にインストールしたユーザにはこのオプションを有効化しない
                         KeepDeprecatedShiftKeyBehavior.value = false
                     }

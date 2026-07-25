@@ -69,7 +69,8 @@ struct SettingTabView: View {
                         BoolSettingView(.useShiftKey)
                             .searchKeys("シフトキー")
                         // Version 2.2.2以前にインストールしており、UseShiftKey.valueがtrueの人にのみこのオプションを表示する
-                        if #unavailable(iOS 18), let initialVersion = SharedStore.initialAppVersion, initialVersion <= .azooKey_v2_2_2, UseShiftKey.value == true {
+                        // Copaky: isCopakyEra — never a legacy azooKey install, hide the deprecated toggle
+                        if #unavailable(iOS 18), let initialVersion = SharedStore.initialAppVersion, initialVersion <= .azooKey_v2_2_2, !initialVersion.isCopakyEra, UseShiftKey.value == true {
                             BoolSettingView(.keepDeprecatedShiftKeyBehavior)
                                 .searchKeys("シフトキー")
                         }

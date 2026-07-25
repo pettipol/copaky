@@ -44,6 +44,8 @@ SEED="$REPO_DIR/scripts/seed_sim_clipboard.sh"
 DEST="id=$UDID"
 GROUP_ID="group.com.pettipol.copaky"
 KB_BUNDLE="com.pettipol.copaky.keyboard"
+EXPECTED_W=1320   # ASC 2026 6.9" portrait
+EXPECTED_H=2868
 
 if [[ "$LANG_ARG" == "ja" ]]; then
   DEMO_URL="https://copaky.app/demo.ja"
@@ -178,8 +180,11 @@ bash "$SEED" --lang "$LANG_ARG" --udid "$UDID"
 # ---- e. screenshot run ---------------------------------------------------------
 XCRESULT="$ART_DIR/$LANG_ARG.xcresult"
 rm -rf "$XCRESULT"
+# A failed rerun must never leave stale shots from a previous run looking current.
+rm -f "$OUT_DIR"/shot0[1-6].png
 openurl_clean
 log "Running screenshot suite (SIGNED)"
+XCB_STATUS=0
 TEST_RUNNER_COPAKY_DEMO_URL="$DEMO_URL" \
 TEST_RUNNER_COPAKY_CLIPBOARD_CANARY="482913" \
 xcodebuild test \
@@ -191,7 +196,9 @@ xcodebuild test \
   -only-testing:"$UITEST_BUNDLE/CopakyScreenshotTests/test_shot04_privacy" \
   -only-testing:"$UITEST_BUNDLE/CopakyScreenshotTests/test_shot05_themes" \
   -only-testing:"$UITEST_BUNDLE/CopakyScreenshotTests/test_shot06_english" \
-  2>&1 | tail -60 || true
+  2>&1 | tail -60 || XCB_STATUS=$?
+# Keep going even on failure: export whatever the xcresult holds for debugging,
+# but the final gate below fails the script.
 
 # ---- export attachments → PNGs -------------------------------------------------
 EXPORT_DIR="$ART_DIR/${LANG_ARG}_attachments"
@@ -201,7 +208,10 @@ if [[ ! -d "$XCRESULT" ]]; then
   exit 1
 fi
 log "Exporting attachments"
-xcrun xcresulttool export attachments --path "$XCRESULT" --output-path "$EXPORT_DIR" >/dev/null 2>&1 || true
+if ! xcrun xcresulttool export attachments --path "$XCRESULT" --output-path "$EXPORT_DIR" >/dev/null 2>&1; then
+  log "FATAL: attachment export failed ($XCRESULT)"
+  exit 1
+fi
 
 COPAKY_EXPORT_DIR="$EXPORT_DIR" COPAKY_OUT_DIR="$OUT_DIR" /usr/bin/python3 - <<'PY'
 import json, os, re, shutil
@@ -235,11 +245,16 @@ if missing:
     print("MISSING:", ", ".join(missing))
 PY
 
-# ---- f. flatten (strip alpha) + verify dims ------------------------------------
+# ---- f. flatten (strip alpha) + verify dims (hard gate) -------------------------
 log "Flattening + verifying PNGs"
+GATE_FAIL=0
 for i in 1 2 3 4 5 6; do
   P="$OUT_DIR/shot0$i.png"
-  [[ -f "$P" ]] || { log "shot0$i: MISSING (skipped or failed)"; continue; }
+  if [[ ! -f "$P" ]]; then
+    log "shot0$i: MISSING"
+    GATE_FAIL=1
+    continue
+  fi
   HAS_ALPHA="$(sips -g hasAlpha "$P" 2>/dev/null | awk '/hasAlpha/{print $2}')"
   if [[ "$HAS_ALPHA" == "yes" ]]; then
     TMPBMP="$OUT_DIR/.shot0$i.bmp"
@@ -251,6 +266,19 @@ for i in 1 2 3 4 5 6; do
   H="$(sips -g pixelHeight "$P" 2>/dev/null | awk '/pixelHeight/{print $2}')"
   A="$(sips -g hasAlpha    "$P" 2>/dev/null | awk '/hasAlpha/{print $2}')"
   log "shot0$i: ${W}x${H} hasAlpha=${A}"
+  if [[ "$W" != "$EXPECTED_W" || "$H" != "$EXPECTED_H" || "$A" != "no" ]]; then
+    log "shot0$i: FAIL (expected ${EXPECTED_W}x${EXPECTED_H} hasAlpha=no)"
+    GATE_FAIL=1
+  fi
 done
 
-log "=== DONE lang=$LANG_ARG → $OUT_DIR ==="
+if [[ "$XCB_STATUS" -ne 0 ]]; then
+  log "FATAL: screenshot suite exited with status $XCB_STATUS — do not trust this set"
+  exit 1
+fi
+if [[ "$GATE_FAIL" -ne 0 ]]; then
+  log "FATAL: output gate failed — missing/wrong-size/alpha screenshots (see above)"
+  exit 1
+fi
+
+log "=== DONE lang=$LANG_ARG → $OUT_DIR (6/6 fresh, ${EXPECTED_W}x${EXPECTED_H}, no alpha) ==="
