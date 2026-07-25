@@ -10,30 +10,17 @@ import KeyboardViews
 import SwiftUI
 
 struct HeaderLogoView: View {
-    @Environment(\.colorScheme) private var colorScheme
-    private var iconColor: Color {
-        Color("IconColor")
-    }
     private var iconSize: CGFloat = 40
 
     var body: some View {
-        Group {
-            switch colorScheme {
-            case .light:
-                Text(verbatim: "A")
-                    .font(Design.fonts.azooKeyIconFont(iconSize * 0.75))
-                    .accessibilityLabel("Copakyのロゴ")
-            case .dark:
-                Text(verbatim: "B")
-                    .font(Design.fonts.azooKeyIconFont(iconSize * 0.75))
-                    .accessibilityLabel("Copakyのロゴ")
-            @unknown default:
-                Text(verbatim: "Copaky")
-                    .font(Font(UIFont.systemFont(ofSize: iconSize)))
-                    .accessibilityLabel("Copakyのロゴ")
-            }
+        HStack(spacing: 9) {
+            CopakyMark(fontSize: iconSize * 0.75)
+            Text(verbatim: "Copaky")
+                .font(.system(size: iconSize * 0.62, weight: .bold, design: .rounded))
+                .foregroundStyle(.primary)
         }
-        .foregroundStyle(iconColor)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Copakyのロゴ")
     }
 }
 

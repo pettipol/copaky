@@ -8,7 +8,7 @@
 
 import SwiftUI
 import SwiftUIUtils
-import struct KeyboardViews.AzooKeyIcon
+import struct KeyboardViews.CopakyMark
 
 struct EnableAzooKeyViewHeader: View {
     private let text: LocalizedStringKey
@@ -19,7 +19,7 @@ struct EnableAzooKeyViewHeader: View {
     var body: some View {
         CenterAlignedView {
             HStack {
-                AzooKeyIcon(fontSize: 30, relativeTo: .title)
+                CopakyMark(fontSize: 30, relativeTo: .title)
                 Text(text)
                     .font(.title.bold())
             }
