@@ -1,6 +1,76 @@
 {
   "sourceLanguage" : "ja",
   "strings" : {
+    "フリックで文頭まで削除" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flick to delete to line start"
+          }
+        }
+      }
+    },
+    "削除キーを左にフリックすると文頭まで一括削除します。オフにすると1文字ずつ削除します。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flick the delete key to the left to delete everything back to the start of the line. Turn this off to delete one character at a time instead."
+          }
+        }
+      }
+    },
+    "絵文字キーボードを開く" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open emoji keyboard"
+          }
+        }
+      }
+    },
+    "固定済み" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinned"
+          }
+        }
+      }
+    },
+    "タブバーを開く" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open tab bar"
+          }
+        }
+      }
+    },
+    "キーボードのサイズを変更" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resize keyboard"
+          }
+        }
+      }
+    },
+    "パスワード入力中は使用できません" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not available while entering a password"
+          }
+        }
+      }
+    },
     "コピーした内容を追加" : {
       "localizations" : {
         "en" : {
@@ -1262,22 +1332,6 @@
         }
       }
     },
-    "azooKeyの開発に協力" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Support azooKey development"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
-        }
-      }
-    },
     "Copakyは、キーボードの振動フィードバックや、キーボードからのペーストを実現するために、フルアクセスの許可が必要です。フルアクセスを許可していただくことで、これらの機能が使用できます。" : {
       "localizations" : {
         "en" : {
@@ -1593,16 +1647,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
-          }
-        }
-      }
-    },
-    "macOS版azooKeyで好評な高精度な変換システム「Zenzai」がついにiOS版でも利用できます" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The highly accurate conversion system 'Zenzai', popular on macOS azooKey, is now available on iOS."
           }
         }
       }
@@ -5244,22 +5288,6 @@
         }
       }
     },
-    "フルアクセスをオンにすると、変換候補を長押しすることでキーボード上で誤変換を報告できるようになります。" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "When you turn on full access, you can report mis-conversions on the keyboard by long-pressing conversion candidates."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
-        }
-      }
-    },
     "フルアクセスを有効化する際、以下のような警告が表示されますが、すべてのキーボードアプリで共通して表示されている警告です。" : {
       "localizations" : {
         "en" : {
@@ -7305,22 +7333,6 @@
         }
       }
     },
-    "報告の際には、「アプリのバージョン」「変換候補と読みと順位」「ローマ字入力かフリック入力か」「学習のあり/なし」の情報がサーバに送信されます。" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "When reporting, information such as the app version, conversion candidate, reading, ranking, input method (roman character input or flick input), and whether or not learning is enabled will be sent to the server."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
-        }
-      }
-    },
     "場所・建物などの名前である" : {
       "localizations" : {
         "en" : {
@@ -7517,22 +7529,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Display tab bar button when there is no candidates"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
-        }
-      }
-    },
-    "変換精度向上のため、報告をいただけると大変助かります。" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reporting would be greatly appreciated as it helps improve conversion accuracy."
           }
         },
         "ja" : {
@@ -11235,22 +11231,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Select"
-          }
-        }
-      }
-    },
-    "選択した候補や周辺文脈などの情報をサーバに送信し、azooKeyの変換精度改善に貢献することができます。" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "You can send the selected candidate, its surrounding context, and other information to help improve azooKey's conversion accuracy."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }

@@ -131,4 +131,159 @@ final class ClipboardHistoryManagerTests: XCTestCase {
         manager.captureCurrentClipboard(isSecureEntry: false)
         XCTAssertTrue(manager.items.isEmpty, "Entro il cap caratteri ma oltre il cap byte → l'elemento va rifiutato")
     }
+
+    // MARK: - persistence (envelope versionato, decode tollerante) / persistence (versioned envelope, tolerant decode)
+
+    private func makeTempSaveDirectory() -> URL {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try! FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }
+
+    private func historyFileURL(in directory: URL) -> URL {
+        directory.appendingPathComponent("clipboard_history.json", isDirectory: false)
+    }
+
+    private func texts(_ items: [ClipboardHistoryItem]) -> [String] {
+        items.compactMap { item -> String? in
+            if case .text(let t) = item.content { return t }
+            return nil
+        }
+    }
+
+    @MainActor
+    func testRoundTripEnvelopeFormat() throws {
+        let dir = makeTempSaveDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let config = MockClipboardHistoryManagerConfiguration(saveDirectory: dir)
+        let now = Date()
+        let item1 = ClipboardHistoryItem(content: .text("alpha"), createdData: now, pinnedDate: now)
+        let item2 = ClipboardHistoryItem(content: .text("beta"), createdData: now.addingTimeInterval(-10))
+        let item3 = ClipboardHistoryItem(content: .text("gamma"), createdData: now.addingTimeInterval(-20))
+
+        SemiStaticStates.shared.setHasFullAccess(true)
+        defer { SemiStaticStates.shared.setHasFullAccess(false) }
+        try ClipboardHistoryManager.save([item1, item2, item3], config: config)
+
+        let encoded = try Data(contentsOf: historyFileURL(in: dir))
+        let topLevel = try JSONSerialization.jsonObject(with: encoded)
+        let dict = try XCTUnwrap(topLevel as? [String: Any], "Il formato su disco deve essere un envelope (dizionario), non un array nudo")
+        XCTAssertEqual(dict["schemaVersion"] as? Int, 1)
+        XCTAssertEqual((dict["items"] as? [Any])?.count, 3)
+
+        let loaded = try ClipboardHistoryManager.load(config: config)
+        XCTAssertEqual(Set(texts(loaded)), Set(["alpha", "beta", "gamma"]))
+    }
+
+    @MainActor
+    func testLoadLegacyBareArrayMigrates() throws {
+        let dir = makeTempSaveDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let config = MockClipboardHistoryManagerConfiguration(saveDirectory: dir)
+        let now = Date()
+        let item1 = ClipboardHistoryItem(content: .text("legacy-one"), createdData: now)
+        let item2 = ClipboardHistoryItem(content: .text("legacy-two"), createdData: now.addingTimeInterval(-5))
+
+        // Wire format legacy pre-versioning: array nudo, senza envelope.
+        let legacyEncoded = try JSONEncoder().encode([item1, item2])
+        try legacyEncoded.write(to: historyFileURL(in: dir))
+
+        let loaded = try ClipboardHistoryManager.load(config: config)
+        XCTAssertEqual(Set(texts(loaded)), Set(["legacy-one", "legacy-two"]), "Il formato legacy (array nudo) deve continuare a essere leggibile")
+
+        SemiStaticStates.shared.setHasFullAccess(true)
+        defer { SemiStaticStates.shared.setHasFullAccess(false) }
+        try ClipboardHistoryManager.save(loaded, config: config)
+
+        let migratedEncoded = try Data(contentsOf: historyFileURL(in: dir))
+        let migratedTopLevel = try JSONSerialization.jsonObject(with: migratedEncoded)
+        XCTAssertNotNil(migratedTopLevel as? [String: Any], "Dopo un save il file deve migrare all'envelope (dizionario), non restare un array nudo")
+    }
+
+    @MainActor
+    func testLoadDropsCorruptedItemKeepsGood() throws {
+        let now = Date().timeIntervalSinceReferenceDate
+        func itemJSON(_ text: String) -> String {
+            "{\"content\":{\"text\":{\"_0\":\"\(text)\"}},\"createdData\":\(now)}"
+        }
+
+        // Variante A: envelope versionato con un item corrotto (42) in mezzo a due validi.
+        let envelopeDir = makeTempSaveDirectory()
+        defer { try? FileManager.default.removeItem(at: envelopeDir) }
+        let envelopeConfig = MockClipboardHistoryManagerConfiguration(saveDirectory: envelopeDir)
+        let envelopeJSON = "{\"schemaVersion\":1,\"items\":[\(itemJSON("good1")),42,\(itemJSON("good2"))]}"
+        try envelopeJSON.data(using: .utf8)!.write(to: historyFileURL(in: envelopeDir))
+        let envelopeItems = try ClipboardHistoryManager.load(config: envelopeConfig)
+        XCTAssertEqual(Set(texts(envelopeItems)), Set(["good1", "good2"]), "L'item corrotto deve decadere a nil, i due validi restano")
+
+        // Variante B: array nudo legacy con un item corrotto in mezzo a due validi.
+        let legacyDir = makeTempSaveDirectory()
+        defer { try? FileManager.default.removeItem(at: legacyDir) }
+        let legacyConfig = MockClipboardHistoryManagerConfiguration(saveDirectory: legacyDir)
+        let legacyJSON = "[\(itemJSON("good3")),42,\(itemJSON("good4"))]"
+        try legacyJSON.data(using: .utf8)!.write(to: historyFileURL(in: legacyDir))
+        let legacyItems = try ClipboardHistoryManager.load(config: legacyConfig)
+        XCTAssertEqual(Set(texts(legacyItems)), Set(["good3", "good4"]), "Anche nel formato legacy l'item corrotto decade, i validi restano")
+    }
+
+    @MainActor
+    func testCorruptTopLevelYieldsEmptyNoCrashNoClobber() throws {
+        let dir = makeTempSaveDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let config = MockClipboardHistoryManagerConfiguration(saveDirectory: dir)
+        let originalBytes = "not json".data(using: .utf8)!
+        try originalBytes.write(to: historyFileURL(in: dir))
+
+        XCTAssertThrowsError(try ClipboardHistoryManager.load(config: config), "Un file corrotto/non-JSON deve far fallire load, non crashare")
+
+        var manager = ClipboardHistoryManager(config: config, clipboardSource: FakeClipboardSource(hasStrings: false, string: nil))
+        XCTAssertTrue(manager.items.isEmpty, "Con un file corrotto init deve produrre una history vuota, senza crash")
+
+        SemiStaticStates.shared.setHasFullAccess(true)
+        defer { SemiStaticStates.shared.setHasFullAccess(false) }
+        manager.save()
+
+        let bytesAfterSaveAttempt = try Data(contentsOf: historyFileURL(in: dir))
+        XCTAssertEqual(bytesAfterSaveAttempt, originalBytes, "Con history collassata, save() deve essere no-op: il file corrotto non va sovrascritto (anti-clobber)")
+    }
+
+    @MainActor
+    func testNewerSchemaVersionPreserved() throws {
+        let dir = makeTempSaveDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let config = MockClipboardHistoryManagerConfiguration(saveDirectory: dir)
+        let originalBytes = "{\"schemaVersion\":99,\"items\":[]}".data(using: .utf8)!
+        try originalBytes.write(to: historyFileURL(in: dir))
+
+        XCTAssertThrowsError(try ClipboardHistoryManager.load(config: config)) { error in
+            guard case ClipboardHistoryManager.IOError.unsupportedSchemaVersion(let version) = error else {
+                XCTFail("Atteso IOError.unsupportedSchemaVersion, trovato \(error)")
+                return
+            }
+            XCTAssertEqual(version, 99)
+        }
+
+        var manager = ClipboardHistoryManager(config: config, clipboardSource: FakeClipboardSource(hasStrings: false, string: nil))
+        XCTAssertTrue(manager.items.isEmpty, "Uno schema più nuovo del build corrente non va letto: history vuota")
+
+        SemiStaticStates.shared.setHasFullAccess(true)
+        defer { SemiStaticStates.shared.setHasFullAccess(false) }
+        manager.save()
+
+        let bytesAfterSaveAttempt = try Data(contentsOf: historyFileURL(in: dir))
+        XCTAssertEqual(bytesAfterSaveAttempt, originalBytes, "save() deve essere no-op: non sovrascrivere un file di schema futuro")
+    }
+
+    @MainActor
+    func testOversizedRawFileYieldsEmpty() throws {
+        let dir = makeTempSaveDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let config = MockClipboardHistoryManagerConfiguration(saveDirectory: dir)
+        // La guardia anti-tamper controlla la size dei byte grezzi PRIMA del decode: non serve JSON valido.
+        let oversizedBytes = Data(repeating: 0x20, count: ClipboardHistoryManager.maxRawFileBytes + 1)
+        try oversizedBytes.write(to: historyFileURL(in: dir))
+
+        let loaded = try ClipboardHistoryManager.load(config: config)
+        XCTAssertTrue(loaded.isEmpty, "Un file oltre maxRawFileBytes deve restituire [] senza lanciare")
+    }
 }

@@ -206,6 +206,23 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
             interface.keys[.gridFit(.init(x: 4, y: 1))] = .system(.nextCandidate)
             custard.interface = interface
         }
+        // フリック左の「文頭まで削除」をオフ設定なら取り除く / strip the flick-left smooth-delete variation when disabled
+        if !Extension.SettingProvider.enableSmoothDelete {
+            var interface = custard.interface
+            for (position, key) in interface.keys {
+                guard case .custom(var customKey) = key else {
+                    continue
+                }
+                let variationCount = customKey.variations.count
+                customKey.variations.removeAll { variation in
+                    variation.type == .flickVariation(.left) && variation.key.press_actions.contains(.smartDeleteDefault)
+                }
+                if customKey.variations.count != variationCount {
+                    interface.keys[position] = .custom(customKey)
+                }
+            }
+            custard.interface = interface
+        }
         return custard
     }
 }

@@ -1017,7 +1017,7 @@ struct EmojiTabShortcutCandidate: ResultViewItemData {
     #if DEBUG
     func getDebugInformation() -> String { "EmojiTabShortcutCandidate" }
     #endif
-    init(systemImageName: String = "ellipsis.circle", accessibilityLabel: String = "絵文字キーボードを開く") {
+    init(systemImageName: String = "ellipsis.circle", accessibilityLabel: String = String(localized: "絵文字キーボードを開く")) {
         self.systemImageName = systemImageName
         self.accessibilityLabel = accessibilityLabel
     }

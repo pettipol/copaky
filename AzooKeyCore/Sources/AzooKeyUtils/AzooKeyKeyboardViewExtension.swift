@@ -78,6 +78,10 @@ public enum AzooKeyKeyboardViewExtension: ApplicationSpecificKeyboardViewExtensi
         EnablePasteButton.value
     }
 
+    public static var enableSmoothDelete: Bool {
+        EnableSmoothDelete.value
+    }
+
     public static var displayTabBarButton: Bool {
         true
     }

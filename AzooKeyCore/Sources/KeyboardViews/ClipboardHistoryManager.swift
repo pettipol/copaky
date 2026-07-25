@@ -72,6 +72,8 @@ public struct ClipboardHistoryManager {
     /// Tetto sui byte grezzi del file di cronologia: non deserializzare blob enormi (anti-tamper)
     /// nella memoria stretta dell'estensione tastiera.
     static let maxRawFileBytes = 4 * 1024 * 1024
+    /// Versione corrente dello schema di clipboard_history.json. / Current schema version of clipboard_history.json.
+    static let currentSchemaVersion = 1
 
     @MainActor private var enabled: Bool {
         config.enabled
@@ -197,6 +199,23 @@ public struct ClipboardHistoryManager {
         config.saveDirectory?.appendingPathComponent("clipboard_history.json", isDirectory: false)
     }
 
+    /// Envelope versionato (formato v1+): {"schemaVersion": 1, "items": [...]}.
+    struct HistoryFile: Codable {
+        var schemaVersion: Int
+        var items: [ClipboardHistoryItem]
+    }
+
+    /// Un item corrotto decade a nil invece di far fallire l'intero array. / A corrupted item decays to nil instead of failing the whole array.
+    private struct FailableItem: Decodable {
+        let item: ClipboardHistoryItem?
+        init(from decoder: Decoder) throws { self.item = try? ClipboardHistoryItem(from: decoder) }
+    }
+
+    private struct TolerantHistoryFile: Decodable {
+        var schemaVersion: Int
+        var items: [FailableItem]
+    }
+
     static func load(config: any ClipboardHistoryManagerConfiguration) throws -> [ClipboardHistoryItem] {
         guard let historyFileURL = historyFileURL(config: config) else {
             throw IOError.sharedDirectoryInaccessible
@@ -217,7 +236,28 @@ public struct ClipboardHistoryManager {
             debug("ClipboardHistoryManager.load: history file oversized, ignoring", encoded.count)
             return []
         }
-        var items = try JSONDecoder().decode([ClipboardHistoryItem].self, from: encoded)
+        let decoder = JSONDecoder()
+        var items: [ClipboardHistoryItem]
+        if let envelope = try? decoder.decode(TolerantHistoryFile.self, from: encoded) {
+            guard envelope.schemaVersion <= Self.currentSchemaVersion else {
+                // File di un build più nuovo: non leggerlo e non sovrascriverlo (collapsed → save no-op).
+                throw IOError.unsupportedSchemaVersion(envelope.schemaVersion)
+            }
+            let decoded = envelope.items.compactMap(\.item)
+            if decoded.count != envelope.items.count {
+                debug("ClipboardHistoryManager.load: dropped corrupted item(s)", envelope.items.count - decoded.count)
+            }
+            items = decoded
+        } else if let legacy = try? decoder.decode([FailableItem].self, from: encoded) {
+            // Formato legacy pre-versioning (array nudo): decode item-by-item tolerant.
+            let decoded = legacy.compactMap(\.item)
+            if decoded.count != legacy.count {
+                debug("ClipboardHistoryManager.load: dropped corrupted legacy item(s)", legacy.count - decoded.count)
+            }
+            items = decoded
+        } else {
+            throw IOError.malformedHistoryFile
+        }
         // I cap sono invarianti veri, indipendenti da come è stato prodotto il file: scarta gli item
         // sovradimensionati e applica `maxCount` anche in lettura (non solo in cattura).
         items.removeAll { item in
@@ -238,6 +278,10 @@ public struct ClipboardHistoryManager {
         case lackFullAccess
         /// 共有ディレクトリにアクセスできない
         case sharedDirectoryInaccessible
+        /// ファイルのスキーマバージョンが現在のビルドより新しい / File's schema version is newer than the current build
+        case unsupportedSchemaVersion(Int)
+        /// ファイルの形式が不正で読み込めない / File format is malformed and cannot be read
+        case malformedHistoryFile
     }
 
     @MainActor static func save(_ items: [ClipboardHistoryItem], config: any ClipboardHistoryManagerConfiguration) throws {
@@ -249,10 +293,8 @@ public struct ClipboardHistoryManager {
         guard let historyFileURL = historyFileURL(config: config) else {
             throw IOError.sharedDirectoryInaccessible
         }
-        let encoder = JSONEncoder()
-        let encoded = try encoder.encode(items)
-
-        try encoded.write(to: historyFileURL)
+        let encoded = try JSONEncoder().encode(HistoryFile(schemaVersion: Self.currentSchemaVersion, items: items))
+        try encoded.write(to: historyFileURL, options: .atomic)
     }
 }
 

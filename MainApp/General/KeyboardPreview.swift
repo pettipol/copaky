@@ -54,8 +54,8 @@ struct KeyboardPreview: View {
             .onAppear {
                 variableStates.resultModel.setResults([
                     CandidateMock(text: "Copaky"),
-                    CandidateMock(text: "あずーきー"),
-                    CandidateMock(text: "アズーキー"),
+                    CandidateMock(text: "こぱきー"),
+                    CandidateMock(text: "コパキー"),
                 ])
             }
     }

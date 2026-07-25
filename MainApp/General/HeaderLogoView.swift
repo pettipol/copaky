@@ -30,6 +30,7 @@ struct HeaderLogoView: View {
             @unknown default:
                 Text(verbatim: "Copaky")
                     .font(Font(UIFont.systemFont(ofSize: iconSize)))
+                    .accessibilityLabel("Copakyのロゴ")
             }
         }
         .foregroundStyle(iconColor)

@@ -23,6 +23,7 @@ struct PasteButton: View {
         } label: {
             Image(systemName: "doc.on.clipboard")
         }
+        .accessibilityLabel(Text("ペースト"))
     }
 }
 
@@ -42,5 +43,13 @@ struct PasteLongPressButton: View {
                 }
             }
             .foregroundStyle(.accentColor)
+            .accessibilityLabel(Text("ペースト"))
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction {
+                if let string = UIPasteboard.general.string {
+                    MainAppFeedback.success()
+                    text = string
+                }
+            }
     }
 }

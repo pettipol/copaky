@@ -28,5 +28,6 @@ struct TabBarButton<Extension: ApplicationSpecificKeyboardViewExtension>: View {
         KeyboardBarButton<Extension>(label: .azooKeyIcon(isXmas ? .santaClaus : isSummerDay ? .strawHat : .normal)) {
             self.action.registerAction(.setTabBar(.toggle), variableStates: variableStates)
         }
+        .accessibilityLabel(Text("タブバーを開く"))
     }
 }

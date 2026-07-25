@@ -129,6 +129,8 @@ struct SettingTabView: View {
                     if self.canFlickLayout(appStates.japaneseLayout) {
                         FlickSensitivitySettingView(.flickSensitivity)
                             .searchKeys("フリックの感度", "感度")
+                        BoolSettingView(.enableSmoothDelete)
+                            .searchKeys("文頭まで削除", "スムーズ削除", "削除", "フリック")
                     }
                 }
                 .inheritSearchKeys()

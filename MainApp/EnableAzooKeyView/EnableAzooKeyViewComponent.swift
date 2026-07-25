@@ -40,6 +40,7 @@ struct EnableAzooKeyViewText: View {
     var body: some View {
         HStack {
             Image(systemName: systemName)
+                .accessibilityHidden(true)
             Text(text)
         }
         .lineLimit(nil)
@@ -101,5 +102,6 @@ struct EnableAzooKeyViewImage: View {
             .scaledToFit()
             .cornerRadius(2)
             .frame(maxWidth: MainAppDesign.imageMaximumWidth)
+            .accessibilityHidden(true)
     }
 }

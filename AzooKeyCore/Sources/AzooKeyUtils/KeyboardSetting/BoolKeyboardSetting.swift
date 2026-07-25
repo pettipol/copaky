@@ -216,6 +216,19 @@ public extension KeyboardSettingKey where Self == EnablePasteButton {
     static var enablePasteButton: Self { .init() }
 }
 
+/// 削除キーの左フリックで文頭まで削除する設定 / Toggle for the flick-left "delete to line start" gesture
+/// - note: フリックレイアウトのみ対象。オフにすると左フリックでも1文字削除になる。
+public struct EnableSmoothDelete: BoolKeyboardSettingKey {
+    public static let title: LocalizedStringKey = "フリックで文頭まで削除"
+    public static let explanation: LocalizedStringKey = "削除キーを左にフリックすると文頭まで一括削除します。オフにすると1文字ずつ削除します。"
+    public static let defaultValue = true
+    public static let key: String = "enable_smooth_delete_flick"
+}
+
+public extension KeyboardSettingKey where Self == EnableSmoothDelete {
+    static var enableSmoothDelete: Self { .init() }
+}
+
 /// 「連絡先」アプリの名前情報を読み込む設定
 /// - note: この機能はフルアクセスがないと実現できない
 public struct EnableContactImport: BoolKeyboardSettingKey {

@@ -35,9 +35,30 @@ struct TabBarView<Extension: ApplicationSpecificKeyboardViewExtension>: View {
                 Text(text)
             case let .image(image):
                 Image(systemName: image)
+                    .accessibilityLabel(tabItemAccessibilityLabel(for: item, symbolName: image))
             }
         }
         .buttonStyle(ResultButtonStyle<Extension>(height: Design.keyboardBarHeight(interfaceHeight: variableStates.interfaceSize.height, orientation: variableStates.keyboardOrientation) * 0.6))
+    }
+
+    /// タブバーの画像アイテムに付与するアクセシビリティラベル。アクションから意味のある説明を導出し、
+    /// マッチしない場合はSF Symbol名にフォールバックする。
+    private func tabItemAccessibilityLabel(for item: TabBarItem, symbolName: String) -> Text {
+        for action in item.actions {
+            switch action {
+            case .moveTab(.system(.clipboard_history_tab)):
+                return Text("クリップボードの履歴")
+            case .moveTab(.system(.emoji_tab)):
+                return Text("絵文字")
+            case .dismissKeyboard:
+                return Text("キーボードを閉じる")
+            case .enableResizingMode:
+                return Text("キーボードのサイズを変更")
+            default:
+                continue
+            }
+        }
+        return Text(verbatim: symbolName)
     }
 
     var body: some View {

@@ -116,6 +116,7 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
         } label: {
             HStack {
                 Image(systemName: "doc.on.clipboard")
+                    .accessibilityHidden(true)
                 Text(variableStates.clipboardHistoryManager.hasPendingClipboard ? "コピーした内容を追加" : "現在のクリップボードを追加")
             }
             .font(.system(size: 13, weight: .medium))
@@ -124,6 +125,7 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
         }
         .disabled(variableStates.isSecureEntry)
         .opacity(variableStates.isSecureEntry ? 0.4 : 1)
+        .accessibilityHint(variableStates.isSecureEntry ? Text("パスワード入力中は使用できません") : Text(""))
         .padding(.horizontal, 12)
     }
 
@@ -191,9 +193,11 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
     }
     private func deleteKey(_ design: TabDependentDesign) -> some View {
         SimpleKeyView<Extension>(model: SimpleKeyModel<Extension>(keyLabelType: .image("delete.left"), unpressedKeyColorType: .special, pressActions: [.delete(1)], longPressActions: .init(repeat: [.delete(1)])), tabDesign: design)
+            .accessibilityLabel(Text("削除キー"))
     }
     private func backTabKey(_ design: TabDependentDesign) -> some View {
         SimpleKeyView<Extension>(model: SimpleKeyModel<Extension>(keyLabelType: .text("戻る"), unpressedKeyColorType: .special, pressActions: [.moveTab(.system(.last_tab))], longPressActions: .none), tabDesign: design)
+            .accessibilityLabel(Text("戻る"))
     }
 
     var body: some View {
@@ -262,8 +266,17 @@ private struct ClipboardTileView<Extension: ApplicationSpecificKeyboardViewExten
     let onUnpin: (Int) -> Void
     let onDelete: (Int) -> Void
 
+    /// アクセシビリティラベルに使うプレビュー文字列。表示中の`TextTileContent`と同じ切り詰めロジックを使う
+    /// （最大50kにもなる`item.content`全体をVoiceOverに読ませない）。
+    private var accessibilityPreviewText: String {
+        switch item.content {
+        case .text(let string):
+            return String(string.prefix(TextTileContent.displayPreviewLimit))
+        }
+    }
+
     var body: some View {
-        RoundedRectangle(cornerRadius: 8)
+        let tile = RoundedRectangle(cornerRadius: 8)
             .strokeAndFill(
                 fillContent: self.background.color.blendMode(self.background.blendMode),
                 strokeContent: pinned ? Color.orange : Color.clear,
@@ -309,6 +322,31 @@ private struct ClipboardTileView<Extension: ApplicationSpecificKeyboardViewExten
                     Label("削除", systemImage: "trash")
                 }
             }
+            .accessibilityElement(children: .ignore)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityLabel(Text(verbatim: accessibilityPreviewText))
+            .accessibilityAction(named: pinned ? Text("固定解除") : Text("固定")) {
+                guard let index else {
+                    return
+                }
+                if pinned {
+                    onUnpin(index)
+                } else {
+                    onPin(index)
+                }
+            }
+            .accessibilityAction(named: Text("削除")) {
+                guard let index else {
+                    return
+                }
+                onDelete(index)
+            }
+
+        if pinned {
+            tile.accessibilityValue(Text("固定済み"))
+        } else {
+            tile
+        }
     }
 }
 
