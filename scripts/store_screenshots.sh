@@ -175,13 +175,22 @@ fi
 
 # ---- d. seed -------------------------------------------------------------------
 log "Seeding clipboard container (lang=$LANG_ARG)"
-bash "$SEED" --lang "$LANG_ARG" --udid "$UDID"
+if ! bash "$SEED" --lang "$LANG_ARG" --udid "$UDID"; then
+  log "FATAL: clipboard seed failed — stale history from a previous language pass could leak into shot03"
+  exit 1
+fi
 
 # ---- e. screenshot run ---------------------------------------------------------
 XCRESULT="$ART_DIR/$LANG_ARG.xcresult"
 rm -rf "$XCRESULT"
 # A failed rerun must never leave stale shots from a previous run looking current.
 rm -f "$OUT_DIR"/shot0[1-6].png
+for i in 1 2 3 4 5 6; do
+  if [[ -e "$OUT_DIR/shot0$i.png" ]]; then
+    log "FATAL: could not clear stale $OUT_DIR/shot0$i.png"
+    exit 1
+  fi
+done
 openurl_clean
 log "Running screenshot suite (SIGNED)"
 XCB_STATUS=0
@@ -244,6 +253,10 @@ missing = [s for s in wanted if s not in best]
 if missing:
     print("MISSING:", ", ".join(missing))
 PY
+if [[ $? -ne 0 ]]; then
+  log "FATAL: attachment mapping failed (python)"
+  exit 1
+fi
 
 # ---- f. flatten (strip alpha) + verify dims (hard gate) -------------------------
 log "Flattening + verifying PNGs"
