@@ -7,9 +7,8 @@ It is an **independent project** built on — and crediting — [azooKey](https:
 (MIT): it keeps azooKey's high-quality Japanese conversion engine while reworking the clipboard, privacy,
 and telemetry behaviour around a strict **on-device, no-network** model.
 
-> **Status: private / pre-release (v0.1).** Not on the App Store yet. Real-device validation (memory/RSS
-> budget, `UIPasteControl` paste flow) and the security pass are still pending; the repository is private
-> for now.
+> **Status: pre-release (v0.1).** Not on the App Store yet — real-device validation and TestFlight
+> dogfooding are in progress ahead of the first submission.
 
 ## Based on azooKey
 

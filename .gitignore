@@ -1,3 +1,6 @@
+# Copaky machine-local signing (personal DEVELOPMENT_TEAM — see Copaky.xcconfig)
+/Copaky.local.xcconfig
+
 # azooKey Settings
 /Gen/generated/*.gen
 /Keyboard/Dictionary/*.binary

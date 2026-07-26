@@ -26,7 +26,6 @@ if [[ "$LANG_ARG" != "en" && "$LANG_ARG" != "ja" ]] || [[ "$APPEAR" != "light" &
 fi
 
 UDID="${COPAKY_UDID:-E0552C62-FFDB-4DF6-9040-2734DB5B2458}"
-TEAM="4XDQKU66NJ"
 SCHEME="CopakyUITests"
 UITEST_BUNDLE="azooKeyUITests"
 REPO_DIR="/Users/vittoriovillani/SviluppoTastieraOpen/vendor/azooKey"
@@ -44,6 +43,12 @@ fi
 
 mkdir -p "$OUT_DIR" "$ART_DIR"
 log() { echo "[$(date +%H:%M:%S)] $*"; }
+# Signing team: env override, else machine-local xcconfig (see CONTRIBUTING.md)
+TEAM="${COPAKY_TEAM:-$(sed -n 's/^[[:space:]]*DEVELOPMENT_TEAM[[:space:]]*=[[:space:]]*//p' "$REPO_DIR/Copaky.local.xcconfig" 2>/dev/null | head -n1)}"
+if [[ -z "$TEAM" ]]; then
+  echo "FATAL: no signing team — set COPAKY_TEAM or create $REPO_DIR/Copaky.local.xcconfig with: DEVELOPMENT_TEAM = <your team id>" >&2
+  exit 1
+fi
 sign_args=(-allowProvisioningUpdates DEVELOPMENT_TEAM="$TEAM" CODE_SIGN_STYLE=Automatic)
 
 status_bar() {

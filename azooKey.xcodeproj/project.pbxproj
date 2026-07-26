@@ -103,6 +103,7 @@
 
 /* Begin PBXFileReference section */
 		1A09112B2A20B13C00ABFC72 /* Dictionary */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Dictionary; path = ../azooKey_dictionary_storage/Dictionary; sourceTree = "<group>"; };
+		C0BAC0DE26072600000000A1 /* Copaky.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Copaky.xcconfig; sourceTree = "<group>"; };
 		1A3DC1C22500D44A002CAA93 /* azooKey.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = azooKey.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1A3DC1C92500D44B002CAA93 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		1A3DC1CB2500D44E002CAA93 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -226,6 +227,7 @@
 		1A3DC1B92500D44A002CAA93 = {
 			isa = PBXGroup;
 			children = (
+				C0BAC0DE26072600000000A1 /* Copaky.xcconfig */,
 				1AF3060029FE6C2800B4DAC3 /* AzooKeyCore */,
 				1AA346B42567F26000B41A16 /* Resources */,
 				1A3DC1C42500D44A002CAA93 /* MainApp */,
@@ -628,6 +630,7 @@
 /* Begin XCBuildConfiguration section */
 		1A3DC1EA2500D44E002CAA93 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C0BAC0DE26072600000000A1 /* Copaky.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -664,7 +667,6 @@
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = 4XDQKU66NJ;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -700,6 +702,7 @@
 		};
 		1A3DC1EB2500D44E002CAA93 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C0BAC0DE26072600000000A1 /* Copaky.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -736,7 +739,6 @@
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = 4XDQKU66NJ;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = NO;
