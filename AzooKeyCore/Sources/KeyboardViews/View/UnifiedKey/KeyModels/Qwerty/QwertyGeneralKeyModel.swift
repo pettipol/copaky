@@ -84,9 +84,15 @@ struct QwertyGeneralKeyModel<Extension: ApplicationSpecificKeyboardViewExtension
         // Emulate QwertyKeyModel: uppercase for en_US when shifted or caps（必要時のみ）
         if shouldUppercaseForEnglish,
            states.boolStates.isCapsLocked || states.boolStates.isShifted,
-           states.keyboardLanguage == .en_US,
-           case let .text(text) = labelType {
-            return KeyLabel(.text(text.uppercased()), width: width, textColor: color)
+           states.keyboardLanguage == .en_US {
+            switch labelType {
+            case let .text(text):
+                return KeyLabel(.text(text.uppercased()), width: width, textColor: color)
+            case let .textWithUpperHint(main, hint):
+                return KeyLabel(.textWithUpperHint(main.uppercased(), hint), width: width, textColor: color)
+            default:
+                break
+            }
         }
         return KeyLabel(labelType, width: width, textColor: color)
     }
