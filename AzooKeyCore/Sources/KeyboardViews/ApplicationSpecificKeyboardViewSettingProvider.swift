@@ -28,6 +28,8 @@ import Foundation
     static var enablePasteButton: Bool { get }
     /// 削除キーの左フリックで文頭まで削除する / Flick-left "delete to line start" on the delete key
     static var enableSmoothDelete: Bool { get }
+    /// QWERTY最上段に数字ヒントを表示し、長押しで入力できるようにする / Number hints + long-press digits on the QWERTY top row
+    static var enableNumberRowHints: Bool { get }
     static var hideResetButtonInOneHandedMode: Bool { get }
     static var useShiftKey: Bool { get }
     static var keepDeprecatedShiftKeyBehavior: Bool { get }

@@ -18,6 +18,9 @@ public enum KeyLabelType: Sendable, Equatable {
     case customImage(String)
     case changeKeyboard
     case selectable(String, String)
+    /// Copaky: main text with a small hint rendered ABOVE it (e.g. digit hints on the QWERTY top row)
+    /// メイン文字の上に小さなヒントを表示する（QWERTY最上段の数字ヒント用）
+    case textWithUpperHint(String, String)
 }
 
 public struct DirectionalKeyLabel: View {
@@ -143,6 +146,22 @@ public struct KeyLabel<Extension: ApplicationSpecificKeyboardViewExtension>: Vie
         case .changeKeyboard:
             (self.action.makeChangeKeyboardButtonView() as ChangeKeyboardButtonView<Extension>)
                 .foregroundStyle(mainKeyColor)
+
+        case let .textWithUpperHint(main, hint):
+            let font = Design.fonts.keyLabelFont(text: main, width: width, fontSize: self.textSize, userDecidedSize: keyViewFontSize, theme: theme)
+            let hintFont = Design.fonts.keyLabelFont(text: hint, width: width, fontSize: .xsmall, userDecidedSize: keyViewFontSize, theme: theme)
+            VStack(spacing: -1) {
+                Text(hint)
+                    .font(hintFont)
+                    .foregroundStyle(mainKeyColor.opacity(0.6))
+                Text(main)
+                    .font(font)
+                    .foregroundStyle(mainKeyColor)
+            }
+            // VoiceOver reads the letter only — the digit is a visual hint, reachable via long-press
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(verbatim: main))
+            .allowsHitTesting(false)
 
         case let .selectable(primary, secondery):
             let font = Design.fonts.keyLabelFont(text: primary + primary, width: width, fontSize: self.textSize, userDecidedSize: keyViewFontSize, theme: theme)

@@ -1,6 +1,26 @@
 {
   "sourceLanguage" : "ja",
   "strings" : {
+    "上段に数字を表示" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show numbers on the top row"
+          }
+        }
+      }
+    },
+    "QWERTYの最上段に数字を小さく表示し、長押しで入力できます。オフにすると通常のキー表示になります。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shows small digits on the QWERTY top row; long-press a key to type the digit. When off, keys show letters only."
+          }
+        }
+      }
+    },
     "フリックで文頭まで削除" : {
       "localizations" : {
         "en" : {

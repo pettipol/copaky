@@ -464,7 +464,7 @@
 			};
 			buildConfigurationList = 1A3DC1BD2500D44A002CAA93 /* Build configuration list for PBXProject "azooKey" */;
 			compatibilityVersion = "Xcode 12.0";
-			developmentRegion = ja;
+			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,

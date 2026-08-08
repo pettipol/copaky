@@ -133,6 +133,8 @@ struct SettingTabView: View {
                         BoolSettingView(.enableSmoothDelete)
                             .searchKeys("文頭まで削除", "スムーズ削除", "削除", "フリック")
                     }
+                    BoolSettingView(.enableNumberRowHints)
+                        .searchKeys("数字", "数字キー", "ナンバー", "上段", "number")
                 }
                 .inheritSearchKeys()
 

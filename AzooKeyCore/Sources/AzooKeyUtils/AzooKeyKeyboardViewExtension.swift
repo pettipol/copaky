@@ -82,6 +82,10 @@ public enum AzooKeyKeyboardViewExtension: ApplicationSpecificKeyboardViewExtensi
         EnableSmoothDelete.value
     }
 
+    public static var enableNumberRowHints: Bool {
+        EnableNumberRowHints.value
+    }
+
     public static var displayTabBarButton: Bool {
         true
     }

@@ -29,6 +29,7 @@ private enum L {
     static let clipboardTab = ["コピー履歴", "clipboard_history_tab", "doc.badge.clock"]
     /// Flick key whose LONG-PRESS toggles the tab bar (FlickCustomKeySetting: ☆123 → .toggleTabBar).
     static let tabBarToggleKey = ["☆123", "123"]
+    static let numberHintsToggle = ["Show numbers on the top row", "上段に数字を表示"]
 }
 
 @MainActor
@@ -636,5 +637,94 @@ final class CopakyCampaignTests: XCTestCase {
         shot("30-after-longpress")
         let value = field.value as? String ?? ""
         XCTAssertTrue(value.contains("è"), "Accent variation 'è' was not inserted via long-press (got '\(value)')")
+    }
+
+    /// Focus a field on a page the ORCHESTRATOR already opened in Safari via `simctl openurl`
+    /// (iOS 26 gotcha: the "-u" launch argument opens the Start Page instead of navigating).
+    private func activatePreNavigatedField(_ placeholder: String) -> XCUIElement {
+        safari.activate()
+        let web = safari.webViews.firstMatch
+        XCTAssertTrue(web.waitForExistence(timeout: 10), "Safari webview did not load (page must be pre-opened via simctl openurl)")
+        for closeLabel in ["Chiudi", "Close", "OK", "Continua", "Continue"] {
+            let x = safari.buttons[closeLabel]
+            if x.exists && x.isHittable {
+                x.tap()
+                RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+            }
+        }
+        let pred = NSPredicate(format: "label == %@ OR placeholderValue == %@ OR identifier == %@ OR value == %@", placeholder, placeholder, placeholder, placeholder)
+        var field = web.descendants(matching: .any).matching(pred).firstMatch
+        if !field.waitForExistence(timeout: 6) {
+            web.swipeUp()
+            field = web.descendants(matching: .any).matching(pred).firstMatch
+        }
+        XCTAssertTrue(field.waitForExistence(timeout: 6), "Field \(placeholder) not found in pre-navigated page")
+        field.tap()
+        return field
+    }
+
+    // MARK: - 31 · Copaky extension: optional number hints on the QWERTY top row
+
+    /// Copaky extension (EnableNumberRowHints, default OFF): after enabling the toggle in
+    /// MainApp ▸ Settings, the EN QWERTY top row carries digit hints and long-pressing "q"
+    /// must input "1" via the leading variation.
+    func test31_numberRowHintsOnLongPress() throws {
+        // 1. Enable the toggle in MainApp settings (idempotent: skip if already ON)
+        mainApp.launch()
+        if let close = firstMatch(in: mainApp, labels: L.closeOnboarding, timeout: 4) {
+            close.tap()
+        }
+        openSettingsTab()
+        var toggle = firstMatch(in: mainApp, labels: L.numberHintsToggle, timeout: 6)
+        var swipes = 0
+        while toggle == nil && swipes < 6 {
+            mainApp.swipeUp()
+            swipes += 1
+            toggle = firstMatch(in: mainApp, labels: L.numberHintsToggle, timeout: 2)
+        }
+        guard let toggle else {
+            dump(mainApp, "31-no-toggle")
+            XCTFail("Number-hints toggle not found in MainApp settings")
+            return
+        }
+        let sw = mainApp.switches.matching(NSPredicate(format: "label IN %@", L.numberHintsToggle)).firstMatch
+        let alreadyOn = (sw.exists ? (sw.value as? String) : nil) == "1"
+        if !alreadyOn {
+            // SwiftUI Toggle: tapping the cell center does NOT flip it — tap the right side where
+            // the switch sits (same gotcha as test10's Full Access toggle).
+            let target = sw.exists ? sw : toggle
+            target.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+        }
+        if sw.exists {
+            XCTAssertEqual(sw.value as? String, "1", "Number-hints toggle did not turn ON")
+        }
+        shot("31-toggle-on")
+
+        // 2. Long-press "q" on the EN QWERTY tab and drag onto the "1" variation.
+        // NOTE: on iOS 26 Safari ignores the "-u" launch argument (see store_screenshots.sh);
+        // the orchestrator must pre-navigate with `xcrun simctl openurl` — here we only activate.
+        let field = activatePreNavigatedField("plain-text")
+        switchToCopaky(in: safari)
+        // Flick JP tab → EN via the ABC key; on the QWERTY JP tab use the language-switch key.
+        // (Orchestrator must set keyboard_type_en=roman so the EN tab is QWERTY, not flick.)
+        let abcKey = safari.descendants(matching: .any)["ABC"]
+        if abcKey.waitForExistence(timeout: 2) && abcKey.isHittable {
+            abcKey.tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+            dismissCopakyNotice(in: safari)
+        } else {
+            switchToEnglishTab(in: safari)
+        }
+        shot("31-english-tab")
+        // firstMatch everywhere: the magnifier bubble duplicates the key label during the press
+        let qKey = safari.descendants(matching: .any).matching(NSPredicate(format: "label == 'q'")).firstMatch
+        XCTAssertTrue(qKey.waitForExistence(timeout: 4), "Key 'q' not found on Copaky EN keyboard")
+        let variant = safari.descendants(matching: .any).matching(NSPredicate(format: "label == '1'")).firstMatch
+        qKey.press(forDuration: 0.6, thenDragTo: variant)
+        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+        shot("31-after-longpress")
+        let value = field.value as? String ?? ""
+        XCTAssertTrue(value.contains("1"), "Digit '1' was not inserted via long-press (got '\(value)')")
     }
 }

@@ -229,6 +229,19 @@ public extension KeyboardSettingKey where Self == EnableSmoothDelete {
     static var enableSmoothDelete: Self { .init() }
 }
 
+/// QWERTY最上段に数字ヒントを表示する設定 / Optional number hints on the QWERTY top row
+/// - note: 基本入力の一部でありフルアクセス不要。ラベルに数字を小さく表示し、長押しバリエーションの先頭に数字を追加する。
+public struct EnableNumberRowHints: BoolKeyboardSettingKey {
+    public static let title: LocalizedStringKey = "上段に数字を表示"
+    public static let explanation: LocalizedStringKey = "QWERTYの最上段に数字を小さく表示し、長押しで入力できます。オフにすると通常のキー表示になります。"
+    public static let defaultValue = false
+    public static let key: String = "enable_qwerty_number_row_hints"
+}
+
+public extension KeyboardSettingKey where Self == EnableNumberRowHints {
+    static var enableNumberRowHints: Self { .init() }
+}
+
 /// 「連絡先」アプリの名前情報を読み込む設定
 /// - note: この機能はフルアクセスがないと実現できない
 public struct EnableContactImport: BoolKeyboardSettingKey {

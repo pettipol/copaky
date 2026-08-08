@@ -1,6 +1,12 @@
 import CustardKit
 import Foundation
 
+// Copaky: optional number hints on the QWERTY top row / QWERTY最上段の数字ヒント（長押しで入力）
+private let qwertyTopRowDigits: [String: String] = [
+    "q": "1", "w": "2", "e": "3", "r": "4", "t": "5",
+    "y": "6", "u": "7", "i": "8", "o": "9", "p": "0",
+]
+
 struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
     enum ShiftBehaviorPreference {
         case left
@@ -172,10 +178,24 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
             )
         }
         var dict: [UnifiedPositionSpecifier: any UnifiedKeyModelProtocol<Extension>] = [:]
-        // Row 0
+        // Row 0 (digit leads the long-press variations when number hints are on)
+        let numberHints = Extension.SettingProvider.enableNumberRowHints
         for (i, c) in ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"].enumerated() {
-            let (pos, mdl) = key(Double(i), 0, c)
-            dict[pos] = mdl
+            if numberHints, let digit = qwertyTopRowDigits[c] {
+                let direction: VariationsViewDirection = i < 5 ? .right : .left
+                dict[.init(x: Double(i), y: 0)] = QwertyGeneralKeyModel(
+                    labelType: .textWithUpperHint(c, digit),
+                    pressActions: { _ in [.input(c)] },
+                    longPressActions: { _ in .none },
+                    variations: [.init(label: .text(digit), actions: [.input(digit)])],
+                    direction: direction,
+                    showsTapBubble: true,
+                    role: .normal
+                )
+            } else {
+                let (pos, mdl) = key(Double(i), 0, c)
+                dict[pos] = mdl
+            }
         }
         // Row 1 letters + bar key at end
         for (i, c) in ["a", "s", "d", "f", "g", "h", "j", "k", "l"].enumerated() {
@@ -227,6 +247,17 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
             }
             return key(x, y, t)
         }
+        // Copaky: with number hints on, the digit leads the long-press variations and shows above the letter
+        // 数字ヒントON時は長押しバリエーションの先頭に数字を置き、キー上部に小さく表示する（アクセント記号は数字の後ろに残る）
+        func topRowKey(_ x: Double, _ t: String) -> (UnifiedPositionSpecifier, any UnifiedKeyModelProtocol<Extension>) {
+            guard Extension.SettingProvider.enableNumberRowHints, let digit = qwertyTopRowDigits[t] else {
+                return accentKey(x, 0, t)
+            }
+            let accent = accentVariations[t]
+            let direction = accent?.direction ?? (x < 5 ? VariationsViewDirection.right : .left)
+            let variations = [digit] + (accent?.variations ?? [])
+            return (.init(x: x, y: 0), QwertyGeneralKeyModel(labelType: .textWithUpperHint(t, digit), pressActions: { _ in [.input(t)] }, longPressActions: { _ in .none }, variations: variations.map(v), direction: direction, showsTapBubble: true, role: .normal))
+        }
         func dotKey() -> any UnifiedKeyModelProtocol<Extension> {
             QwertyGeneralKeyModel(
                 labelType: .text("."),
@@ -248,7 +279,7 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
         var dict: [UnifiedPositionSpecifier: any UnifiedKeyModelProtocol<Extension>] = [:]
         // Row 0
         for (i, c) in ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"].enumerated() {
-            let (pos, mdl) = accentKey(Double(i), 0, c)
+            let (pos, mdl) = topRowKey(Double(i), c)
             dict[pos] = mdl
         }
         // Row 1 core letters
