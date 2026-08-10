@@ -120,8 +120,7 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
                     variableStates.capturePastedText(text)
                     self.target.reload(manager: variableStates.clipboardHistoryManager)
                     KeyboardFeedback<Extension>.click()
-                },
-                tint: UIColor(theme.textColor.color)
+                }
             )
             .frame(height: 34)
             .padding(.horizontal, 12)

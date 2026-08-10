@@ -165,10 +165,11 @@ public struct ClipboardHistoryManager {
         self.insert(text: string, now: now)
     }
 
-    /// Copaky — capture of text HANDED to us by the system (`UIPasteControl`), which never touches
-    /// `UIPasteboard`: iOS treats the tap on its own paste button as the user's intent and delivers
-    /// the value directly, so no "pasted from…" banner appears. Same guards and same caps as
-    /// `captureCurrentClipboard`; the only difference is where the string comes from.
+    /// Copaky — capture of text HANDED to us by the system (`UIPasteControl`). It never reads the
+    /// pasteboard VALUE — it only advances our copy of `changeCount`, which is metadata: iOS treats the
+    /// tap on its own paste button as the user's intent and delivers the string directly, so no
+    /// "pasted from…" banner appears. Same guards and same caps as `captureCurrentClipboard`; the only
+    /// difference is where the string comes from.
     /// Copaky — システムのペーストボタン経由で渡されたテキストの取り込み。
     /// UIPasteboard を読まないためバナーが出ない。ガードと上限は通常の取り込みと同一。
     @MainActor public mutating func captureProvidedText(_ string: String, isSecureEntry: Bool, now: Date = Date()) {

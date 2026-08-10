@@ -120,11 +120,23 @@ extension View {
     }
 }
 
+extension String {
+    /// Copaky: normalise a search key or a query so that matching ignores case and accents.
+    /// The Japanese fold (hiragana → katakana) was already here; without the Latin fold a query typed
+    /// as "Numeri" or "sensibilità" would never match a key written "numeri" or "sensibilita",
+    /// which made the settings search unusable in Italian and unreliable in English.
+    /// Both sides of the comparison must be folded with this same property.
+    /// Copaky: 検索キーとクエリの正規化。大文字小文字とアクセント記号の違いを無視する。
+    var searchFolded: String {
+        self.toKatakana().folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
+    }
+}
+
 extension View {
     @ViewBuilder func searchKeys(_ keys: String...) -> some View {
-        let katakanaKey: Key = .prefixMatch(Set(keys.map {$0.toKatakana()}))
-        SearchQueriedItemView(content: self, key: katakanaKey)
-            .preference(key: SearchKeysPreferenceKey.self, value: katakanaKey)
+        let foldedKey: Key = .prefixMatch(Set(keys.map {$0.searchFolded}))
+        SearchQueriedItemView(content: self, key: foldedKey)
+            .preference(key: SearchKeysPreferenceKey.self, value: foldedKey)
     }
     func searchAlways() -> some View {
         SearchQueriedItemView(content: self, key: .always)

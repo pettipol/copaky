@@ -223,6 +223,8 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
             }
             custard.interface = interface
         }
-        return custard
+        // Copaky: last step — these are OUR custards, so their Japanese functional labels
+        // (CustardKit's 「空白」/「全角」) follow the UI language. User custards never pass through here.
+        return custard.localizingFunctionalLabels()
     }
 }

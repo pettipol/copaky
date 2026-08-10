@@ -1,6 +1,22 @@
 {
   "sourceLanguage" : "ja",
   "strings" : {
+    "オフのときは、よく使う設定だけを表示します。検索は隠れている設定も対象にします。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When off, only the settings most people need are shown. Search also looks inside the hidden ones."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quando è spento vengono mostrate solo le impostazioni più usate. La ricerca comprende anche quelle nascoste."
+          }
+        }
+      }
+    },
     "基本設定" : {
       "localizations" : {
         "en" : {
@@ -29,22 +45,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mostra tutte le impostazioni"
-          }
-        }
-      }
-    },
-    "オフのときは、よく使う設定だけを表示します。検索はすべての設定を対象にします。" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "When off, only the settings most people need are shown. Search always covers every setting."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Quando è spento vengono mostrate solo le impostazioni più usate. La ricerca riguarda comunque tutte le impostazioni."
           }
         }
       }
@@ -734,12 +734,6 @@
             "state" : "translated",
             "value" : "Aggiungi il testo copiato"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -755,12 +749,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aggiungi gli appunti correnti"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -778,12 +766,6 @@
             "state" : "translated",
             "value" : "Cronologia"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -799,12 +781,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Fissati"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -822,12 +798,6 @@
             "state" : "translated",
             "value" : "Fissa"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -843,12 +813,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Rimuovi fissaggio"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -866,12 +830,6 @@
             "state" : "translated",
             "value" : "Elimina tutto"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -887,12 +845,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Rimuovi tutti i fissaggi"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -910,12 +862,6 @@
             "state" : "translated",
             "value" : "Altro"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -931,28 +877,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dopo aver copiato il testo, tocca «Aggiungi» qui sopra per salvarlo qui"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
-        }
-      }
-    },
-    "" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -970,12 +894,6 @@
             "state" : "translated",
             "value" : "・'year='yyyy → year=1234 (il testo fisso va racchiuso tra apici singoli ')"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -991,12 +909,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "・%@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -1014,12 +926,6 @@
             "state" : "translated",
             "value" : "・EEE a HH:mm → gio AM 01:23"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -1035,12 +941,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "・yyyy/MM/dd HH:mm → 1234/01/23 01:23"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -1058,12 +958,6 @@
             "state" : "translated",
             "value" : "Puoi dire «%1$@(%2$@)»"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -1080,12 +974,6 @@
             "state" : "translated",
             "value" : "Importazione di «%1$@»(%2$@) riuscita"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -1101,12 +989,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Inserisci «%@»"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -1125,12 +1007,6 @@
             "state" : "translated",
             "value" : "Inserisci «%@» ripetutamente"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -1148,12 +1024,6 @@
             "state" : "translated",
             "value" : "Converte tra anno solare occidentale ed era giapponese, mostrando candidati come «2020ねん → 令和2年» e «れいわ2ねん → 2020年»."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -1170,12 +1040,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Converte il numero Unicode inserito nel carattere corrispondente, ad esempio «u3042 → あ». Sono supportati i prefissi u, u+, U e U+."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -1226,12 +1090,6 @@
             "state" : "translated",
             "value" : "Mostra candidati in inglese anche durante l'input in giapponese con romaji (QWERTY), ad esempio «いんてれsちんg → interesting»."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -1280,12 +1138,6 @@
             "state" : "translated",
             "value" : "Tocca «Tastiera»"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -1301,12 +1153,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Quando utilizzi funzioni come «Cronologia degli appunti» o il pulsante «Incolla», potresti visualizzare spesso una finestra di dialogo che chiede di consentire l'operazione di incolla."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -1372,12 +1218,6 @@
             "state" : "translated",
             "value" : "Informazioni sulla finestra «Consenti incolla»"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -1393,12 +1233,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Informazioni su «Incolla da altre app»"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -1416,12 +1250,6 @@
             "state" : "translated",
             "value" : "Attivare l'impostazione «Proteggi testo in composizione» potrebbe risolvere il problema."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -1437,12 +1265,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Puoi personalizzare i caratteri inseriti dai tasti «小ﾞﾟ» e «､｡?!»."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -1476,12 +1298,6 @@
             "state" : "translated",
             "value" : "Tocca «Una mano»."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -1499,12 +1315,6 @@
             "state" : "translated",
             "value" : "Tieni premuto «Spazio» per visualizzare la barra del cursore. Sui dispositivi senza pulsante Home, durante l'input a flick puoi visualizzarla anche toccando %@ in basso a sinistra."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -1520,12 +1330,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Apri l'app «Impostazioni»"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -1576,12 +1380,6 @@
             "state" : "translated",
             "value" : "Devi consentire l'accesso a «Contatti»"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -1615,12 +1413,6 @@
             "state" : "translated",
             "value" : "Posiziona il dito su %1$@ %2$@ e scorri a sinistra o a destra per spostare il cursore in modo fluido."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -1637,12 +1429,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tipo di tastiera %1$@ (attuale: %2$@)"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -1661,12 +1447,6 @@
             "state" : "translated",
             "value" : "Il modello «%@» non è stato trovato."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -1684,12 +1464,6 @@
             "state" : "translated",
             "value" : "%@, ecc."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -1706,12 +1480,6 @@
             "state" : "translated",
             "value" : "Sposta il cursore accanto a %@"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -1727,12 +1495,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Elimina fino a %@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -1751,12 +1513,6 @@
             "state" : "translated",
             "value" : "Per reimpostare, tocca %@."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -1773,12 +1529,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Per completare il ridimensionamento, tocca %@."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -1797,12 +1547,6 @@
             "state" : "translated",
             "value" : "Dopo aver toccato %@ per confermare, puoi usare la tastiera normalmente."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -1819,12 +1563,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tocca %@ per modificare di nuovo."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -1843,12 +1581,6 @@
             "state" : "translated",
             "value" : "Per tornare alla modalità a due mani, tocca %@."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -1866,12 +1598,6 @@
             "state" : "translated",
             "value" : "%@ può essere modificato"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -1888,12 +1614,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tieni premuto %@ per incollare"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -1928,12 +1648,6 @@
             "state" : "translated",
             "value" : "Sposta il cursore di %@ caratteri ripetutamente"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -1951,12 +1665,6 @@
             "state" : "translated",
             "value" : "Elimina %@ caratteri ripetutamente"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -1973,12 +1681,6 @@
             "state" : "translated",
             "value" : "Sposta il cursore di %@ caratteri"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -1994,12 +1696,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Elimina %@ caratteri"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -2018,12 +1714,6 @@
             "state" : "translated",
             "value" : "%@Cambia immagine"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -2041,12 +1731,6 @@
             "state" : "translated",
             "value" : "%@Seleziona immagine"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -2062,12 +1746,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@配信"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -2118,12 +1796,6 @@
             "state" : "translated",
             "value" : "Crea nuovo modello %"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -2140,12 +1812,6 @@
             "state" : "translated",
             "value" : "⚫︎%@"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -2161,12 +1827,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "1. Apri Impostazioni → Dizionario utente → Dizionario utente Copaky"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -2185,12 +1845,6 @@
             "state" : "translated",
             "value" : "Per spostarti di un carattere alla volta, tocca la sezione %2$@ o la sezione %3$@ di %1$@: il cursore si sposta di un carattere in ciascuna direzione."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -2206,12 +1860,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "2. Tocca «Aggiungi» in alto a destra"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -2229,12 +1877,6 @@
             "state" : "translated",
             "value" : "3. Nella schermata di modifica, attiva «Conversione ora/casuale»"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -2251,12 +1893,6 @@
             "state" : "translated",
             "value" : "4. Seleziona «Ora», poi scegli un preset (ad es. yyyy/MM/dd, HH:mm) oppure inserisci un formato personalizzato"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -2272,12 +1908,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ringraziamenti"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -2311,12 +1941,6 @@
             "state" : "translated",
             "value" : "Ora puoi usare Copaky!"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -2332,12 +1956,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hai attivato Copaky!"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -2355,12 +1973,6 @@
             "state" : "translated",
             "value" : "Con Copaky puoi ingrandire i caratteri sulla tastiera per verificarli."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -2376,12 +1988,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Con Copaky puoi personalizzare alcuni tasti. Puoi modificarli dal tab «Impostazioni»."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -2399,12 +2005,6 @@
             "state" : "translated",
             "value" : "Con Copaky puoi usare la modalità a una mano."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -2420,12 +2020,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "In alcune app, l'inserimento del testo potrebbe non funzionare correttamente per problemi di compatibilità con Copaky."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -2443,12 +2037,6 @@
             "state" : "translated",
             "value" : "Visualizza il codice sorgente di azooKey"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -2465,12 +2053,6 @@
             "state" : "translated",
             "value" : "Logo di Copaky"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -2486,12 +2068,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Copaky richiede l'autorizzazione per l'accesso completo per offrire funzioni come il feedback aptico della tastiera e l'incollaggio dalla tastiera. Concedendo l'accesso completo potrai utilizzare queste funzioni."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -2531,12 +2107,6 @@
             "state" : "translated",
             "value" : "Copaky controlla periodicamente gli appunti per salvare la cronologia degli appunti; utilizza queste informazioni anche quando incolli il testo."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -2552,12 +2122,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Copaky è un'app tastiera sicura e non trasmette né conserva informazioni personali senza il consenso esplicito dell'utente."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -2575,12 +2139,6 @@
             "state" : "translated",
             "value" : "Dizionario utente di Copaky"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -2596,12 +2154,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Subito dopo l'installazione di Copaky, la tastiera potrebbe non aprirsi in alcune app."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -2619,12 +2171,6 @@
             "state" : "translated",
             "value" : "Attiva Copaky"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -2640,12 +2186,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Buon divertimento con Copaky!"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -2664,12 +2204,6 @@
             "state" : "translated",
             "value" : "Prima di usare Copaky, devi aggiungerlo all'elenco delle tastiere di iPhone"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -2686,12 +2220,6 @@
             "state" : "translated",
             "value" : "Grazie per aver scelto Copaky!"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -2707,12 +2235,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Estendi Copaky"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -2746,12 +2268,6 @@
             "state" : "translated",
             "value" : "Apri l'app Copaky"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -2767,12 +2283,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Caps lock"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -2790,12 +2300,6 @@
             "state" : "translated",
             "value" : "Attiva/disattiva Caps lock"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -2812,12 +2316,6 @@
             "state" : "translated",
             "value" : "Configuring open access for a custom keyboard | Apple Developer Documentation (inglese)"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -2833,12 +2331,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Importa da iCloud"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -2888,12 +2380,6 @@
             "state" : "translated",
             "value" : "Licenza"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -2910,12 +2396,6 @@
             "state" : "translated",
             "value" : "Puoi usare la «Conversione live», la funzione — presente ad esempio in macOS — che converte automaticamente il testo mentre lo stai digitando."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -2931,12 +2411,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "OK"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -2955,12 +2429,6 @@
             "state" : "translated",
             "value" : "Utilizzo del dizionario utente del sistema"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -2977,12 +2445,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Utilizza il dizionario utente standard del sistema."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -3034,12 +2496,6 @@
             "state" : "translated",
             "value" : "Conversione Unicode"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -3055,12 +2511,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "URL Scheme"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -3078,12 +2528,6 @@
             "state" : "translated",
             "value" : "Importa da URL"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -3099,12 +2543,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "L'URL potrebbe non essere corretto"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -3122,12 +2560,6 @@
             "state" : "translated",
             "value" : "Copia l'URL."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -3143,12 +2575,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Inserisci URL"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -3166,12 +2592,6 @@
             "state" : "translated",
             "value" : "Recupero dell'URL in corso"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -3187,12 +2607,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ver %@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -3210,12 +2624,6 @@
             "state" : "translated",
             "value" : "Visualizza azooKey su GitHub"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -3231,12 +2639,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ricerca web"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -3383,12 +2785,6 @@
             "state" : "translated",
             "value" : "Elementi"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -3404,12 +2800,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aggiungi elemento"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -3427,12 +2817,6 @@
             "state" : "translated",
             "value" : "Azioni"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -3448,12 +2832,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Modifica azione di pressione"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -3471,12 +2849,6 @@
             "state" : "translated",
             "value" : "Aggiungi azione"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -3493,12 +2865,6 @@
             "state" : "translated",
             "value" : "La barra dei tab appare quando premi l'icona di Copaky sulla tastiera."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -3514,12 +2880,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Puoi creare tab personalizzate in cui raccogliere ciò che preferisci: i saluti di lavoro che usi più spesso, le frasi ricorrenti nei giochi, le tue kaomoji preferite e altro ancora."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -3538,12 +2898,6 @@
             "state" : "translated",
             "value" : "Apri l'app"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -3559,12 +2913,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "La tastiera non si apre in alcune app subito dopo l'installazione"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -3598,12 +2946,6 @@
             "state" : "translated",
             "value" : "Software open source"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -3619,12 +2961,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Consigliato"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -3642,12 +2978,6 @@
             "state" : "translated",
             "value" : "Opzioni"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -3663,12 +2993,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Come impostare le opzioni"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -3702,12 +3026,6 @@
             "state" : "translated",
             "value" : "Contatti"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -3723,12 +3041,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Seleziona il tipo di richiesta. Si aprirà un modulo Google nel browser."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -3746,12 +3058,6 @@
             "state" : "translated",
             "value" : "Attiva/disattiva la barra del cursore"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -3768,12 +3074,6 @@
             "state" : "translated",
             "value" : "Mostra la barra del cursore"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -3789,12 +3089,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Per nascondere la barra, digita o elimina caratteri, oppure tieni premuto di nuovo il tasto «Spazio»."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -3828,12 +3122,6 @@
             "state" : "translated",
             "value" : "Sposta il cursore"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -3849,12 +3137,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sposta liberamente il cursore"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -3872,12 +3154,6 @@
             "state" : "translated",
             "value" : "Spostamento del cursore"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -3893,12 +3169,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Personalizzato"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -3980,12 +3250,6 @@
             "state" : "translated",
             "value" : "Tasti personalizzati"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -4018,12 +3282,6 @@
             "state" : "translated",
             "value" : "Modifica tasti personalizzati"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -4039,12 +3297,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tasto da personalizzare"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -4062,12 +3314,6 @@
             "state" : "translated",
             "value" : "Tab personalizzati"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -4083,12 +3329,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nessun tab personalizzato"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -4106,12 +3346,6 @@
             "state" : "translated",
             "value" : "Informazioni sul tab personalizzato"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -4127,12 +3361,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gestisci tab personalizzati"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -4150,12 +3378,6 @@
             "state" : "translated",
             "value" : "Carica tab personalizzati"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -4171,12 +3393,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "I tab personalizzati possono essere condivisi come file. Puoi caricare e utilizzare file creati sul computer o da altre persone."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -4194,12 +3410,6 @@
             "state" : "translated",
             "value" : "Come creare file di tab personalizzati"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -4215,12 +3425,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Puoi creare tab personalizzati come file all'esterno dell'app e importarli in Copaky. In questo modo puoi creare tab più avanzati. Per maggiori dettagli, consulta quanto segue."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -4238,12 +3442,6 @@
             "state" : "translated",
             "value" : "Crea un tab personalizzato"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -4259,12 +3457,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Per usare i tab personalizzati, utilizza la barra dei tab."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -4282,12 +3474,6 @@
             "state" : "translated",
             "value" : "Funzione Tab personalizzati"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -4303,12 +3489,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Formato personalizzato"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -4342,12 +3522,6 @@
             "state" : "translated",
             "value" : "Inizio"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -4363,12 +3537,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tasti"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -4386,12 +3554,6 @@
             "state" : "translated",
             "value" : "Imposta l'etichetta del tasto."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -4407,12 +3569,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dimensione di questo tasto"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -4431,12 +3587,6 @@
             "state" : "translated",
             "value" : "Puoi impostare la dimensione del testo dei tasti. Se il testo è troppo grande, la visualizzazione potrebbe risultare compromessa."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -4452,12 +3602,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Colore delle etichette dei tasti"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -4475,12 +3619,6 @@
             "state" : "translated",
             "value" : "Tipo di questo tasto"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -4497,12 +3635,6 @@
             "state" : "translated",
             "value" : "Modifica tasto"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -4518,12 +3650,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Colore di questo tasto"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -4542,12 +3668,6 @@
             "state" : "translated",
             "value" : "Dimensione del testo delle etichette dei tasti"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -4565,12 +3685,6 @@
             "state" : "translated",
             "value" : "Puoi impostare l'aspetto del tasto tramite «Etichetta»."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -4587,12 +3701,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Attiva i suoni della tastiera"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -4627,12 +3735,6 @@
             "state" : "translated",
             "value" : "Metodo di input della tastiera"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -4649,12 +3751,6 @@
             "state" : "translated",
             "value" : "Tieni premuto il pulsante del globo sulla tastiera, quindi seleziona Copaky"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -4670,12 +3766,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tipo di tastiera"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -4694,12 +3784,6 @@
             "state" : "translated",
             "value" : "Tipo di tastiera (attuale: %@)"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -4716,12 +3800,6 @@
             "state" : "translated",
             "value" : "Seleziona il tipo di tastiera"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -4737,12 +3815,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Imposta il tipo di tastiera"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -4761,12 +3833,6 @@
             "state" : "translated",
             "value" : "Altezza della tastiera"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -4784,12 +3850,6 @@
             "state" : "translated",
             "value" : "Puoi regolare l'altezza della tastiera."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -4805,12 +3865,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Rendi disponibile la tastiera"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -4828,12 +3882,6 @@
             "state" : "translated",
             "value" : "Attiva tastiera"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -4849,12 +3897,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nascondi tastiera"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -4872,12 +3914,6 @@
             "state" : "translated",
             "value" : "Apri tastiera"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -4893,12 +3929,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Personalizza i tasti"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -4916,12 +3946,6 @@
             "state" : "translated",
             "value" : "Trascina il tasto per spostarlo."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -4937,12 +3961,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Configura in dettaglio l'azione eseguita quando premi questo tasto."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -4961,12 +3979,6 @@
             "state" : "translated",
             "value" : "Attiva la vibrazione quando premi i tasti."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -4984,12 +3996,6 @@
             "state" : "translated",
             "value" : "Riproduci un suono quando premi i tasti♪"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -5005,12 +4011,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Imposta i caratteri inseriti quando premi questo tasto."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -5028,12 +4028,6 @@
             "state" : "translated",
             "value" : "Imposta il tab di destinazione da aprire quando premi questo tasto."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -5049,12 +4043,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aggiungi un nuovo tasto"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -5072,12 +4060,6 @@
             "state" : "translated",
             "value" : "Configura in dettaglio l'azione eseguita quando tieni premuto questo tasto."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -5093,12 +4075,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Annulla"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -5116,12 +4092,6 @@
             "state" : "translated",
             "value" : "Greco"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -5137,12 +4107,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nascondi le emoji di ragni"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -5160,12 +4124,6 @@
             "state" : "translated",
             "value" : "Cancella"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -5181,12 +4139,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Cronologia degli appunti"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -5205,12 +4157,6 @@
             "state" : "translated",
             "value" : "Salva la cronologia degli appunti"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -5226,12 +4172,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nascondi le emoji di scarafaggi"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -5282,12 +4222,6 @@
             "state" : "translated",
             "value" : "Questa azione potrebbe non essere più disponibile con i futuri aggiornamenti principali di iOS"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -5303,12 +4237,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Un'azione che non può essere modificata in questa app"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -5326,12 +4254,6 @@
             "state" : "translated",
             "value" : "Creato in questa app"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -5348,12 +4270,6 @@
             "state" : "translated",
             "value" : "Informazioni su Copaky"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -5369,12 +4285,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Apri di nuovo questa app"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -5393,12 +4303,6 @@
             "state" : "translated",
             "value" : "A questo tasto è assegnata un'azione diversa dal cambio tab."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -5414,12 +4318,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "A questo tasto è assegnata un'azione diversa dal cambio tab. Per cancellare l'azione attuale e impostare il tab di destinazione, premi «Imposta tab»"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -5438,12 +4336,6 @@
             "state" : "translated",
             "value" : "A questo tasto è assegnata un'azione diversa dall'inserimento di testo."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -5459,12 +4351,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "A questo tasto è assegnata un'azione diversa dall'inserimento di testo. Per cancellare l'azione attuale e impostare i caratteri da inserire, premi «Imposta inserimento»"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -5482,12 +4368,6 @@
             "state" : "translated",
             "value" : "Aggiungi un tasto alternativo che appare con la pressione prolungata"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -5504,12 +4384,6 @@
             "state" : "translated",
             "value" : "Questo tasto non può essere modificato"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -5525,12 +4399,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Riordina questo tasto"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -5644,12 +4512,6 @@
             "state" : "translated",
             "value" : "Elimina questa colonna"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -5665,12 +4527,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Condividi questa parola"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -5704,12 +4560,6 @@
             "state" : "translated",
             "value" : "Questa operazione non può essere annullata."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -5726,12 +4576,6 @@
             "state" : "translated",
             "value" : "Questa funzione richiede l'accesso completo. Per utilizzarla, attiva l'accesso completo in \"Impostazioni\" > \"Tastiera\"."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -5747,12 +4591,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Quando attivi questa funzione, durante l'uso della tastiera vengono mostrati suggerimenti di invio come quelli seguenti."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -5802,12 +4640,6 @@
             "state" : "translated",
             "value" : "Attiva l'accesso completo per utilizzare questa funzione."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -5824,12 +4656,6 @@
             "state" : "translated",
             "value" : "Elimina questa riga"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -5845,12 +4671,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Senza questa configurazione non puoi usare Copaky"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -5869,12 +4689,6 @@
             "state" : "translated",
             "value" : "Salva la cronologia degli appunti e ne consente l'inserimento dall'apposito tab."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -5890,12 +4704,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Copia"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -5913,12 +4721,6 @@
             "state" : "translated",
             "value" : "Potrebbe non essere un problema di Copaky, ma un ritardo nell'aggiornamento dei dati da parte del sistema operativo."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -5935,12 +4737,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ignora l'apprendimento"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -5990,12 +4786,6 @@
             "state" : "translated",
             "value" : "Viene attivata la modalità di ridimensionamento. Trascina le parti bianche ai lati per regolare la tastiera alla dimensione desiderata."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -6012,12 +4802,6 @@
             "state" : "translated",
             "value" : "Audio"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -6033,12 +4817,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Audio e vibrazione"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -6072,12 +4850,6 @@
             "state" : "translated",
             "value" : "Etichetta secondaria"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -6093,12 +4865,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Esempio"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -6131,12 +4897,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Condividi"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -6186,12 +4946,6 @@
             "state" : "translated",
             "value" : "Icona di sistema"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -6207,12 +4961,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Disattivato"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -6247,12 +4995,6 @@
             "state" : "translated",
             "value" : "Esegui scorciatoia"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -6268,12 +5010,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Esegui la scorciatoia"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -6291,12 +5027,6 @@
             "state" : "translated",
             "value" : "Crea un tab personalizzato a scorrimento"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -6313,12 +5043,6 @@
             "state" : "translated",
             "value" : "Direzione di scorrimento"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -6334,12 +5058,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Scostamento"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -6373,12 +5091,6 @@
             "state" : "translated",
             "value" : "Inserimento diretto"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -6411,12 +5123,6 @@
             "state" : "translated",
             "value" : "Altre domande o richieste di contatto"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -6432,12 +5138,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Per altre domande o richieste di contatto, scrivici via email"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -6487,12 +5187,6 @@
             "state" : "translated",
             "value" : "Usa in modalità scura"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -6508,12 +5202,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Usa il timestamp"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -6531,12 +5219,6 @@
             "state" : "translated",
             "value" : "Imposta il timestamp"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -6552,12 +5234,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Diretto"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -6591,12 +5267,6 @@
             "state" : "translated",
             "value" : "Tab"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -6612,12 +5282,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nome del tab"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -6635,12 +5299,6 @@
             "state" : "translated",
             "value" : "Vai al tab"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -6656,12 +5314,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Barra dei tab"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -6712,12 +5364,6 @@
             "state" : "translated",
             "value" : "È stato aggiunto il pulsante \"Cronologia\" alla barra dei tab."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -6750,12 +5396,6 @@
             "state" : "translated",
             "value" : "Aggiungi alla barra dei tab"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -6773,12 +5413,6 @@
             "state" : "translated",
             "value" : "Aggiungi alla barra dei tab"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -6794,12 +5428,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Già presente nella barra dei tab"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -6817,12 +5445,6 @@
             "state" : "translated",
             "value" : "Attiva/disattiva la barra dei tab"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -6839,12 +5461,6 @@
             "state" : "translated",
             "value" : "Modifica barra dei tab"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -6860,12 +5476,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mostra la barra dei tab"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -6884,12 +5494,6 @@
             "state" : "translated",
             "value" : "Pulsante della barra dei tab"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -6905,12 +5509,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Modifica barra dei tab"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -6928,12 +5526,6 @@
             "state" : "translated",
             "value" : "Puoi modificare la barra dei tab: riordinare, eliminare e aggiungere tab, oltre ad aggiungere funzioni come l'inserimento di testo, lo spostamento del cursore e altro ancora."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -6949,12 +5541,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Imposta il tab di destinazione"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -6973,12 +5559,6 @@
             "state" : "translated",
             "value" : "Seleziona il tab di destinazione"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -6994,12 +5574,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nome tab"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -7018,12 +5592,6 @@
             "state" : "translated",
             "value" : "A volte"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -7039,12 +5607,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Impossibile recuperare i dati dall'URL"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -7062,12 +5624,6 @@
             "state" : "translated",
             "value" : "Aggiornamento dei dati in corso"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -7083,12 +5639,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Testo"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -7122,12 +5672,6 @@
             "state" : "translated",
             "value" : "Ripristina"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -7145,12 +5689,6 @@
             "state" : "translated",
             "value" : "In entrambi gli stili di inserimento, il simbolo %@ indica che il blocco maiuscole è attivo."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -7167,12 +5705,6 @@
             "state" : "translated",
             "value" : "Molto insensibile"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -7188,12 +5720,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Molto sensibile"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -7212,12 +5738,6 @@
             "state" : "translated",
             "value" : "Molto spesso"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -7235,12 +5755,6 @@
             "state" : "translated",
             "value" : "Puoi regolare quanto muovere il dito perché venga riconosciuto come flick."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -7256,12 +5770,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Se la \"cronologia degli appunti\" non è attiva, Copaky non accede periodicamente al contenuto degli appunti. Inoltre, il testo eventualmente ottenuto dagli appunti viene utilizzato solo all'interno dell'app."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -7301,12 +5809,6 @@
             "state" : "translated",
             "value" : "In alcuni casi, l'app potrebbe essere configurata per impedire l'uso di tastiere personalizzate. Se il riavvio non risolve il problema, controlla anche questa impostazione."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -7323,12 +5825,6 @@
             "state" : "translated",
             "value" : "Nessuno"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -7344,12 +5840,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Soprannome"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -7399,12 +5889,6 @@
             "state" : "translated",
             "value" : "Versione"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -7420,12 +5904,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Segnala un bug o richiedi una nuova funzione"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -7507,12 +5985,6 @@
             "state" : "translated",
             "value" : "Elaborazione del file in corso"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -7529,12 +6001,6 @@
             "state" : "translated",
             "value" : "Recupero del file in corso"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -7550,12 +6016,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Feedback"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -7622,12 +6082,6 @@
             "state" : "translated",
             "value" : "Il carattere utilizzato è \"Hiragino Mincho\", quello standard su iOS. Tieni presente che le forme dei caratteri in stile Mincho non sempre corrispondono alle forme normative della scrittura a mano."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -7643,12 +6097,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Seleziona carattere"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -7666,12 +6114,6 @@
             "state" : "translated",
             "value" : "Informativa sulla privacy (in giapponese)"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -7687,12 +6129,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Impossibile aprire il browser"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -7727,12 +6163,6 @@
             "state" : "translated",
             "value" : "Nell'input a flick, fai scorrere verso sinistra il tasto elimina %@ per eliminare fino all'inizio della frase."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -7750,12 +6180,6 @@
             "state" : "translated",
             "value" : "Sensibilità del flick"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -7771,12 +6195,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Flick"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -7794,12 +6212,6 @@
             "state" : "translated",
             "value" : "Con l'input a flick puoi assegnare fino a tre caratteri per direzione ai tasti «小ﾞﾟ» e «､｡?!» del tab Hiragana."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -7816,12 +6228,6 @@
             "state" : "translated",
             "value" : "Con l'input a flick, fai scorrere verso l'alto il tasto \"a/A\" per attivare il blocco maiuscole."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -7837,12 +6243,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Con l'input a flick puoi visualizzarlo anche tenendo premuto il tasto \"☆123\" in alto a sinistra sulla tastiera. Con l'input romaji puoi visualizzarlo tenendo premuto il tasto \"123\" o \"#+=\" in basso a sinistra."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -7875,12 +6275,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Crea tab personalizzati in stile flick"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -7930,12 +6324,6 @@
             "state" : "translated",
             "value" : "Puoi creare tab personalizzati in stile flick."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -7969,12 +6357,6 @@
             "state" : "translated",
             "value" : "Usa funzioni che richiedono l'accesso completo"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -7990,12 +6372,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Informazioni sull'accesso completo"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -8013,12 +6389,6 @@
             "state" : "translated",
             "value" : "Disattiva l'accesso completo (apre l'app Impostazioni)"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -8034,12 +6404,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Attiva l'accesso completo (apre l'app Impostazioni)"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -8057,12 +6421,6 @@
             "state" : "translated",
             "value" : "Quando attivi l'accesso completo viene mostrato l'avviso seguente, comune a tutte le app di tastiera."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -8079,12 +6437,6 @@
             "state" : "translated",
             "value" : "La tastiera funziona perfettamente anche senza concedere l'accesso completo. Se non usi le funzioni sopra indicate, ti consigliamo vivamente di non attivarlo."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -8100,12 +6452,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Anteprima"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -8139,12 +6485,6 @@
             "state" : "translated",
             "value" : "Incolla"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -8160,12 +6500,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Incolla il testo copiato"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -8183,12 +6517,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pulsante Incolla"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -8239,12 +6567,6 @@
             "state" : "translated",
             "value" : "Per prima cosa, crea un nuovo modello da \"Gestisci modelli\". Tocca %@ in alto a destra per aggiungere un nuovo modello."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -8261,12 +6583,6 @@
             "state" : "translated",
             "value" : "Per prima cosa, mostra la barra dei tab. Puoi farlo tenendo premuto lo spazio dei candidati di conversione oppure il tasto del tab simboli."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -8282,12 +6598,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Inoltre, anche dopo aver attivato l'accesso completo, puoi disattivarlo in qualsiasi momento."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -8321,12 +6631,6 @@
             "state" : "translated",
             "value" : "Fine"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -8343,12 +6647,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Raramente"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -8398,12 +6696,6 @@
             "state" : "translated",
             "value" : "Principale e secondaria"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -8419,12 +6711,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Etichetta principale"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -8443,12 +6729,6 @@
             "state" : "translated",
             "value" : "Più comodo"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -8464,12 +6744,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dizionario utente"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -8488,12 +6762,6 @@
             "state" : "translated",
             "value" : "Per usare un modello creato nel dizionario utente, scrivilo nel formato %@."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -8509,12 +6777,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Usando \"Conversione data/ora e casuale\" nella schermata di modifica del dizionario utente, puoi generare automaticamente la data e l'ora correnti o un valore casuale."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -8564,12 +6826,6 @@
             "state" : "translated",
             "value" : "Lento"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -8602,12 +6858,6 @@
             "state" : "translated",
             "value" : "Usa in modalità chiara"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -8623,12 +6873,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Conversione live"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -8678,12 +6922,6 @@
             "state" : "translated",
             "value" : "Impostazioni della conversione live"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -8699,12 +6937,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Vuoi attivare la conversione live?"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -8722,12 +6954,6 @@
             "state" : "translated",
             "value" : "Etichette"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -8743,12 +6969,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tipo di etichetta"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -8766,12 +6986,6 @@
             "state" : "translated",
             "value" : "Imposta etichette"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -8787,12 +7001,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Casuale"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -8826,12 +7034,6 @@
             "state" : "translated",
             "value" : "Ripristina"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -8847,12 +7049,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Reimposta"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -8903,12 +7099,6 @@
             "state" : "translated",
             "value" : "La segnalazione include automaticamente il contesto a sinistra e a destra, troncato a circa 10 caratteri per lato: il testo completo non viene mai inviato. Puoi comunque scegliere di escluderlo di volta in volta nella schermata di conferma."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -8924,12 +7114,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Input romaji-kana"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -8947,12 +7131,6 @@
             "state" : "translated",
             "value" : "Input romaji"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -8968,12 +7146,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Con l'input romaji puoi assegnare un carattere preferito ad alcuni tasti del tab numerico, sia per il tasto stesso sia per le varianti selezionabili con la pressione prolungata."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -8991,12 +7163,6 @@
             "state" : "translated",
             "value" : "Con l'input Qwerty, tieni premuto il tasto «Aa» per attivare il blocco maiuscole."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -9013,12 +7179,6 @@
             "state" : "translated",
             "value" : "Riavviando il dispositivo, i dati potrebbero aggiornarsi e la tastiera tornare utilizzabile."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -9034,12 +7194,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Elenco"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -9105,12 +7259,6 @@
             "state" : "translated",
             "value" : "Vengono eseguite in ordine, dall'alto verso il basso"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -9126,12 +7274,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aggiungi riga sopra"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -9149,12 +7291,6 @@
             "state" : "translated",
             "value" : "Sovrascrivi"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -9170,12 +7306,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Scorri verso il basso e tocca «Aggiungi»"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -9193,12 +7323,6 @@
             "state" : "translated",
             "value" : "Aggiungi riga sotto"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -9215,12 +7339,6 @@
             "state" : "translated",
             "value" : "Segnala un problema"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -9236,12 +7354,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Blocca emoji sgradevoli"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -9291,12 +7403,6 @@
             "state" : "translated",
             "value" : "È il nome di una persona, di un animale o di un'azienda."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -9313,12 +7419,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Poiché questo modello si chiama «Timestamp», inserisci %@."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -9337,12 +7437,6 @@
             "state" : "translated",
             "value" : "Di seguito sono elencate le impostazioni disponibili attivando l'accesso completo. Le funzioni che richiedono l'accesso completo sono tutte disattivate per impostazione predefinita, quindi concedere l'accesso completo non modifica da solo il comportamento della tastiera."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -9358,12 +7452,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Di seguito sono elencate le impostazioni disponibili attivando l'accesso completo. Le impostazioni che richiedono l'accesso completo sono tutte disattivate per impostazione predefinita, quindi concedere l'accesso completo non modifica da solo il comportamento della tastiera."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -9397,12 +7485,6 @@
             "state" : "translated",
             "value" : "Crea"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -9419,12 +7501,6 @@
             "state" : "translated",
             "value" : "La barra dei tab consente di spostarsi tra i tab personalizzati creati. Puoi passare facilmente da un tab all'altro, indipendentemente dal numero."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -9440,12 +7516,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Come si usa"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -9511,12 +7581,6 @@
             "state" : "translated",
             "value" : "Consigli utili"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -9532,12 +7596,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Salva"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -9587,12 +7645,6 @@
             "state" : "translated",
             "value" : "Il valore non è valido. Inserisci un numero valido"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -9608,12 +7660,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tipo di valore"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -9647,12 +7693,6 @@
             "state" : "translated",
             "value" : "Inserisci"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -9669,12 +7709,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Caratteri inseriti"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -9693,12 +7727,6 @@
             "state" : "translated",
             "value" : "Non è necessario che coincida con i caratteri inseriti."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -9714,12 +7742,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Caratteri da inserire"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -9737,12 +7759,6 @@
             "state" : "translated",
             "value" : "Conferma input"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -9758,12 +7774,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Imposta i caratteri inseriti"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -9782,12 +7792,6 @@
             "state" : "translated",
             "value" : "Proteggi il testo in fase di composizione (sperimentale)"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -9804,12 +7808,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Proteggendo il testo in fase di composizione, Copaky si comporta in modo più stabile in alcune app web.\nTrattandosi di una funzione sperimentale, sono possibili modifiche alle specifiche o malfunzionamenti."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -9828,12 +7826,6 @@
             "state" : "translated",
             "value" : "Converte automaticamente il testo mentre lo digiti."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -9850,12 +7842,6 @@
             "state" : "translated",
             "value" : "Modalità di input"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -9871,12 +7857,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Scegli la modalità di input"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -9911,12 +7891,6 @@
             "state" : "translated",
             "value" : "Mostra i candidati di conversione in numeri e lettere a larghezza intera (ａｂｃ１２３)."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -9933,12 +7907,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Conversione in caratteri alfanumerici a larghezza intera"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -10052,12 +8020,6 @@
             "state" : "translated",
             "value" : "Impostazioni iniziali"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -10074,12 +8036,6 @@
             "state" : "translated",
             "value" : "Il carattere viene mostrato alla dimensione massima possibile. Scorri verso destra per vedere le parti tagliate."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -10095,12 +8051,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ultimo tab utilizzato"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -10150,12 +8100,6 @@
             "state" : "translated",
             "value" : "Minuti"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -10188,12 +8132,6 @@
             "state" : "translated",
             "value" : "In uso"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -10209,12 +8147,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Termini di utilizzo (in giapponese)"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -10280,12 +8212,6 @@
             "state" : "translated",
             "value" : "Elimina"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -10301,12 +8227,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tasto elimina"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -10324,12 +8244,6 @@
             "state" : "translated",
             "value" : "Mantieni"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -10345,12 +8259,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Elimina"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -10368,12 +8276,6 @@
             "state" : "translated",
             "value" : "Numero di caratteri da eliminare"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -10389,12 +8291,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Elimina e riordina"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -10412,12 +8308,6 @@
             "state" : "translated",
             "value" : "Nessuna azione"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -10434,12 +8324,6 @@
             "state" : "translated",
             "value" : "Modifica azioni"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -10455,12 +8339,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nessuna informazione viene inviata automaticamente. L'invio avviene solo quando tocchi il pulsante \"Segnala\"."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -10527,12 +8405,6 @@
             "state" : "translated",
             "value" : "Mostra tra i candidati la conversione in ｶﾀｶﾅ (katakana) a metà larghezza."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -10550,12 +8422,6 @@
             "state" : "translated",
             "value" : "Conversione in kana a metà larghezza"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -10572,12 +8438,6 @@
             "state" : "translated",
             "value" : "Parola"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -10593,12 +8453,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "La parola è vuota"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -10632,12 +8486,6 @@
             "state" : "translated",
             "value" : "Nel campo Parola viene mostrata un'anteprima, così puoi verificare il risultato con l'ora corrente."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -10653,12 +8501,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Riferimenti"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -10676,12 +8518,6 @@
             "state" : "translated",
             "value" : "Meno sensibile"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -10698,12 +8534,6 @@
             "state" : "translated",
             "value" : "Più sensibile"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -10719,12 +8549,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tasto punteggiatura giapponese"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -10758,12 +8582,6 @@
             "state" : "translated",
             "value" : "Aggiungi una colonna a destra"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -10796,12 +8614,6 @@
             "state" : "translated",
             "value" : "Valore più a destra"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -10817,12 +8629,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Questo nome è già in uso"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -10856,12 +8662,6 @@
             "state" : "translated",
             "value" : "Era giapponese"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -10877,12 +8677,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "In caso di problemi"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -10900,12 +8694,6 @@
             "state" : "translated",
             "value" : "Tasto del globo"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -10921,12 +8709,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Base"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -10944,12 +8726,6 @@
             "state" : "translated",
             "value" : "Includi il tuo nickname nella segnalazione. Potrebbe essere usato per identificare l'utente."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -10965,12 +8741,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "È il nome di un luogo o di un edificio"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -10988,12 +8758,6 @@
             "state" : "translated",
             "value" : "Conversione"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -11009,12 +8773,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nessuna conversione"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -11049,12 +8807,6 @@
             "state" : "translated",
             "value" : "Candidati di conversione"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -11070,12 +8822,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Puoi aggiungere parole ai candidati di conversione. È diverso dal dizionario utente standard di iOS."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -11094,12 +8840,6 @@
             "state" : "translated",
             "value" : "Puoi impostare la dimensione dei caratteri dei candidati di conversione."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -11116,12 +8856,6 @@
             "state" : "translated",
             "value" : "Colore del testo dei candidati"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -11137,12 +8871,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Colore di sfondo dei candidati"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -11161,12 +8889,6 @@
             "state" : "translated",
             "value" : "Dimensione del testo dei candidati"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -11182,12 +8904,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aggiungi un candidato di conversione"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -11205,12 +8921,6 @@
             "state" : "translated",
             "value" : "Richiesta di aggiunta candidato"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -11227,12 +8937,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mostra il pulsante della barra dei tab quando il campo dei candidati è vuoto"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -11266,12 +8970,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ingrandisci"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -11321,12 +9019,6 @@
             "state" : "translated",
             "value" : "Passa tra maiuscolo/minuscolo, piccolo kana/dakuten/handakuten"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -11342,12 +9034,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Blocco maiuscole"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -11365,12 +9051,6 @@
             "state" : "translated",
             "value" : "Puoi utilizzare la modalità che permette di inserire solo lettere maiuscole (Blocco maiuscole) in Copaky."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -11387,12 +9067,6 @@
             "state" : "translated",
             "value" : "Puoi creare un tab originale con i caratteri e le frasi che preferisci."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -11408,12 +9082,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Inizia"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -11432,12 +9100,6 @@
             "state" : "translated",
             "value" : "Usa l'apprendimento (predefinito)"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -11453,12 +9115,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ripristina apprendimento"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -11477,12 +9133,6 @@
             "state" : "translated",
             "value" : "Utilizzo dell'apprendimento"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -11498,12 +9148,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Reimposta la cronologia di apprendimento. Continuare?"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -11521,12 +9165,6 @@
             "state" : "translated",
             "value" : "Funzione di apprendimento"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -11542,12 +9180,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Fine"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -11581,12 +9213,6 @@
             "state" : "translated",
             "value" : "Decimali"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -11618,12 +9244,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tasto piccolo kana/dakuten"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -11657,12 +9277,6 @@
             "state" : "translated",
             "value" : "Leggermente veloce"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -11678,12 +9292,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Inserisci una colonna a sinistra"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -11701,12 +9309,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aggiunge un pulsante Incolla al flick verso l'alto del tasto della barra del cursore in basso a sinistra"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -11739,12 +9341,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Valore più a sinistra"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -11795,12 +9391,6 @@
             "state" : "translated",
             "value" : "Indietro"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -11833,12 +9423,6 @@
             "state" : "translated",
             "value" : "Visualizza i passaggi"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -11854,12 +9438,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Colore dei tasti premuti"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -11878,12 +9456,6 @@
             "state" : "translated",
             "value" : "Azione alla pressione"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -11899,12 +9471,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Azioni ripetute durante la pressione prolungata"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -11922,12 +9488,6 @@
             "state" : "translated",
             "value" : "Azioni eseguite all'inizio della pressione prolungata"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -11944,12 +9504,6 @@
             "state" : "translated",
             "value" : "Estensioni"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -11965,12 +9519,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Non specificato"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -11989,12 +9537,6 @@
             "state" : "translated",
             "value" : "Feedback aptico"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -12010,12 +9552,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Usabilità"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -12033,12 +9569,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Attiva la nuova barra del cursore, con un'usabilità notevolmente migliorata."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -12072,12 +9602,6 @@
             "state" : "translated",
             "value" : "Tasto Invio"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -12110,12 +9634,6 @@
             "state" : "translated",
             "value" : "Numeri (input romaji)"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -12131,12 +9649,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nel tab numeri puoi assegnare i simboli o i caratteri che preferisci ai tasti con bordo blu."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -12154,12 +9666,6 @@
             "state" : "translated",
             "value" : "Numeri interi"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -12175,12 +9681,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Caratteri"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -12198,12 +9698,6 @@
             "state" : "translated",
             "value" : "Inserimento caratteri"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -12219,12 +9713,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Eliminazione caratteri"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -12242,12 +9730,6 @@
             "state" : "translated",
             "value" : "Spessore carattere"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -12263,12 +9745,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Per ingrandire i caratteri, inseriscili e poi tieni premuto sul candidato di conversione."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -12286,12 +9762,6 @@
             "state" : "translated",
             "value" : "Ingrandisci i caratteri difficili"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -12308,12 +9778,6 @@
             "state" : "translated",
             "value" : "Stringhe"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -12329,12 +9793,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Non hai inserito alcuna stringa. Devi specificarne almeno una."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -12369,12 +9827,6 @@
             "state" : "translated",
             "value" : "Includi il contesto per impostazione predefinita"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -12390,12 +9842,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Elimina tutto in una volta fino all'inizio della frase"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -12413,12 +9859,6 @@
             "state" : "translated",
             "value" : "Elimina fino all'inizio della frase"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -12434,12 +9874,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Elimina fino all'inizio della frase"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -12457,12 +9891,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Usa la nuova barra del cursore"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -12496,12 +9924,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Interrompi l'apprendimento"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -12551,12 +9973,6 @@
             "state" : "translated",
             "value" : "Giorni"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -12572,12 +9988,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Giapponese"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -12595,12 +10005,6 @@
             "state" : "translated",
             "value" : "Se hai importato tab personalizzati compatibili con giapponese o inglese, puoi selezionarli anche come tastiera predefinita."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -12616,12 +10020,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Giapponese (input a flick)"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -12639,12 +10037,6 @@
             "state" : "translated",
             "value" : "Giapponese (input romaji)"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -12660,12 +10052,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Giapponese (segui le impostazioni)"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -12683,12 +10069,6 @@
             "state" : "translated",
             "value" : "Tasto tab giapponese"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -12704,12 +10084,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Per il giapponese e per l'inglese puoi scegliere separatamente tra input romaji e input a flick."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -12760,12 +10134,6 @@
             "state" : "translated",
             "value" : "Conversione in parole inglesi durante la digitazione in giapponese"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -12781,12 +10149,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Orario"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -12836,12 +10198,6 @@
             "state" : "translated",
             "value" : "Ore"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -12874,12 +10230,6 @@
             "state" : "translated",
             "value" : "Normale"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -12895,12 +10245,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tipo di calendario"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -12919,12 +10263,6 @@
             "state" : "translated",
             "value" : "Aggiorna"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -12940,12 +10278,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Cronologia degli aggiornamenti (in giapponese)"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -12964,12 +10296,6 @@
             "state" : "translated",
             "value" : "Esporta"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -12985,12 +10311,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Formato"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -13024,12 +10344,6 @@
             "state" : "translated",
             "value" : "Impostazioni formato"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -13046,12 +10360,6 @@
             "state" : "translated",
             "value" : "Il formato si scrive nello stile yyyyMMddhhmmss. Per i dettagli sulla notazione puoi consultare risorse online."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -13067,12 +10375,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Inserisci il formato"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -13106,12 +10408,6 @@
             "state" : "translated",
             "value" : "Abbiamo pubblicato come open source, con il nome CustardKit, la descrizione della struttura dati dei tab personalizzati disponibili in questa applicazione, che utilizziamo anche al suo interno."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -13127,12 +10423,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Questa applicazione utilizza alcuni dati di Mozc."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -13150,12 +10440,6 @@
             "state" : "translated",
             "value" : "Questa applicazione utilizza Swift Algorithms."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -13171,12 +10455,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Questa applicazione utilizza Swift Collections."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -13194,12 +10472,6 @@
             "state" : "translated",
             "value" : "Questa applicazione utilizza mecab-ipadic-NEologd per l'analisi dei nomi propri e di altri termini specifici."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -13215,12 +10487,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Questa applicazione utilizza IPAdic come base per il vocabolario di base."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -13238,12 +10504,6 @@
             "state" : "translated",
             "value" : "Questa applicazione utilizza SudachiDict come base per il vocabolario di base."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -13259,12 +10519,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Questa applicazione utilizza japanese-word2vec-model-builder per migliorare la precisione di conversione."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -13282,12 +10536,6 @@
             "state" : "translated",
             "value" : "Questa applicazione è stata realizzata grazie a numerosi software open source. Colgo l'occasione per esprimere la mia gratitudine."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -13303,12 +10551,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Questa applicazione utilizza MeCab come analizzatore morfologico."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -13326,12 +10568,6 @@
             "state" : "translated",
             "value" : "Questa applicazione utilizza i dati di \"Emoji-IME-Dictionary\" per mostrare i candidati di conversione in emoji."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -13347,12 +10583,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Questa applicazione utilizza i dati di \"Kaomojic\" per mostrare i candidati di conversione in kaomoji."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -13370,12 +10600,6 @@
             "state" : "translated",
             "value" : "Questa applicazione utilizza i dati di \"Kaomojitoka to Google IME Dictionary\" per mostrare i candidati di conversione in kaomoji."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -13392,12 +10616,6 @@
             "state" : "translated",
             "value" : "Spessore del bordo"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -13413,12 +10631,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Colore del bordo"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -13468,12 +10680,6 @@
             "state" : "translated",
             "value" : "Orizzontale"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -13506,12 +10712,6 @@
             "state" : "translated",
             "value" : "Numero di tasti per riga"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -13527,12 +10727,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Richiedi una funzionalità o un miglioramento"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -13600,12 +10794,6 @@
             "state" : "translated",
             "value" : "Il file non è nel formato corretto"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -13621,12 +10809,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Attenzione"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -13644,12 +10826,6 @@
             "state" : "translated",
             "value" : "Note importanti"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -13666,12 +10842,6 @@
             "state" : "translated",
             "value" : "Configurazione completata!"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -13687,12 +10857,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ingrandisci i kanji difficili"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -13727,12 +10891,6 @@
             "state" : "translated",
             "value" : "Non mostrare il pulsante di uscita in modalità una mano"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -13750,12 +10908,6 @@
             "state" : "translated",
             "value" : "Nasconde il pulsante di uscita mostrato in modalità una mano. Puoi regolare la modalità una mano dal pulsante nella barra dei tab."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -13771,12 +10923,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Attiva modalità a una mano"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -13794,12 +10940,6 @@
             "state" : "translated",
             "value" : "Attiva la modalità a una mano"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -13815,12 +10955,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Usa la modalità a una mano"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -13838,12 +10972,6 @@
             "state" : "translated",
             "value" : "Utilizza la modalità a una mano"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -13860,12 +10988,6 @@
             "state" : "translated",
             "value" : "Colore dei tasti speciali"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -13881,12 +11003,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "L'inserimento del testo non funziona correttamente in alcune app"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -13936,12 +11052,6 @@
             "state" : "translated",
             "value" : "Colore di sfondo dei tasti speciali"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -13975,12 +11085,6 @@
             "state" : "translated",
             "value" : "Attuale"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -13997,12 +11101,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Per eliminare le azioni correnti e impostare il testo da digitare, tocca «Imposta input»"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -14021,12 +11119,6 @@
             "state" : "translated",
             "value" : "Per eliminare le azioni correnti e impostare il tab di destinazione, tocca «Imposta tab»"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -14042,12 +11134,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Al momento Copaky non supporta l'input in stile telefono cellulare (giapponese)."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -14065,12 +11151,6 @@
             "state" : "translated",
             "value" : "Origine"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -14086,12 +11166,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Richiedi aggiunta"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -14109,12 +11183,6 @@
             "state" : "translated",
             "value" : "Richiesta in corso"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -14130,12 +11198,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ritaglia immagine"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -14153,12 +11215,6 @@
             "state" : "translated",
             "value" : "Rimuovi immagine"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -14174,12 +11230,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Puoi creare tab personalizzati a scorrimento semplicemente scrivendo in ordine i caratteri e le parole che vuoi registrare."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -14229,12 +11279,6 @@
             "state" : "translated",
             "value" : "Colore dei tasti secondari"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -14267,12 +11311,6 @@
             "state" : "translated",
             "value" : "Temi"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -14288,12 +11326,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Il tuo tema è pronto 🎉"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -14311,12 +11343,6 @@
             "state" : "translated",
             "value" : "Crea il tuo tema"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -14332,12 +11358,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Modifica tema"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -14355,12 +11375,6 @@
             "state" : "translated",
             "value" : "Conferma"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -14377,12 +11391,6 @@
             "state" : "translated",
             "value" : "Confermato"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -14398,12 +11406,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Secondi"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -14422,12 +11424,6 @@
             "state" : "translated",
             "value" : "Sposta"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -14444,12 +11440,6 @@
             "state" : "translated",
             "value" : "Sposta/Aggiungi"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -14465,12 +11455,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Numero di caratteri da spostare"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -14489,12 +11473,6 @@
             "state" : "translated",
             "value" : "Destinazione: %@"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -14511,12 +11489,6 @@
             "state" : "translated",
             "value" : "Tab di destinazione"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -14532,12 +11504,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tasto spazio"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -14556,12 +11522,6 @@
             "state" : "translated",
             "value" : "Quando selezioni un candidato di conversione diverso dal primo, puoi verificarne i dettagli prima di inviare una segnalazione."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -14577,12 +11537,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Emoji"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -14616,12 +11570,6 @@
             "state" : "translated",
             "value" : "Emoji e kaomoji"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -14637,12 +11585,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Puoi attivare o disattivare emoji e kaomoji separatamente."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -14660,12 +11602,6 @@
             "state" : "translated",
             "value" : "Per visualizzare l'elenco delle emoji, usa la tastiera emoji standard del dispositivo."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -14681,12 +11617,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mostra i candidati di conversione per emoji e kaomoji"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -14736,12 +11666,6 @@
             "state" : "translated",
             "value" : "Seleziona il tasto che vuoi modificare."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -14758,12 +11682,6 @@
             "state" : "translated",
             "value" : "Seleziona la direzione che vuoi modificare."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -14779,12 +11697,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Modifica"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -14836,12 +11748,6 @@
             "state" : "translated",
             "value" : "Verticale"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -14873,12 +11779,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Numero di tasti in colonna"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -14960,12 +11860,6 @@
             "state" : "translated",
             "value" : "Sfondo"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -14981,12 +11875,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Colore di sfondo"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -15005,12 +11893,6 @@
             "state" : "translated",
             "value" : "Automatico"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -15026,12 +11908,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aggiungi automaticamente alla barra dei tab"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -15049,12 +11925,6 @@
             "state" : "translated",
             "value" : "Conferma automatica"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -15071,12 +11941,6 @@
             "state" : "translated",
             "value" : "Velocità del completamento automatico"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -15092,12 +11956,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Con il completamento automatico, selezionare i candidati è più semplice quando scrivi testi lunghi."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -15132,12 +11990,6 @@
             "state" : "translated",
             "value" : "Inglese"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -15153,12 +12005,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Inglese (input a flick)"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -15176,12 +12022,6 @@
             "state" : "translated",
             "value" : "Inglese (input romaji)"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -15198,12 +12038,6 @@
             "state" : "translated",
             "value" : "Inglese (segui le impostazioni)"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -15219,12 +12053,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tasto tab inglese"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -15290,12 +12118,6 @@
             "state" : "translated",
             "value" : "Visualizza"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -15311,12 +12133,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Valori da visualizzare (separati da virgola)"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -15334,12 +12150,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Candidati di lettere decorative"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -15389,12 +12199,6 @@
             "state" : "translated",
             "value" : "Gregoriano"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -15412,12 +12216,6 @@
             "state" : "translated",
             "value" : "Conversione calendario gregoriano ⇄ giapponese"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -15433,12 +12231,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Per sbloccare, premi di nuovo il tasto."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -15456,12 +12248,6 @@
             "state" : "translated",
             "value" : "Lingua"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -15477,12 +12263,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Simboli (input romaji)"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -15500,12 +12280,6 @@
             "state" : "translated",
             "value" : "Tasto tab simboli"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -15521,12 +12295,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Simboli e numeri (input a flick)"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -15544,12 +12312,6 @@
             "state" : "translated",
             "value" : "Impostazioni"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -15565,12 +12327,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Impostando «Incolla da altre app» su «Consenti» nell'app Impostazioni, questo avviso non verrà più visualizzato."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -15588,12 +12344,6 @@
             "state" : "translated",
             "value" : "Apri l'app Impostazioni"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -15609,12 +12359,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Puoi disattivare i suggerimenti di invio in qualsiasi momento dalle Impostazioni."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -15632,12 +12376,6 @@
             "state" : "translated",
             "value" : "Imposta"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -15653,12 +12391,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Puoi modificare le impostazioni in qualsiasi momento dal tab Impostazioni"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -15676,12 +12408,6 @@
             "state" : "translated",
             "value" : "Non è possibile attivare questa impostazione"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -15697,12 +12423,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dettagli"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -15720,12 +12440,6 @@
             "state" : "translated",
             "value" : "Impostazioni dettagliate"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -15741,12 +12455,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Impostazioni avanzate"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -15764,12 +12472,6 @@
             "state" : "translated",
             "value" : "Se cancelli qualcosa per errore, puoi annullare l'operazione scuotendo il dispositivo oppure trascinando tre dita nel campo di testo."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -15785,12 +12487,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Informazioni sulle segnalazioni di conversione errata"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -15809,12 +12505,6 @@
             "state" : "translated",
             "value" : "Regola la frequenza con cui ti viene proposto di inviare le segnalazioni di conversione errata."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -15830,12 +12520,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Quando scegli un candidato diverso dal primo, puoi inviare una segnalazione di conversione errata dopo averla confermata."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -15870,12 +12554,6 @@
             "state" : "translated",
             "value" : "Lettura"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -15891,12 +12569,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "La lettura è vuota"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -15914,12 +12586,6 @@
             "state" : "translated",
             "value" : "Lettura e parola"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -15935,12 +12601,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "La lettura contiene caratteri non utilizzabili. Usa hiragana, lettere romane e numeri."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -15958,12 +12618,6 @@
             "state" : "translated",
             "value" : "Esporta il tab personalizzato «%@» il cui caricamento non è riuscito"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -15979,12 +12633,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Caricamento in corso"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -16002,12 +12650,6 @@
             "state" : "translated",
             "value" : "Caricamento non riuscito"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -16023,12 +12665,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Importa"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -16046,12 +12682,6 @@
             "state" : "translated",
             "value" : "Tab importati"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -16067,12 +12697,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dati importati"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -16090,12 +12714,6 @@
             "state" : "translated",
             "value" : "Identificatore"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -16111,12 +12729,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "È già presente un tab personalizzato con l'identificatore %@. Vuoi sovrascriverlo?"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -16134,12 +12746,6 @@
             "state" : "translated",
             "value" : "Un valore negativo elimina il carattere a destra"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -16155,12 +12761,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Un valore negativo sposta il cursore a sinistra"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -16195,12 +12795,6 @@
             "state" : "translated",
             "value" : "Aggiungi"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -16216,12 +12810,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aggiungi"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -16254,12 +12842,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "I dati inviati vengono utilizzati per migliorare il sistema di conversione kana-kanji e le funzionalità correlate."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -16294,12 +12876,6 @@
             "state" : "translated",
             "value" : "Prima dell'invio viene mostrato un popup per verificare il contenuto. Puoi escludere le informazioni non necessarie scorrendo verso destra."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -16315,12 +12891,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Colore di sfondo dei tasti normali"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -16338,12 +12908,6 @@
             "state" : "translated",
             "value" : "Colore dei tasti normali"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -16359,12 +12923,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Veloce"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -16414,12 +12972,6 @@
             "state" : "translated",
             "value" : "Seleziona"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -16453,12 +13005,6 @@
             "state" : "translated",
             "value" : "Pressione prolungata"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -16474,12 +13020,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Azione di pressione prolungata"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -16497,12 +13037,6 @@
             "state" : "translated",
             "value" : "Modifica l'azione di pressione prolungata"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -16518,12 +13052,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Varianti selezionabili tenendo premuto questo tasto"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -16557,12 +13085,6 @@
             "state" : "translated",
             "value" : "Nella schermata visualizzata dopo la pressione prolungata, tocca «Mostra a caratteri grandi»."
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -16579,12 +13101,6 @@
             "state" : "translated",
             "value" : "Chiudi"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -16600,12 +13116,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Area con bordo blu"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -16624,12 +13134,6 @@
             "state" : "translated",
             "value" : "Frequente"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -16645,12 +13149,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kaomoji"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -16684,12 +13182,6 @@
             "state" : "translated",
             "value" : "Avanzate"
           }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
         }
       }
     },
@@ -16722,12 +13214,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Area con bordo giallo"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }

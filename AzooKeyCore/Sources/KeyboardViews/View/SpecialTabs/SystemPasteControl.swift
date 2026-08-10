@@ -6,9 +6,25 @@
 //  システム標準のペーストボタン（UIPasteControl）のSwiftUIラッパー。
 //
 
+import os
 import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
+
+/// Copaky: diagnostics for the paste prototype.
+///
+/// The whole point of the device round is to answer a question the Simulator cannot: does iOS actually
+/// route a paste into a keyboard extension's input view? Without these probes a failure is
+/// indistinguishable from "the user never tapped", "the control was disabled", "loading failed" and
+/// "the text was too long" — all of them produce exactly the same nothing.
+///
+/// `os.Logger`, not the repo's `debug(…)`: that one compiles away outside DEBUG and prints to stdout,
+/// so it does not exist on a phone. These lines are readable in Console.app with the device attached.
+///
+/// NEVER log the pasted text. Lengths, counts and booleans only: writing a user's clipboard into the
+/// system log would damage the privacy invariant far more than any banner this prototype hopes to avoid.
+/// 貼り付け内容そのものは絶対に記録しない（長さと件数のみ）。
+private let pasteLog = Logger(subsystem: "com.pettipol.copaky", category: "paste-control")
 
 /// Copaky: the system paste button.
 ///
@@ -30,8 +46,6 @@ import UniformTypeIdentifiers
 struct SystemPasteControl: UIViewRepresentable {
     /// Called with the pasted plain text, on the main actor.
     let onPaste: (String) -> Void
-    /// Tint applied to the control so it sits on the keyboard's theme rather than the system default.
-    var tint: UIColor?
 
     func makeUIView(context: Context) -> UIView {
         let receiver = PasteReceiverView()
@@ -40,12 +54,15 @@ struct SystemPasteControl: UIViewRepresentable {
         // control offer pastes we cannot store.
         receiver.pasteConfiguration = UIPasteConfiguration(acceptableTypeIdentifiers: [UTType.plainText.identifier])
 
+        // Deliberately NOT tinted with the keyboard theme. This is Apple's consent control: the system
+        // paints foreground and background as a matched pair, while our theme would set only the
+        // foreground — and a theme with a pale text colour could render it invisible. During a device
+        // round that would read as "the button does nothing" and would poison the one question the
+        // round exists to answer. It also keeps the control looking like what App Review expects.
+        // テーマで着色しない（前景だけ変えると読めなくなる恐れがあり、実機検証の結果を汚す）。
         let configuration = UIPasteControl.Configuration()
         configuration.displayMode = .iconAndLabel
         configuration.cornerStyle = .capsule
-        if let tint {
-            configuration.baseForegroundColor = tint
-        }
         let control = UIPasteControl(configuration: configuration)
         // The control walks the responder chain; `receiver` is its superview, so it is found first.
         control.target = receiver
@@ -70,12 +87,16 @@ struct SystemPasteControl: UIViewRepresentable {
         var onPaste: ((String) -> Void)?
 
         override func canPaste(_ itemProviders: [NSItemProvider]) -> Bool {
-            itemProviders.contains { $0.canLoadObject(ofClass: NSString.self) }
+            let textual = itemProviders.filter { $0.canLoadObject(ofClass: NSString.self) }
+            pasteLog.info("canPaste: \(itemProviders.count, privacy: .public) provider, \(textual.count, privacy: .public) testuali")
+            return !textual.isEmpty
         }
 
         override func paste(itemProviders: [NSItemProvider]) {
+            pasteLog.info("paste: il sistema ha consegnato \(itemProviders.count, privacy: .public) provider")
             // One item is enough: the history stores a single string per entry.
             guard let provider = itemProviders.first(where: { $0.canLoadObject(ofClass: NSString.self) }) else {
+                pasteLog.error("paste: nessun provider caricabile come stringa — niente da salvare")
                 return
             }
             // loadObject calls back off the main thread and the history is @MainActor: bridge to
@@ -83,12 +104,21 @@ struct SystemPasteControl: UIViewRepresentable {
             // loadObject は別スレッドで返るため、Sendable な String に変換してから戻る。
             Task { [weak self] in
                 let text: String? = await withCheckedContinuation { continuation in
-                    provider.loadObject(ofClass: NSString.self) { object, _ in
+                    provider.loadObject(ofClass: NSString.self) { object, error in
+                        if let error {
+                            // Length/kind only — never the value.
+                            pasteLog.error("loadObject fallito: \(error.localizedDescription, privacy: .public)")
+                        } else if object == nil {
+                            pasteLog.error("loadObject: oggetto nullo senza errore")
+                        }
                         continuation.resume(returning: (object as? NSString).map(String.init))
                     }
                 }
                 if let text {
+                    pasteLog.info("consegnato: \(text.count, privacy: .public) caratteri")
                     self?.onPaste?(text)
+                } else {
+                    pasteLog.error("nessun testo consegnato al termine del caricamento")
                 }
             }
         }

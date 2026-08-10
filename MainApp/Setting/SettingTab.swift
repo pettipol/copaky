@@ -73,7 +73,9 @@ struct SettingTabView: View {
                 Section {
                     Toggle("すべての設定を表示", isOn: $showAllSections)
                 } footer: {
-                    Text("オフのときは、よく使う設定だけを表示します。検索はすべての設定を対象にします。")
+                    // Says only what is true: search bypasses the split. It does NOT promise that every
+                    // row is findable in every language — many rows still carry Japanese-only keywords.
+                    Text("オフのときは、よく使う設定だけを表示します。検索は隠れている設定も対象にします。")
                 }
                 .searchKeys("すべての設定", "全設定", "tutte", "impostazioni", "all settings")
 
@@ -122,10 +124,13 @@ struct SettingTabView: View {
                         .searchKeys("カーソルバー", "バー", "cursore", "barra", "cursor", "bar")
                     BoolSettingView(.enableClipboardHistoryManagerTab)
                         .searchKeys("コピー履歴", "クリップボード履歴", "履歴", "appunti", "clipboard", "cronologia")
-                    if SemiStaticStates.shared.hasFullAccess {
-                        BoolSettingView(.useSystemPasteControl)
-                            .searchKeys("ペースト", "バナー", "コピー履歴", "incolla", "appunti", "paste")
-                    }
+                    // NOT wrapped in a hasFullAccess check: that flag is read once at app launch and
+                    // never refreshed, so a user who grants Full Access in iOS Settings and comes back
+                    // would find the row GONE — and, worse, someone who revokes it later would lose the
+                    // only way to turn this off. BoolSettingView already handles requireFullAccess by
+                    // disabling the row and offering the shortcut to Settings.
+                    BoolSettingView(.useSystemPasteControl)
+                        .searchKeys("ペースト", "バナー", "コピー履歴", "incolla", "appunti", "paste")
                     if SemiStaticStates.shared.hasFullAccess {
                         NavigationLink("「ペーストを許可」のダイアログについて") {
                             PasteFromOtherAppsPermissionTipsView()
@@ -259,7 +264,7 @@ struct SettingTabView: View {
 
                 }   // showsEverything
             }
-            .searchQuery(searchQuery.isEmpty ? nil : searchQuery.toKatakana())
+            .searchQuery(searchQuery.isEmpty ? nil : searchQuery.searchFolded)
             .navigationTitle("設定")
             .navigationBarTitleDisplayMode(.large)
             .navigationDestination(for: CustomizeTabView.Path.self) { destination in

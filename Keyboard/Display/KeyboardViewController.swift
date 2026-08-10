@@ -51,6 +51,12 @@ extension UIKeyboardType: @retroactive CustomDebugStringConvertible {
 final class KeyboardViewController: UIInputViewController {
     private static var keyboardViewHost: KeyboardHostingController<Keyboard>?
     private static var loadedInstanceCount: Int = 0
+    /// Copaky: the Latin tab's language is taken from the user's preference the FIRST time the keyboard
+    /// loads in this process, then left alone — later reloads must preserve what the user picked with
+    /// the language-switch key. `variableStates` is static, so without this flag every reload would
+    /// overwrite that choice.
+    /// Copaky: ラテン文字タブの言語は各プロセスで一度だけ設定から与える（以降はユーザーの選択を保持）。
+    private static var didSeedLatinLanguage = false
     private static let action = KeyboardActionManager()
     private static let variableStates = VariableStates(
         clipboardHistoryManagerConfig: ClipboardHistoryManagerConfig(),
@@ -138,12 +144,19 @@ final class KeyboardViewController: UIInputViewController {
         super.viewDidLoad()
         SemiStaticStates.shared.setup()
         KeyboardViewController.loadedInstanceCount += 1
+        // Copaky: seed which language the Latin tab starts in, BEFORE initialize() — that call restores
+        // the last tab and resolves its language through latinKeyboardLanguage, so seeding afterwards
+        // would leave keyboardLanguage and the labels disagreeing until the next tab action.
+        // Seeded only ONCE per process: variableStates is static and survives keyboard reloads, so a
+        // user who switched to English mid-session must not be silently pushed back to Italian every
+        // time the host app brings the keyboard up again.
+        // Copaky: ラテン文字タブの初期言語は initialize() の前に、かつプロセスごとに一度だけ与える。
+        if !KeyboardViewController.didSeedLatinLanguage {
+            KeyboardViewController.didSeedLatinLanguage = true
+            KeyboardViewController.variableStates.latinKeyboardLanguage = EnableItalianKeyboardLanguage.value ? .it_IT : .en_US
+        }
         // 初期化の順序としてこの位置に置くこと
         KeyboardViewController.variableStates.initialize()
-        // Copaky: seed which language the Latin tab starts in. Someone who turned Italian on wants to
-        // start there; English stays one tap away on the language-switch key.
-        // Copaky: ラテン文字タブの初期言語を設定から与える。
-        KeyboardViewController.variableStates.latinKeyboardLanguage = EnableItalianKeyboardLanguage.value ? .it_IT : .en_US
 
         self.setupInitialKeyboardHeight()
 

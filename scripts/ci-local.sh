@@ -14,6 +14,12 @@ SIM='platform=iOS Simulator,name=iPhone 17'
 FAST=0; [ "${1:-}" = "--fast" ] && FAST=1
 fail=0
 
+# Cheap and always run: an empty localization value renders as a BLANK label on device
+# (Foundation returns the empty value, it does not fall back to the key). Catching this costs
+# milliseconds; missing it costs a blank keycap on someone's phone.
+echo "▶ [0/3] String Catalog lint…"
+python3 "$REPO/scripts/lint_string_catalog.py" || fail=1
+
 echo "▶ [1/3] Build MainApp ($([ $FAST = 1 ] && echo fast || echo full))…"
 xcodebuild build -project "$REPO/azooKey.xcodeproj" -scheme MainApp \
   -destination "$SIM" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO -quiet \

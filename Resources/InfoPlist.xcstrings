@@ -23,26 +23,6 @@
         }
       }
     },
-    "custom keyboard file" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
-        }
-      }
-    },
-    "json custom keyboard file" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
-        }
-      }
-    },
     "NSContactsUsageDescription" : {
       "extractionState" : "manual",
       "localizations" : {

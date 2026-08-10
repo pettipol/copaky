@@ -11,7 +11,14 @@ import Foundation
 import SwiftUI
 
 public extension Custard {
-    static let errorMessage = Custard(
+    /// Copaky: the error keyboard is one of OUR custards, so its Japanese messages follow the UI
+    /// language. Resolved on access (this keyboard appears only when a custom tab fails to load).
+    /// Copaky: エラー用カスタードの文言もUI言語に追従させる。
+    static var errorMessage: Custard {
+        errorMessageSource.localizingFunctionalLabels()
+    }
+
+    private static let errorMessageSource = Custard(
         identifier: "error_message",
         language: .undefined,
         input_style: .direct,
