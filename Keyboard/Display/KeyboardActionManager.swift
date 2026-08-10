@@ -132,7 +132,9 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
         case let .input(text, simpleInsert):
             self.textEditingActionDidBegin(variableStates: variableStates)
             let input: String
-            if (variableStates.boolStates.isCapsLocked || variableStates.boolStates.isShifted) && [.en_US, .el_GR].contains(variableStates.keyboardLanguage) {
+            // Copaky: it_IT added — Shift/Caps must uppercase on the Italian keyboard exactly as it
+            // does on the English one (both are Latin-script languages).
+            if (variableStates.boolStates.isCapsLocked || variableStates.boolStates.isShifted) && [.en_US, .el_GR, .it_IT].contains(variableStates.keyboardLanguage) {
                 input = text.uppercased()
             } else {
                 input = text
@@ -248,6 +250,14 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
         case let .moveTab(type):
             // タブ移動ではシフトを解除しない
             variableStates.setTab(type)
+
+        case let .setLatinKeyboardLanguage(language):
+            // Copaky: English and Italian share the Latin tab, so switching between them is a change
+            // of language, not of tab. Emitted just before moveTab(.system(.user_english)), which
+            // then resolves the tab's declared en_US to whatever is set here.
+            // Copaky: 英語とイタリア語は同じタブを共有するため、これはタブではなく言語の切替。
+            variableStates.latinKeyboardLanguage = language
+            variableStates.keyboardLanguage = language
 
         case let .setUpsideComponent(type):
             self.applyUpsideComponent(type, variableStates: variableStates)

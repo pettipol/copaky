@@ -140,6 +140,10 @@ final class KeyboardViewController: UIInputViewController {
         KeyboardViewController.loadedInstanceCount += 1
         // 初期化の順序としてこの位置に置くこと
         KeyboardViewController.variableStates.initialize()
+        // Copaky: seed which language the Latin tab starts in. Someone who turned Italian on wants to
+        // start there; English stays one tap away on the language-switch key.
+        // Copaky: ラテン文字タブの初期言語を設定から与える。
+        KeyboardViewController.variableStates.latinKeyboardLanguage = EnableItalianKeyboardLanguage.value ? .it_IT : .en_US
 
         self.setupInitialKeyboardHeight()
 

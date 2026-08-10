@@ -40,7 +40,11 @@ let package = Package(
         // MARK: `_: .upToNextMinor(Version)` or `exact: Version` or `revision: Version`.
         // MARK: For develop branch, you can use `revision:` specification.
         // MARK: For main branch, you must use `upToNextMinor` specification.
-        .package(url: "https://github.com/azooKey/AzooKeyKanaKanjiConverter", revision: "1def030b6697fb3811f2ae642719811db6b70c3e", traits: ["ZenzaiCPU"]),
+        // Copaky: pinned to our fork, which adds `it_IT` as a keyboard language (Italian predictions
+        // from the Italian system dictionary instead of English ones). The fork branches off the
+        // upstream revision 1def030b — the only delta is the it_IT support.
+        // Copaky: it_IT 対応のためフォークを参照（upstream 1def030b からの差分は it_IT のみ）。
+        .package(url: "https://github.com/pettipol/AzooKeyKanaKanjiConverter", revision: "9cd2cf25547fe3fd9a8a5e6ee6dd7017f91a90eb", traits: ["ZenzaiCPU"]),
         .package(url: "https://github.com/azooKey/CustardKit", revision: "7bddc14eb3f8f0145c6f3a4fea20cf394f8104e8"),
     ],
     targets: [

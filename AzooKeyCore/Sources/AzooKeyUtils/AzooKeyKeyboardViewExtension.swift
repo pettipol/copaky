@@ -86,6 +86,10 @@ public enum AzooKeyKeyboardViewExtension: ApplicationSpecificKeyboardViewExtensi
         EnableNumberRowHints.value
     }
 
+    public static var enableItalianKeyboardLanguage: Bool {
+        EnableItalianKeyboardLanguage.value
+    }
+
     public static var displayTabBarButton: Bool {
         true
     }

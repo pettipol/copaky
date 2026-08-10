@@ -30,6 +30,9 @@ import Foundation
     static var enableSmoothDelete: Bool { get }
     /// QWERTY最上段に数字ヒントを表示し、長押しで入力できるようにする / Number hints + long-press digits on the QWERTY top row
     static var enableNumberRowHints: Bool { get }
+    /// イタリア語をキーボードの言語として使う / Italian as a keyboard language: it joins the language-switch cycle
+    /// and the Latin tab predicts from the Italian dictionary instead of the English one.
+    static var enableItalianKeyboardLanguage: Bool { get }
     static var hideResetButtonInOneHandedMode: Bool { get }
     static var useShiftKey: Bool { get }
     static var keepDeprecatedShiftKeyBehavior: Bool { get }

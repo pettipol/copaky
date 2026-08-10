@@ -135,6 +135,8 @@ struct SettingTabView: View {
                     }
                     BoolSettingView(.enableNumberRowHints)
                         .searchKeys("数字", "数字キー", "ナンバー", "上段", "number")
+                    BoolSettingView(.enableItalianKeyboardLanguage)
+                        .searchKeys("イタリア語", "italiano", "italian", "lingua", "language", "言語")
                 }
                 .inheritSearchKeys()
 

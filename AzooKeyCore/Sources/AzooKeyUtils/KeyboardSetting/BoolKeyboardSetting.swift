@@ -242,6 +242,21 @@ public extension KeyboardSettingKey where Self == EnableNumberRowHints {
     static var enableNumberRowHints: Self { .init() }
 }
 
+/// イタリア語をキーボードの言語として使う設定 / Italian as a keyboard language.
+/// Off by default: with it on, the language-switch key cycles through Italian as well and the Latin
+/// tab predicts from the Italian dictionary instead of the English one. The layout does not change —
+/// accented letters are already on long-press.
+public struct EnableItalianKeyboardLanguage: BoolKeyboardSettingKey {
+    public static let title: LocalizedStringKey = "イタリア語を使う"
+    public static let explanation: LocalizedStringKey = "言語切替キーにイタリア語を加え、ラテン文字タブの予測変換をイタリア語の辞書から行います。キー配列は変わりません。"
+    public static let defaultValue = false
+    public static let key: String = "enable_italian_keyboard_language"
+}
+
+public extension KeyboardSettingKey where Self == EnableItalianKeyboardLanguage {
+    static var enableItalianKeyboardLanguage: Self { .init() }
+}
+
 /// 「連絡先」アプリの名前情報を読み込む設定
 /// - note: この機能はフルアクセスがないと実現できない
 public struct EnableContactImport: BoolKeyboardSettingKey {

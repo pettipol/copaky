@@ -33,6 +33,7 @@ private enum L {
     /// Flick key whose LONG-PRESS toggles the tab bar (FlickCustomKeySetting: ☆123 → .toggleTabBar).
     static let tabBarToggleKey = ["☆123", "123"]
     static let numberHintsToggle = ["Show numbers on the top row", "上段に数字を表示", "Mostra i numeri nella riga superiore"]
+    static let italianToggle = ["Use Italian", "イタリア語を使う", "Usa l'italiano"]
     /// Enter key in its plain "return" state — localized since the key-label fix (Design.getEnterKeyText).
     static let enterKeyReturn = ["改行", "Newline", "A capo"]
     /// Space key on the simple/flick keyboards — localized since the key-label fix.
@@ -788,5 +789,85 @@ final class CopakyCampaignTests: XCTestCase {
                 .matching(NSPredicate(format: "label == %@", "空白")).firstMatch
             XCTAssertFalse(japaneseSpace.exists, "Space key still shows the Japanese label 空白 on a \(language) device")
         }
+    }
+
+    // MARK: - 33 · Copaky extension: Italian as a keyboard language
+
+    /// Turning on Settings ▸ Usability ▸ "Use Italian" must put Italian into the language-switch
+    /// cycle. English and Italian share ONE Latin tab (same layout, different prediction dictionary),
+    /// so the proof is the switch key offering "IT" — there is no second tab to look for.
+    /// イタリア語をオンにすると言語切替キーの巡回にITが加わることを確認する。
+    ///
+    /// SIMULATOR PREREQUISITES (the App Group is not provisioned on an unsigned simulator build, so
+    /// the app and the extension end up with SEPARATE "group.com.pettipol.copaky" domains — flipping
+    /// the toggle in the app does NOT reach the keyboard here; on a real device it does). The
+    /// orchestrator must seed the device-wide domain and flush cfprefsd before running:
+    ///   P=~/Library/Developer/CoreSimulator/Devices/<UDID>/data/Library/Preferences/group.com.pettipol.copaky.plist
+    ///   killall cfprefsd
+    ///   /usr/libexec/PlistBuddy -c "Add :enable_italian_keyboard_language bool true" "$P"
+    ///   /usr/libexec/PlistBuddy -c "Add :keyboard_type_en string roman" "$P"   # the switch key is QWERTY-only
+    ///   killall cfprefsd
+    /// keyboard_type_en=roman matters: the language-switch key exists only on the QWERTY layouts, so
+    /// on a flick Latin tab there is nothing to assert (Italian still applies — it is seeded at load).
+    func test33_italianJoinsTheLanguageCycle() throws {
+        // 1. Enable the toggle in MainApp settings (idempotent)
+        mainApp.launch()
+        if let close = firstMatch(in: mainApp, labels: L.closeOnboarding, timeout: 4) {
+            close.tap()
+        }
+        openSettingsTab()
+        var row = firstMatch(in: mainApp, labels: L.italianToggle, timeout: 6)
+        var swipes = 0
+        while row == nil && swipes < 8 {
+            mainApp.swipeUp()
+            swipes += 1
+            row = firstMatch(in: mainApp, labels: L.italianToggle, timeout: 2)
+        }
+        guard let row else {
+            dump(mainApp, "33-no-toggle")
+            XCTFail("Italian toggle not found in MainApp settings")
+            return
+        }
+        let sw = mainApp.switches.matching(NSPredicate(format: "label IN %@", L.italianToggle)).firstMatch
+        if (sw.exists ? (sw.value as? String) : nil) != "1" {
+            // SwiftUI Toggle: the cell tap does not flip it — hit the right-hand side.
+            (sw.exists ? sw : row).coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+        }
+        if sw.exists {
+            XCTAssertEqual(sw.value as? String, "1", "Italian toggle did not turn ON")
+        }
+        shot("33-toggle-on")
+
+        // 2. Bring up Copaky and move to the Latin tab.
+        _ = activatePreNavigatedField("plain-text")
+        switchToCopaky(in: safari)
+        let abcKey = safari.descendants(matching: .any)["ABC"]
+        if abcKey.waitForExistence(timeout: 3) && abcKey.isHittable {
+            abcKey.tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+            dismissCopakyNotice(in: safari)
+        }
+        shot("33-latin-tab")
+
+        // 3. "IT" is the Italian shortSymbol: it appears on the switch key either as the language in
+        // use or as the one the next tap selects. Allow one extra tap for the cycle to reach it.
+        var italian = safari.descendants(matching: .any)
+            .matching(NSPredicate(format: "label == %@", "IT")).firstMatch
+        if !italian.waitForExistence(timeout: 4) {
+            let switchKey = safari.descendants(matching: .any)
+                .matching(NSPredicate(format: "label == %@ OR label == %@", "A", "あ")).firstMatch
+            if switchKey.exists && switchKey.isHittable {
+                switchKey.tap()
+                RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+            }
+            italian = safari.descendants(matching: .any)
+                .matching(NSPredicate(format: "label == %@", "IT")).firstMatch
+        }
+        if !italian.exists {
+            dump(safari, "33-no-italian")
+        }
+        shot("33-after-cycle")
+        XCTAssertTrue(italian.exists, "Italian ('IT') never appeared on the language-switch key with the toggle ON")
     }
 }

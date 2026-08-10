@@ -84,7 +84,7 @@ public extension ActionType {
             KeyboardFeedback<Extension>.delete()
         case .smoothDelete, .smartDelete, .smartMoveCursor:
             KeyboardFeedback<Extension>.smoothDelete()
-        case .moveTab, .enter, .changeCharacterType, .completeCharacterForm, .setCursorBar, .moveCursor, .enableResizingMode, .replaceLastCharacters, .setTabBar, .setBoolState, .setUpsideComponent, .setSearchQuery, .selectCandidate:
+        case .moveTab, .setLatinKeyboardLanguage, .enter, .changeCharacterType, .completeCharacterForm, .setCursorBar, .moveCursor, .enableResizingMode, .replaceLastCharacters, .setTabBar, .setBoolState, .setUpsideComponent, .setSearchQuery, .selectCandidate:
             KeyboardFeedback<Extension>.tabOrOtherKey()
         case .openApp, .dismissKeyboard, .hideLearningMemory:
             return

@@ -117,6 +117,14 @@ public final class VariableStates: ObservableObject {
     @Published public var clipboardHistoryManager: ClipboardHistoryManager
 
     @Published public var keyboardLanguage: KeyboardLanguage = .ja_JP
+    /// Copaky: which language the LATIN tab is currently typing. English and Italian share one
+    /// QWERTY layout — only the prediction dictionary differs — so instead of a second identical tab
+    /// the Latin tab carries a language here. Seeded from the user's preference when the keyboard
+    /// loads and changed by the language-switch key; `TabManager` applies it whenever a tab declares
+    /// itself English.
+    /// Copaky: ラテン文字タブが今どの言語を入力しているか。英語とイタリア語は同じ配列を共有し、
+    /// 予測辞書だけが異なるため、タブを増やさずここで言語を持つ。
+    @Published public var latinKeyboardLanguage: KeyboardLanguage = .en_US
     @Published private(set) public var keyboardOrientation: KeyboardOrientation = .vertical
 
     @MainActor private(set) public var keyboardType: UIKeyboardType = .default

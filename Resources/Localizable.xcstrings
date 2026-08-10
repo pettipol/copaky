@@ -1,6 +1,38 @@
 {
   "sourceLanguage" : "ja",
   "strings" : {
+    "イタリア語を使う" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use Italian"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usa l'italiano"
+          }
+        }
+      }
+    },
+    "言語切替キーにイタリア語を加え、ラテン文字タブの予測変換をイタリア語の辞書から行います。キー配列は変わりません。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adds Italian to the language-switch key and makes the Latin tab predict from the Italian dictionary. The key layout does not change."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aggiunge l'italiano al tasto di cambio lingua e fa suggerire le parole dal dizionario italiano sulla scheda latina. La disposizione dei tasti non cambia."
+          }
+        }
+      }
+    },
     "全角" : {
       "extractionState" : "manual",
       "localizations" : {

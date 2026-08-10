@@ -351,6 +351,11 @@ public struct CustardManager: CustardManagerProtocol {
                 }
                 return nil
             }
+        case .it_IT:
+            // Copaky: CustardKit's own language enum has no Italian, so a custard can never declare
+            // itself Italian — an Italian typist gets the same custards an English one gets.
+            // Copaky: CustardKit 側にイタリア語がないため、英語のカスタードを共有する。
+            return self.availableCustard(for: .en_US)
         case .none:
             return []
         }

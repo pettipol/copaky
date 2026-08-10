@@ -168,7 +168,7 @@ public struct TabManager {
         // VariableStateの状態を遷移先のタブに合わせて適切に変更する
         variableStates.setInputStyle(destination.inputStyle)
         if let language = destination.language {
-            variableStates.keyboardLanguage = language
+            variableStates.keyboardLanguage = Self.resolved(language, variableStates: variableStates)
         }
 
         // selfの状態を更新する
@@ -177,11 +177,19 @@ public struct TabManager {
         self.currentTab = .existential(destination)
     }
 
+    /// Copaky: a tab that declares itself English really means "the Latin tab"; which Latin language
+    /// is actually being typed lives in `VariableStates.latinKeyboardLanguage` (English or Italian).
+    /// Every other language passes through untouched.
+    /// Copaky: 英語を宣言するタブは「ラテン文字タブ」の意味。実際の言語は latinKeyboardLanguage に従う。
+    @MainActor private static func resolved(_ language: KeyboardLanguage, variableStates: VariableStates) -> KeyboardLanguage {
+        language == .en_US ? variableStates.latinKeyboardLanguage : language
+    }
+
     @MainActor private func updateVariableStates(_ variableStates: VariableStates, inputStyle: InputStyle, language: KeyboardLanguage?) {
         // VariableStateの状態を遷移先のタブに合わせて適切に変更する
         variableStates.setInputStyle(inputStyle)
         if let language {
-            variableStates.keyboardLanguage = language
+            variableStates.keyboardLanguage = Self.resolved(language, variableStates: variableStates)
         }
         variableStates.updateResizingState()
     }

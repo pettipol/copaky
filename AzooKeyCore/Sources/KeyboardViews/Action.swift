@@ -9,6 +9,7 @@
 import CustardKit
 import Foundation
 import enum KanaKanjiConverterModule.ConverterBehaviorSemantics
+import enum KanaKanjiConverterModule.KeyboardLanguage
 
 public enum BoolOperation: Equatable, Sendable {
     case on, off, toggle
@@ -41,6 +42,11 @@ public indirect enum ActionType: Equatable, Sendable {
     case hideLearningMemory
     // タブの変更
     case moveTab(TabData)
+    /// Copaky: pick which language the LATIN tab types (English or Italian). The layout is the same
+    /// either way — what changes is the prediction dictionary — so this is a language switch, not a
+    /// tab switch, and it is emitted right before `moveTab(.system(.user_english))`.
+    /// Copaky: ラテン文字タブの言語（英語／イタリア語）を選ぶ。配列は同じで予測辞書だけが変わる。
+    case setLatinKeyboardLanguage(KeyboardLanguage)
     case setTabBar(BoolOperation)
     case setUpsideComponent(UpsideComponent?)
     // キーボードを閉じる

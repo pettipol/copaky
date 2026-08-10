@@ -16,6 +16,10 @@ extension KeyboardLanguage {
             "A"
         case .el_GR:
             "Ω"
+        case .it_IT:
+            // Copaky: Italian shares the Latin alphabet with English, so "A" would be ambiguous on
+            // the switch key — the language code is what tells the two apart at a glance.
+            "IT"
         case .ja_JP:
             "あ"
         case .none:
@@ -28,6 +32,8 @@ extension KeyboardLanguage {
             "ABC"
         case .el_GR:
             "ΑΒΓ"
+        case .it_IT:
+            "ITA"
         case .ja_JP:
             "あいう"
         case .none:
