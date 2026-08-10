@@ -162,7 +162,30 @@ public struct ClipboardHistoryManager {
             return
         }
         self.previousChangedCount = currentCount
+        self.insert(text: string, now: now)
+    }
 
+    /// Copaky — capture of text HANDED to us by the system (`UIPasteControl`), which never touches
+    /// `UIPasteboard`: iOS treats the tap on its own paste button as the user's intent and delivers
+    /// the value directly, so no "pasted from…" banner appears. Same guards and same caps as
+    /// `captureCurrentClipboard`; the only difference is where the string comes from.
+    /// Copaky — システムのペーストボタン経由で渡されたテキストの取り込み。
+    /// UIPasteboard を読まないためバナーが出ない。ガードと上限は通常の取り込みと同一。
+    @MainActor public mutating func captureProvidedText(_ string: String, isSecureEntry: Bool, now: Date = Date()) {
+        guard self.enabled, !isSecureEntry else {
+            return
+        }
+        guard string.count <= Self.maxItemCharacterCount, string.utf8.count <= Self.maxItemByteCount else {
+            self.hasPendingClipboard = false
+            return
+        }
+        // The system handed us this text, so whatever is on the pasteboard is now accounted for.
+        self.previousChangedCount = self.clipboardSource.changeCount
+        self.insert(text: string, now: now)
+    }
+
+    /// Shared tail of both capture paths: dedupe, keep pins, order, prune, cap the list.
+    @MainActor private mutating func insert(text string: String, now: Date) {
         var item = ClipboardHistoryItem(content: .text(string), createdData: now)
         if let index = self.items.firstIndex(where: { item.content == $0.content }) {
             let oldItem = self.items.remove(at: index)

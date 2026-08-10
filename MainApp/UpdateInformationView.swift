@@ -25,7 +25,7 @@ struct UpdateInformationView: View {
                     "フルアクセスがなくても日本語入力は使えます（クリップボード履歴の保存にはフルアクセスが必要です）"
                 }
             }
-            Section(footer: Text("Copaky は独立したプロジェクトです。高精度なかな漢字変換など入力の中核はオープンソースの azooKey（MIT）を基盤としており、その成果に感謝します。")) {
+            Section(footer: Text("Copakyは、オープンソースソフトウェアazooKey（MITライセンス）を基盤とした独立したプロジェクトであり、azooKeyの作者とは提携しておらず、その支援を受けているものでもありません。")) {
                 FallbackLink("View azooKey on GitHub", destination: URL(string: "https://github.com/azooKey/azooKey")!)
             }
         }.navigationBarTitle(Text("更新履歴"), displayMode: .inline)

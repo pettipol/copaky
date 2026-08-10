@@ -257,6 +257,23 @@ public extension KeyboardSettingKey where Self == EnableItalianKeyboardLanguage 
     static var enableItalianKeyboardLanguage: Self { .init() }
 }
 
+/// クリップボード履歴の取り込みにシステムのペーストボタンを使う設定（試験的） / Experimental: use Apple's
+/// system paste button (`UIPasteControl`) to add to the clipboard history. iOS treats a tap on its own
+/// control as consent, so the text is handed over without us reading the pasteboard and no
+/// "pasted from…" banner appears. Off by default until it is validated on a real device — the paste
+/// dialog does not exist on the Simulator, so nothing about this can be proven there.
+public struct UseSystemPasteControl: BoolKeyboardSettingKey {
+    public static let title: LocalizedStringKey = "システムのペーストボタンを使う"
+    public static let explanation: LocalizedStringKey = "クリップボード履歴への追加を、iOS標準のペーストボタンで行います。確認バナーが表示されなくなります。試験的な機能です。"
+    public static let defaultValue = false
+    public static let key: String = "use_system_paste_control"
+    public static let requireFullAccess: Bool = true
+}
+
+public extension KeyboardSettingKey where Self == UseSystemPasteControl {
+    static var useSystemPasteControl: Self { .init() }
+}
+
 /// 「連絡先」アプリの名前情報を読み込む設定
 /// - note: この機能はフルアクセスがないと実現できない
 public struct EnableContactImport: BoolKeyboardSettingKey {

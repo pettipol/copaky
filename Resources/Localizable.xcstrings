@@ -1,6 +1,230 @@
 {
   "sourceLanguage" : "ja",
   "strings" : {
+    "コピーした文字列の履歴をキーボードに保存し、専用のタブからいつでも呼び出せるようになりました。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copied text is now saved to a history you can recall from a dedicated tab in the keyboard."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il testo copiato viene ora salvato in una cronologia richiamabile da una scheda dedicata della tastiera."
+          }
+        }
+      }
+    },
+    "既定ではオフのオプトイン機能で、有効化にはフルアクセスの許可が必要です。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "It's off by default and opt-in — enabling it requires full access."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "È disattivata per impostazione predefinita: per attivarla serve l'accesso completo."
+          }
+        }
+      }
+    },
+    "履歴はこの端末内にのみ保存され、外部に送信されることはありません。ネットワーク通信を一切行わない機能です。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The history stays only on this device and is never sent anywhere — the feature makes no network connections at all."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La cronologia resta solo su questo dispositivo e non viene mai inviata altrove: la funzione non effettua alcuna connessione di rete."
+          }
+        }
+      }
+    },
+    "クリップボードの履歴を保存できるようになりました！" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can now save a clipboard history!"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ora puoi salvare la cronologia degli appunti!"
+          }
+        }
+      }
+    },
+    "ローマ字入力のQWERTYキーボードで、最上段のキーに小さく数字を表示できるようになりました。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On the QWERTY romaji keyboard, the top row of keys can now show a small number hint."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sulla tastiera QWERTY per l'input romaji, la riga superiore dei tasti può ora mostrare un piccolo numero."
+          }
+        }
+      }
+    },
+    "該当のキーを長押しすると、その数字を入力できます。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Long-press the key to type that number."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Con il tocco prolungato su quel tasto si inserisce il numero corrispondente."
+          }
+        }
+      }
+    },
+    "既定ではオフのオプション機能です。設定の「操作性」からいつでも有効・無効を切り替えられます。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "It's an optional feature that's off by default. You can turn it on or off anytime from Settings > Usability."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "È una funzione opzionale disattivata per impostazione predefinita. Puoi attivarla o disattivarla in qualsiasi momento da Impostazioni > Usabilità."
+          }
+        }
+      }
+    },
+    "QWERTYの最上段に数字を表示できるようになりました！" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can now show numbers on the QWERTY top row!"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ora puoi mostrare i numeri nella riga superiore del QWERTY!"
+          }
+        }
+      }
+    },
+    "イタリア語をキーボードの言語として選べるようになりました。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Italian can now be selected as a keyboard language."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ora è possibile selezionare l'italiano come lingua della tastiera."
+          }
+        }
+      }
+    },
+    "設定の「操作性」にある「イタリア語を使う」をオンにすると、言語切替キーにイタリア語が加わり、ラテン文字タブの予測変換がイタリア語の辞書から行われます。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turning on \"Use Italian\" in Settings > Usability adds Italian to the language-switch key, and predictions on the Latin tab come from the Italian dictionary."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Attivando \"Usa l'italiano\" in Impostazioni > Usabilità, l'italiano si aggiunge al tasto di cambio lingua e i suggerimenti nella scheda latina arrivano dal dizionario italiano."
+          }
+        }
+      }
+    },
+    "キー配列はローマ字入力のままで変わりません。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The key layout stays the same romaji layout — nothing changes there."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La disposizione dei tasti resta quella dell'input romaji: non cambia."
+          }
+        }
+      }
+    },
+    "à ù ì ò é などのアクセント付き文字は、対応するキーを長押しすることで入力できます。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accented letters such as à, ù, ì, ò, é can be typed with a long press on the corresponding key."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le lettere accentate come à, ù, ì, ò, é si inseriscono con un tocco prolungato sul tasto corrispondente."
+          }
+        }
+      }
+    },
+    "イタリア語をキーボードの言語に追加しました！" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Italian added as a keyboard language!"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aggiunto l'italiano come lingua della tastiera!"
+          }
+        }
+      }
+    },
+    "Copakyは、オープンソースソフトウェアazooKey（MITライセンス）を基盤とした独立したプロジェクトであり、azooKeyの作者とは提携しておらず、その支援を受けているものでもありません。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copaky is an independent project, based on the open-source software azooKey (MIT license), not affiliated with or endorsed by its authors."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copaky è un progetto indipendente, basato sul software open source azooKey (licenza MIT), non affiliato né sponsorizzato dai suoi autori."
+          }
+        }
+      }
+    },
     "イタリア語を使う" : {
       "localizations" : {
         "en" : {

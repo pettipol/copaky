@@ -42,6 +42,15 @@ struct TipsNewsSection: View {
             }
         }
         Section("新機能") {
+            IconNavigationLink("イタリア語をキーボードの言語に追加しました！", systemImage: "globe", imageColor: .orange) {
+                ItalianKeyboardLanguageNews()
+            }
+            IconNavigationLink("QWERTYの最上段に数字を表示できるようになりました！", systemImage: "number", imageColor: .orange) {
+                NumberRowHintsNews()
+            }
+            IconNavigationLink("クリップボードの履歴を保存できるようになりました！", systemImage: "doc.badge.clock", imageColor: .orange) {
+                ClipboardHistoryNews()
+            }
             if needFlickDakutenKeyNews {
                 IconNavigationLink("日本語フリックのカスタムキーで「濁点化」をサポート", systemImage: "bolt", imageColor: .orange) {
                     FlickDakutenKeyNews()

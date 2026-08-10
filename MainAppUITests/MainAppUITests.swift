@@ -870,4 +870,31 @@ final class CopakyCampaignTests: XCTestCase {
         shot("33-after-cycle")
         XCTAssertTrue(italian.exists, "Italian ('IT') never appeared on the language-switch key with the toggle ON")
     }
+
+    // MARK: - 34 · Copaky extension: the system paste control renders inside the input view
+
+    /// Apple does not document putting `UIPasteControl` inside a keyboard extension's input view, so
+    /// the first thing to establish is whether it even DRAWS there. This test does not — and cannot —
+    /// prove the paste itself: the paste dialog does not exist on the Simulator, so only a device
+    /// round can tell us whether the banner really disappears.
+    /// Prerequisites (orchestrator): use_system_paste_control + enable_clipboard_history_manager_tab
+    /// injected device-wide, Full Access already granted on the simulator.
+    /// UIPasteControl がキーボード拡張内で描画されるかだけを確認する（ペースト自体は実機でのみ検証可能）。
+    func test34_systemPasteControlRendersInKeyboard() throws {
+        _ = activatePreNavigatedField("plain-text")
+        switchToCopaky(in: safari)
+        dismissCopakyNotice(in: safari)
+        guard let clipboardTab = firstMatch(in: safari, labels: L.clipboardTab, timeout: 6) else {
+            dump(safari, "34-no-clipboard-tab")
+            throw XCTSkip("Clipboard tab not on the bar — Full Access or the tab setting is off on this simulator")
+        }
+        clipboardTab.tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(1.2))
+        shot("34-clipboard-tab")
+        dump(safari, "34-tree")
+        // UIPasteControl vends a button whose label iOS localizes ("Paste"/"ペースト"/"Incolla").
+        let pasteControl = safari.descendants(matching: .any)
+            .matching(NSPredicate(format: "label IN %@", ["Paste", "ペースト", "Incolla"])).firstMatch
+        XCTAssertTrue(pasteControl.waitForExistence(timeout: 4), "UIPasteControl did not render inside the keyboard's input view")
+    }
 }

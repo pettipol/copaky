@@ -90,6 +90,10 @@ public enum AzooKeyKeyboardViewExtension: ApplicationSpecificKeyboardViewExtensi
         EnableItalianKeyboardLanguage.value
     }
 
+    public static var useSystemPasteControl: Bool {
+        UseSystemPasteControl.value
+    }
+
     public static var displayTabBarButton: Bool {
         true
     }

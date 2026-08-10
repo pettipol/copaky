@@ -306,6 +306,14 @@ public final class VariableStates: ObservableObject {
 
     /// Cattura il contenuto corrente degli appunti nella cronologia, su intento esplicito dell'utente.
     /// Saltata automaticamente nei campi sicuri.
+    /// Copaky: store text delivered by the system paste button. Nothing reads the pasteboard here,
+    /// so iOS shows no "pasted from…" banner — the tap on its own control IS the consent.
+    /// Copaky: システムのペーストボタンから渡されたテキストを保存する（バナーなし）。
+    @MainActor public func capturePastedText(_ text: String) {
+        self.clipboardHistoryManager.captureProvidedText(text, isSecureEntry: self.isSecureEntry)
+        self.clipboardHistoryManager.save()
+    }
+
     @MainActor public func captureClipboard() {
         self.clipboardHistoryManager.captureCurrentClipboard(isSecureEntry: self.isSecureEntry)
         // Persisti subito: l'estensione può essere terminata prima di closeKeyboard (perdita dell'elemento).

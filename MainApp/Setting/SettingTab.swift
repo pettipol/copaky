@@ -86,7 +86,11 @@ struct SettingTabView: View {
                     BoolSettingView(.useReflectStyleCursorBar)
                         .searchKeys("カーソルバー", "バー")
                     BoolSettingView(.enableClipboardHistoryManagerTab)
-                        .searchKeys("コピー履歴", "クリップボード履歴", "履歴")
+                        .searchKeys("コピー履歴", "クリップボード履歴", "履歴", "appunti", "clipboard", "cronologia")
+                    if SemiStaticStates.shared.hasFullAccess {
+                        BoolSettingView(.useSystemPasteControl)
+                            .searchKeys("ペースト", "バナー", "コピー履歴", "incolla", "appunti", "paste")
+                    }
                     if SemiStaticStates.shared.hasFullAccess {
                         NavigationLink("「ペーストを許可」のダイアログについて") {
                             PasteFromOtherAppsPermissionTipsView()

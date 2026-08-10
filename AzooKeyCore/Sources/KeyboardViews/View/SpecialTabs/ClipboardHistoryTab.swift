@@ -109,6 +109,30 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
     /// Disabilitato nei campi sicuri. La label cambia se ci sono nuovi appunti rilevati (solo metadati).
     @ViewBuilder
     private var captureBar: some View {
+        // Copaky prototype: with the setting on, capture goes through Apple's own paste button, which
+        // hands us the text instead of letting us read the pasteboard — so iOS raises no banner.
+        // Off by default and NOT verifiable on the Simulator (the paste dialog does not exist there):
+        // the device round decides whether this becomes the only path.
+        // Copaky試験実装: 設定オン時はシステムのペーストボタン経由で取り込む（バナーなし）。
+        if #available(iOS 16.0, *), Extension.SettingProvider.useSystemPasteControl, !variableStates.isSecureEntry {
+            SystemPasteControl(
+                onPaste: { text in
+                    variableStates.capturePastedText(text)
+                    self.target.reload(manager: variableStates.clipboardHistoryManager)
+                    KeyboardFeedback<Extension>.click()
+                },
+                tint: UIColor(theme.textColor.color)
+            )
+            .frame(height: 34)
+            .padding(.horizontal, 12)
+            .accessibilityHint(Text("クリップボードの内容を履歴に追加します"))
+        } else {
+            legacyCaptureBar
+        }
+    }
+
+    @ViewBuilder
+    private var legacyCaptureBar: some View {
         Button {
             variableStates.captureClipboard()
             self.target.reload(manager: variableStates.clipboardHistoryManager)

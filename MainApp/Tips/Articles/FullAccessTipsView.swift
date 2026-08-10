@@ -48,7 +48,7 @@ struct FullAccessTipsView: View {
                 Text("フルアクセスを有効化する際、以下のような警告が表示されますが、すべてのキーボードアプリで共通して表示されている警告です。")
                 TipsImage(.fullAccessAlert)
                 Text("Copakyは安全なキーボードアプリであり、ユーザの明示的な同意なく、個人情報を外部に送信したり、保存したりすることはありません。")
-                Text("なお、CopakyはオープンソースであるazooKeyをベースにしており、誰もがその実装を確認することができます。")
+                Text("Copakyは、オープンソースソフトウェアazooKey（MITライセンス）を基盤とした独立したプロジェクトであり、azooKeyの作者とは提携しておらず、その支援を受けているものでもありません。")
             }
             if let url = URL(string: UIApplication.openSettingsURLString) {
                 Button(SemiStaticStates.shared.hasFullAccess

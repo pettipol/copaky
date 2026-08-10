@@ -33,6 +33,9 @@ import Foundation
     /// イタリア語をキーボードの言語として使う / Italian as a keyboard language: it joins the language-switch cycle
     /// and the Latin tab predicts from the Italian dictionary instead of the English one.
     static var enableItalianKeyboardLanguage: Bool { get }
+    /// クリップボード取り込みにシステムのペーストボタンを使う（試験的） / Experimental: capture through
+    /// `UIPasteControl` instead of reading the pasteboard ourselves — no system banner.
+    static var useSystemPasteControl: Bool { get }
     static var hideResetButtonInOneHandedMode: Bool { get }
     static var useShiftKey: Bool { get }
     static var keepDeprecatedShiftKeyBehavior: Bool { get }
