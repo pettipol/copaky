@@ -14,6 +14,15 @@ import SwiftUI
 struct SettingTabView: View {
     @State private var searchQuery: String = ""
     @State private var path: [CustomizeTabView.Path] = []
+    /// Copaky: 13 sections is a lot to land in. Off = a short "Essentials" list with the settings
+    /// people actually look for; on = every section, exactly as before. Persisted, and always
+    /// bypassed while searching so a query can never miss a hidden row.
+    /// Copaky: 既定では「基本設定」だけを表示し、必要な人だけ全設定を開く。検索中は常に全表示。
+    @AppStorage("settings_show_all_sections") private var showAllSections = false
+
+    private var showsEverything: Bool {
+        showAllSections || !searchQuery.isEmpty
+    }
     @Environment(\.requestReview) var requestReview
     @EnvironmentObject private var appStates: MainAppStates
     private func canFlickLayout(_ layout: LanguageLayout) -> Bool {
@@ -43,12 +52,38 @@ struct SettingTabView: View {
     var body: some View {
         NavigationStack(path: $path) {
             Form {
+                if !showsEverything {
+                    // Copaky: the short list. Same views as below — a row is defined once and shown
+                    // here or in its own section, never duplicated in behaviour.
+                    Section("基本設定") {
+                        NavigationLink("キーボードの種類を設定する") {
+                            KeyboardLayoutTypeDetailsView()
+                        }
+                        BoolSettingView(.liveConversion)
+                        BoolSettingView(.enableNumberRowHints)
+                        BoolSettingView(.enableItalianKeyboardLanguage)
+                        BoolSettingView(.enableClipboardHistoryManagerTab)
+                        BoolSettingView(.enableKeySound)
+                        if SemiStaticStates.shared.hapticsAvailable {
+                            BoolSettingView(.enableKeyHaptics)
+                        }
+                        FontSizeSettingView(.keyViewFontSize, .key, availableValueRange: 15 ... 28)
+                    }
+                }
+                Section {
+                    Toggle("すべての設定を表示", isOn: $showAllSections)
+                } footer: {
+                    Text("オフのときは、よく使う設定だけを表示します。検索はすべての設定を対象にします。")
+                }
+                .searchKeys("すべての設定", "全設定", "tutte", "impostazioni", "all settings")
+
+                if showsEverything {
                 Section("キーボードの種類") {
                     NavigationLink("キーボードの種類を設定する") {
                         KeyboardLayoutTypeDetailsView()
                     }
                 }
-                .searchKeys("キーボードの種類", "レイアウト", "フリック", "ローマ字")
+                .searchKeys("キーボードの種類", "レイアウト", "フリック", "ローマ字", "tastiera", "layout", "keyboard", "disposizione")
 
                 Section("ライブ変換") {
                     BoolSettingView(.liveConversion)
@@ -56,18 +91,18 @@ struct SettingTabView: View {
                         LiveConversionSettingView()
                     }
                 }
-                .searchKeys("ライブ変換", "自動変換", "自動確定")
+                .searchKeys("ライブ変換", "自動変換", "自動確定", "conversione", "automatica", "live", "conversion")
 
                 Section("カスタムキー") {
                     CustomKeysSettingView(settingAdaptive: true)
-                        .searchKeys("カスタムキー", "カスタマイズ")
+                        .searchKeys("カスタムキー", "カスタマイズ", "personalizza", "tasti", "custom", "keys")
                     if !self.isCustard(appStates.japaneseLayout) || !self.isCustard(appStates.englishLayout) {
                         BoolSettingView(.useNextCandidateKey)
-                            .searchKeys("次候補キー")
+                            .searchKeys("次候補キー", "candidato", "successivo", "next", "candidate")
                     }
                     if self.canQwertyLayout(appStates.englishLayout) {
                         BoolSettingView(.useShiftKey)
-                            .searchKeys("シフトキー")
+                            .searchKeys("シフトキー", "maiuscole", "shift")
                         // Version 2.2.2以前にインストールしており、UseShiftKey.valueがtrueの人にのみこのオプションを表示する
                         // Copaky: isCopakyEra — never a legacy azooKey install, hide the deprecated toggle
                         if #unavailable(iOS 18), let initialVersion = SharedStore.initialAppVersion, initialVersion <= .azooKey_v2_2_2, !initialVersion.isCopakyEra, UseShiftKey.value == true {
@@ -77,14 +112,14 @@ struct SettingTabView: View {
                     }
                     if !SemiStaticStates.shared.needsInputModeSwitchKey, self.canFlickLayout(appStates.japaneseLayout) {
                         BoolSettingView(.enablePasteButton)
-                            .searchKeys("ペーストボタン", "ペーストキー", "貼り付け")
+                            .searchKeys("ペーストボタン", "ペーストキー", "貼り付け", "incolla", "paste")
                     }
                 }
                 .inheritSearchKeys()
 
                 Section("バー") {
                     BoolSettingView(.useReflectStyleCursorBar)
-                        .searchKeys("カーソルバー", "バー")
+                        .searchKeys("カーソルバー", "バー", "cursore", "barra", "cursor", "bar")
                     BoolSettingView(.enableClipboardHistoryManagerTab)
                         .searchKeys("コピー履歴", "クリップボード履歴", "履歴", "appunti", "clipboard", "cronologia")
                     if SemiStaticStates.shared.hasFullAccess {
@@ -100,7 +135,7 @@ struct SettingTabView: View {
                     NavigationLink("タブバーを編集") {
                         EditingTabBarView(manager: $appStates.custardManager)
                     }
-                    .searchKeys("タブバー", "バー")
+                    .searchKeys("タブバー", "バー", "barra", "schede", "tab", "bar")
                 }
                 .inheritSearchKeys()
 
@@ -108,9 +143,9 @@ struct SettingTabView: View {
                 if SemiStaticStates.shared.hapticsAvailable {
                     Section("サウンドと振動") {
                         BoolSettingView(.enableKeySound)
-                            .searchKeys("サウンド", "音")
+                            .searchKeys("サウンド", "音", "suono", "audio", "sound")
                         BoolSettingView(.enableKeyHaptics)
-                            .searchKeys("サウンド", "振動")
+                            .searchKeys("サウンド", "振動", "vibrazione", "haptics", "vibration")
                     }
                     .inheritSearchKeys()
                 } else {
@@ -122,7 +157,7 @@ struct SettingTabView: View {
 
                 Section("表示") {
                     FontSizeSettingView(.keyViewFontSize, .key, availableValueRange: 15 ... 28)
-                        .searchKeys("フォント", "サイズ", "文字サイズ")
+                        .searchKeys("フォント", "サイズ", "文字サイズ", "carattere", "dimensione", "font", "size", "testo")
                     FontSizeSettingView(.resultViewFontSize, .result, availableValueRange: 12...24)
                         .searchKeys("フォント", "サイズ", "文字サイズ")
                 }
@@ -130,15 +165,15 @@ struct SettingTabView: View {
 
                 Section("操作性") {
                     BoolSettingView(.hideResetButtonInOneHandedMode)
-                        .searchKeys("片手モード", "解除ボタン")
+                        .searchKeys("片手モード", "解除ボタン", "una mano", "one-handed")
                     if self.canFlickLayout(appStates.japaneseLayout) {
                         FlickSensitivitySettingView(.flickSensitivity)
-                            .searchKeys("フリックの感度", "感度")
+                            .searchKeys("フリックの感度", "感度", "sensibilita", "flick")
                         BoolSettingView(.enableSmoothDelete)
-                            .searchKeys("文頭まで削除", "スムーズ削除", "削除", "フリック")
+                            .searchKeys("文頭まで削除", "スムーズ削除", "削除", "フリック", "cancella", "elimina", "delete")
                     }
                     BoolSettingView(.enableNumberRowHints)
-                        .searchKeys("数字", "数字キー", "ナンバー", "上段", "number")
+                        .searchKeys("数字", "数字キー", "ナンバー", "上段", "number", "numeri", "cifre", "digits")
                     BoolSettingView(.enableItalianKeyboardLanguage)
                         .searchKeys("イタリア語", "italiano", "italian", "lingua", "language", "言語")
                 }
@@ -222,6 +257,7 @@ struct SettingTabView: View {
                 }
                 .inheritSearchKeys()
 
+                }   // showsEverything
             }
             .searchQuery(searchQuery.isEmpty ? nil : searchQuery.toKatakana())
             .navigationTitle("設定")

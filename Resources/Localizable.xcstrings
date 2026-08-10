@@ -1,6 +1,54 @@
 {
   "sourceLanguage" : "ja",
   "strings" : {
+    "基本設定" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Essentials"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impostazioni di base"
+          }
+        }
+      }
+    },
+    "すべての設定を表示" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show all settings"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostra tutte le impostazioni"
+          }
+        }
+      }
+    },
+    "オフのときは、よく使う設定だけを表示します。検索はすべての設定を対象にします。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When off, only the settings most people need are shown. Search always covers every setting."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quando è spento vengono mostrate solo le impostazioni più usate. La ricerca riguarda comunque tutte le impostazioni."
+          }
+        }
+      }
+    },
     "コピーした文字列の履歴をキーボードに保存し、専用のタブからいつでも呼び出せるようになりました。" : {
       "localizations" : {
         "en" : {
