@@ -23,16 +23,13 @@ struct QwertyNextCandidateKeyModel<Extension: ApplicationSpecificKeyboardViewExt
 
     func label<ThemeExtension>(width: CGFloat, theme _: ThemeData<ThemeExtension>, states: VariableStates, color: Color?) -> KeyLabel<Extension> where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         if states.resultModel.results.isEmpty {
-            switch states.keyboardLanguage {
-            case .el_GR:
+            // Same rule as QwertySpaceKeyModel: the cap follows the UI language, Greek excepted.
+            if states.keyboardLanguage == .el_GR {
                 return KeyLabel(.text("διάστημα"), width: width, textSize: .small, textColor: color)
-            case .en_US:
-                return KeyLabel(.text("space"), width: width, textSize: .small, textColor: color)
-            case .ja_JP, .none:
-                return KeyLabel(.text("空白"), width: width, textSize: .small, textColor: color)
             }
+            return KeyLabel(.localizedText("空白"), width: width, textSize: .small, textColor: color)
         } else {
-            return KeyLabel(.text("次候補"), width: width, textSize: .small, textColor: color)
+            return KeyLabel(.localizedText("次候補"), width: width, textSize: .small, textColor: color)
         }
     }
 

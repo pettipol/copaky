@@ -281,7 +281,7 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
     }
 
     private func backTabKey() -> SimpleKeyView<Extension> {
-        SimpleKeyView(model: SimpleKeyModel<Extension>(keyLabelType: .text("戻る"), unpressedKeyColorType: .special, pressActions: [.moveTab(.system(.last_tab))], longPressActions: .none), width: functionKeyWidth * 2, height: footerHeight)
+        SimpleKeyView(model: SimpleKeyModel<Extension>(keyLabelType: .localizedText("戻る"), unpressedKeyColorType: .special, pressActions: [.moveTab(.system(.last_tab))], longPressActions: .none), width: functionKeyWidth * 2, height: footerHeight)
     }
 
     private func genreKey(_ genre: Genre) -> some View {

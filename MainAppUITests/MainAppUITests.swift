@@ -5,8 +5,11 @@
 //  Drives the phase A/B/C2 checklist in reports/sim_test_2026-07.md (workspace repo).
 //  Tests are ordered (test01_, test02_, …) and some depend on state created by earlier
 //  tests (keyboard enabled in Settings, Full Access granted). Run the whole class in order.
-//  Simulator locale is it_IT (Settings in Italian), MainApp falls back to English,
-//  keyboard-internal strings are Japanese — label helpers try all three.
+//  Simulator locale is it_IT (Settings in Italian). Since commit c47f9765 the app ships an Italian
+//  localization, and since the key-label fix the KEYBOARD's functional labels are localized too
+//  (KeyLabelType.localizedText) — so a label that used to be Japanese on every device is now
+//  "Spazio"/"Space"/"空白" depending on the UI language. Every label helper must therefore list all
+//  three variants; a Japanese-only marker is a latent false negative.
 //
 
 import UIKit
@@ -24,12 +27,18 @@ private enum L {
     static let allowButton = ["Consenti", "Allow", "許可"]
     static let closeOnboarding = ["閉じる", "Close", "Chiudi"]
     static let settingsTab = ["設定", "Settings", "Impostazioni"]
-    static let clipboardToggle = ["Keep clipboard histories", "クリップボードの履歴を保存"]
-    static let captureBar = ["コピーした内容を追加", "現在のクリップボードを追加", "Add copied text", "Add current clipboard"]
+    static let clipboardToggle = ["Keep clipboard histories", "クリップボードの履歴を保存", "Salva la cronologia degli appunti"]
+    static let captureBar = ["コピーした内容を追加", "現在のクリップボードを追加", "Add copied text", "Add current clipboard", "Aggiungi il testo copiato", "Aggiungi gli appunti correnti"]
     static let clipboardTab = ["コピー履歴", "clipboard_history_tab", "doc.badge.clock"]
     /// Flick key whose LONG-PRESS toggles the tab bar (FlickCustomKeySetting: ☆123 → .toggleTabBar).
     static let tabBarToggleKey = ["☆123", "123"]
-    static let numberHintsToggle = ["Show numbers on the top row", "上段に数字を表示"]
+    static let numberHintsToggle = ["Show numbers on the top row", "上段に数字を表示", "Mostra i numeri nella riga superiore"]
+    /// Enter key in its plain "return" state — localized since the key-label fix (Design.getEnterKeyText).
+    static let enterKeyReturn = ["改行", "Newline", "A capo"]
+    /// Space key on the simple/flick keyboards — localized since the key-label fix.
+    static let spaceKey = ["空白", "Space", "Spazio"]
+    /// Back key of the clipboard and emoji tabs — localized since the key-label fix.
+    static let backKey = ["戻る", "Back", "Indietro"]
 }
 
 @MainActor
@@ -111,7 +120,12 @@ final class CopakyCampaignTests: XCTestCase {
     /// NOTE: custom keyboards may not vend a standard `Keyboard` accessibility element at all.
     private func copakyActive(in app: XCUIApplication) -> Bool {
         dismissCopakyNotice(in: app)
-        let markers = ["空白", "改行", "あいう", "戻る", "逆順", "お知らせ"]
+        // Markers must be COPAKY-SPECIFIC. 「空白」/「改行」 are NOT: Apple's own kana keyboard shows
+        // them too, so using them here made the campaign silently test the system keyboard whenever
+        // the globe had cycled away from Copaky. Every marker below exists only in our layouts:
+        // ☆123 and 小ﾞﾟ on the flick tab, Aあ on the QWERTY tabs, 逆順/お知らせ in our bars.
+        // マーカーはCopaky固有のものだけにする（空白・改行は純正キーボードにも存在する）。
+        let markers = ["☆123", "小ﾞﾟ", "Aあ", "あいう", "逆順", "お知らせ"]
         let match = app.descendants(matching: .any).matching(NSPredicate(format: "label IN %@", markers)).firstMatch
         if match.exists { return true }
         let kb = app.keyboards.firstMatch
@@ -726,5 +740,53 @@ final class CopakyCampaignTests: XCTestCase {
         shot("31-after-longpress")
         let value = field.value as? String ?? ""
         XCTAssertTrue(value.contains("1"), "Digit '1' was not inserted via long-press (got '\(value)')")
+    }
+
+    // MARK: - 32 · Copaky extension: functional key labels follow the UI language
+
+    /// Regression guard for the key-label localization bug reported in the first device round:
+    /// `KeyLabelType.text(String)` rendered `Text(verbatim:)`, so the enter key kept showing 改行/確定
+    /// on an English or Italian phone even though its VoiceOver label WAS translated. Functional
+    /// labels now go through `KeyLabelType.localizedText` and resolve against the string catalog.
+    /// キーの機能ラベルがUI言語に追従することの回帰テスト。
+    func test32_functionalKeyLabelsFollowUILanguage() throws {
+        let language = Locale.preferredLanguages.first ?? "en"
+        let expectedEnter: String
+        switch language.prefix(2) {
+        case "it": expectedEnter = "A capo"
+        case "en": expectedEnter = "Newline"
+        case "ja": expectedEnter = "改行"
+        default:
+            throw XCTSkip("Device language \(language) is not one Copaky localizes — nothing to assert")
+        }
+
+        // Pre-navigated page (iOS 26 ignores Safari's "-u"): the orchestrator opens it via simctl openurl.
+        _ = activatePreNavigatedField("plain-text")
+        switchToCopaky(in: safari)
+        dismissCopakyNotice(in: safari)
+        shot("32-keyboard-\(language)")
+
+        // firstMatch: the magnifier bubble can duplicate a label during transient presses.
+        let enter = safari.descendants(matching: .any)
+            .matching(NSPredicate(format: "label == %@", expectedEnter)).firstMatch
+        if !enter.waitForExistence(timeout: 6) {
+            dump(safari, "32-no-enter-key")
+        }
+        XCTAssertTrue(enter.exists, "Enter key label '\(expectedEnter)' not found on a \(language) device")
+
+        // The real proof: on a non-Japanese device the Japanese label must be GONE, not just duplicated.
+        if expectedEnter != "改行" {
+            let japanese = safari.descendants(matching: .any)
+                .matching(NSPredicate(format: "label == %@", "改行")).firstMatch
+            XCTAssertFalse(japanese.exists, "Enter key still shows the Japanese label 改行 on a \(language) device")
+
+            // Second code path, different mechanism: the space key of the flick tab comes from a
+            // BUILT-IN CUSTARD (CustardKit's flickSpace bakes in 「空白」), translated at the
+            // CustardKeyLabelStyle → KeyLabelType boundary. A regression there would leave 空白 on
+            // screen while the enter key looks fine, so assert it separately.
+            let japaneseSpace = safari.descendants(matching: .any)
+                .matching(NSPredicate(format: "label == %@", "空白")).firstMatch
+            XCTAssertFalse(japaneseSpace.exists, "Space key still shows the Japanese label 空白 on a \(language) device")
+        }
     }
 }

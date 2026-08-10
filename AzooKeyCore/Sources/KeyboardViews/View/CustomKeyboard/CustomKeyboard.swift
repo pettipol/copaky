@@ -10,11 +10,26 @@ import CustardKit
 import Foundation
 import SwiftUI
 
+/// Copaky: functional labels that the BUILT-IN custards carry in Japanese — CustardKit bakes
+/// 「空白」/「全角」 into `flickSpace()`, and our own ErrorCustard is written in Japanese too. They are
+/// words the user READS, not characters the key types, so they must follow the UI language like every
+/// other functional label; anything not listed here stays verbatim (a custard key that types 「あ」
+/// must keep typing 「あ」). A user-made custard reusing one of these exact strings gets translated
+/// too, which is the desirable outcome.
+/// Copaky: 組み込みカスタード（CustardKitのflickSpace等）が持つ日本語の機能ラベル。
+/// ユーザーが「読む」語だけをここに列挙し、UI言語に追従させる。打鍵される文字は対象外。
+private let copakyLocalizableCustardLabels: Set<String> = [
+    "空白", "次候補", "戻る", "全角",
+    // ErrorCustard (AzooKeyCore/Sources/KeyboardViews/Custard/ErrorCustard.swift)
+    "カスタードファイルが見つかりません\n正しく読み込めているか確認してください",
+    "アプリで確認する", "前のタブに戻る", "ひらがなタブに移動",
+]
+
 public extension CustardKeyLabelStyle {
     var keyLabelType: KeyLabelType {
         switch self {
         case let .text(value):
-            return .text(value)
+            return copakyLocalizableCustardLabels.contains(value) ? .localizedText(value) : .text(value)
         case let .systemImage(value):
             return .image(value)
         case let .mainAndSub(main, sub):

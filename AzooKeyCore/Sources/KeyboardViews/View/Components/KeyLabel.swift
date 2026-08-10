@@ -11,7 +11,16 @@ import SwiftUI
 import struct CustardKit.CustardKeyDirectionalLabel
 
 public enum KeyLabelType: Sendable, Equatable {
+    /// Verbatim label: the payload is rendered as-is. Use it for the CHARACTERS a key types.
+    /// そのまま表示されるラベル。キーが入力する「文字そのもの」に使う。
     case text(String)
+    /// Copaky: functional label resolved through the app's string catalog.
+    /// The payload doubles as the catalog key (source language: Japanese), so a key that reads
+    /// "戻る" shows "Back"/"Indietro" once the UI language is English/Italian.
+    /// Use it ONLY for words the user reads (space, return, back…), NEVER for typed characters.
+    /// Copaky: 文字列カタログ経由で解決される機能ラベル（ペイロードがそのままカタログのキー）。
+    /// ユーザーが読む語にのみ使い、入力される文字には使わないこと。
+    case localizedText(String)
     case symbols([String])
     case mainAndDirections(String, CustardKeyDirectionalLabel)
     case image(String)
@@ -98,6 +107,17 @@ public struct KeyLabel<Extension: ApplicationSpecificKeyboardViewExtension>: Vie
         case let .text(text):
             let font = Design.fonts.keyLabelFont(text: text, width: width, fontSize: self.textSize, userDecidedSize: keyViewFontSize, theme: theme)
             Text(text)
+                .font(font)
+                .foregroundStyle(mainKeyColor)
+                .allowsHitTesting(false)
+
+        case let .localizedText(key):
+            // Resolve first: the font must be sized on the TRANSLATED text ("Emergency" is much wider
+            // than "緊急連絡"), so we cannot hand a LocalizedStringKey straight to Text.
+            // 先に解決する: フォント幅は翻訳後の文字列で決める必要があるため。
+            let text = String(localized: String.LocalizationValue(key), bundle: .main)
+            let font = Design.fonts.keyLabelFont(text: text, width: width, fontSize: self.textSize, userDecidedSize: keyViewFontSize, theme: theme)
+            Text(verbatim: text)
                 .font(font)
                 .foregroundStyle(mainKeyColor)
                 .allowsHitTesting(false)

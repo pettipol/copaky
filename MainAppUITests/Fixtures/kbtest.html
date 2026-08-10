@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Copaky — keyboard test fields</title>
+<style>
+  body { font: 17px/1.5 -apple-system, system-ui, sans-serif; margin: 0; padding: 16px 16px 70vh; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  p.note { color: #666; margin: 0 0 20px; font-size: 14px; }
+  label { display: block; margin: 14px 0 4px; font-size: 13px; color: #444; }
+  input, textarea { width: 100%; box-sizing: border-box; font-size: 17px; padding: 10px;
+                    border: 1px solid #bbb; border-radius: 8px; }
+  textarea { min-height: 90px; }
+</style>
+</head>
+<body>
+<h1>Copaky — keyboard test fields</h1>
+<p class="note">Fixture for the XCUITest campaign. Each field's <code>placeholder</code> is the handle the
+tests query on (<code>focusField</code> / <code>activatePreNavigatedField</code>). Keep the placeholders
+stable: renaming one breaks the suite. コパキーのUIテスト用フィクスチャ。プレースホルダはテストの検索キー。</p>
+
+<label for="f-plain">Plain text — default return key, no content type</label>
+<input id="f-plain" type="text" placeholder="plain-text" aria-label="plain-text" autocomplete="off">
+
+<label for="f-textarea">Multiline — newline instead of submit</label>
+<textarea id="f-textarea" placeholder="textarea-field" aria-label="textarea-field"></textarea>
+
+<label for="f-url">URL trait</label>
+<input id="f-url" type="url" placeholder="url-field" aria-label="url-field" autocomplete="off">
+
+<label for="f-email">Email trait</label>
+<input id="f-email" type="email" placeholder="email-field" aria-label="email-field" autocomplete="off">
+
+<label for="f-number">Number trait</label>
+<input id="f-number" type="number" placeholder="number-field" aria-label="number-field">
+
+<label for="f-tel">Telephone trait</label>
+<input id="f-tel" type="tel" placeholder="tel-field" aria-label="tel-field">
+
+<label for="f-secure">Secure field — <code>textContentType = password</code></label>
+<input id="f-secure" type="password" placeholder="password-secure" aria-label="password-secure"
+       autocomplete="current-password">
+
+<label for="f-newpass">New-password field — the Q-04b secure-field guard case</label>
+<input id="f-newpass" type="password" placeholder="newpassword-field" aria-label="newpassword-field"
+       autocomplete="new-password">
+
+<label for="f-search">Search trait — return key reads "search"</label>
+<input id="f-search" type="search" placeholder="search-field" aria-label="search-field">
+</body>
+</html>

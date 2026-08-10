@@ -38,7 +38,7 @@ struct FlickNextCandidateKeyModel<Extension: ApplicationSpecificKeyboardViewExte
     }
 
     func label<ThemeExtension>(width: CGFloat, theme _: ThemeData<ThemeExtension>, states: VariableStates, color _: Color?) -> KeyLabel<Extension> where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
-        states.resultModel.results.isEmpty ? KeyLabel(.text("空白"), width: width) : KeyLabel(.text("次候補"), width: width)
+        states.resultModel.results.isEmpty ? KeyLabel(.localizedText("空白"), width: width) : KeyLabel(.localizedText("次候補"), width: width)
     }
     func backgroundStyleWhenUnpressed<ThemeExtension>(states _: VariableStates, theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         (theme.specialKeyFillColor.color, theme.specialKeyFillColor.blendMode)
