@@ -3,8 +3,8 @@
 *English · [日本語](./CREDITS.ja.md)*
 
 Copaky is an **independent project built on azooKey** and would not exist without it. The authoritative,
-per-component license texts are bundled in the app under **Settings → オープンソースソフトウェア
-(Acknowledgements)**; this file is a consolidated summary.
+per-component license texts are bundled in the app, in the **open-source software (Acknowledgements)**
+section of Settings; this file is a consolidated summary.
 
 ## Base project
 
@@ -17,7 +17,7 @@ per-component license texts are bundled in the app under **Settings → オー�
 
 | Component | Role | License |
 |---|---|---|
-| [AzooKeyKanaKanjiConverter](https://github.com/azooKey/AzooKeyKanaKanjiConverter) | Kana-kanji conversion engine | MIT |
+| [AzooKeyKanaKanjiConverter](https://github.com/azooKey/AzooKeyKanaKanjiConverter) — used through the Copaky [fork](https://github.com/pettipol/AzooKeyKanaKanjiConverter) | Kana-kanji conversion engine | MIT |
 | [CustardKit](https://github.com/azooKey/CustardKit) | Custom-tab / custom-key data format | MIT |
 | [SwiftyMarisa](https://github.com/komamitsu/SwiftyMarisa) / marisa-trie | LOUDS / trie dictionary lookup | BSD-2-Clause |
 | [Swift Algorithms](https://github.com/apple/swift-algorithms) | Utilities | Apache-2.0 |
@@ -25,6 +25,12 @@ per-component license texts are bundled in the app under **Settings → オー�
 | Swift Numerics / swift-argument-parser | Utilities | Apache-2.0 |
 | swift-transformers (tokenizers / Jinja) | Tokenization support | see upstream (Apache-2.0) |
 | [llama.cpp](https://github.com/ggerganov/llama.cpp) | CPU inference for **Zenzai** neural conversion | MIT |
+
+> **Converter fork.** Copaky does not link the upstream converter directly: `AzooKeyCore/Package.swift`
+> pins https://github.com/pettipol/AzooKeyKanaKanjiConverter at a fixed revision. That fork is azooKey's
+> AzooKeyKanaKanjiConverter (MIT, © Keita Miwa / ensan and contributors) with a single Copaky addition —
+> `it_IT` as a keyboard language: Italian `UITextChecker`, Italian-only predictions, Latin-alphabet
+> candidates. All upstream copyright notices are preserved and the fork is MIT as well.
 
 > **Zenzai is deferred to v2.** Neural conversion is **not part of Copaky v0.1**: v0.1 uses azooKey's classic
 > (non-neural) conversion. The `zenz` GGUF model (**CC-BY-SA-4.0**) is **not bundled** with v0.1. The

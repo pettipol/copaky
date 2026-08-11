@@ -38,6 +38,26 @@ iOS / UIKit アプリのため無料の Linux ランナーではビルドでき�
 
 **プルリクエストを開く前に、必ず `scripts/ci-local.sh` をグリーンにしてください。**
 
+## UI テスト（シミュレータ。ゲートには含みません）
+
+`MainAppUITests/`（共有スキーム **`CopakyUITests`**）は、シミュレータ上で順序付きのキャンペーンを実行します:
+オンボーディングとフルアクセス、クリップボードタブ、長押しのアクセント記号、数字ヒント、ローカライズされた
+キーラベル、イタリア語の言語巡回。これは `scripts/ci-local.sh` では**実行されません** — テストは順序依存で
+前のテストが作った状態を共有し、シミュレータ側の準備（設定でキーボードを有効化、フルアクセスを許可）が
+必要なため、push のたびではなく意図的に実行します。
+
+```sh
+scripts/serve_test_page.sh --daemon    # MainAppUITests/Fixtures を 127.0.0.1:8377 で配信
+xcodebuild test -project azooKey.xcodeproj -scheme CopakyUITests \
+  -destination 'platform=iOS Simulator,name=iPhone 17'
+scripts/serve_test_page.sh --stop
+```
+
+このサーバーがないと、入力欄を使うテストはすべて「Safari webview did not load」で失敗します。
+
+シミュレータでは**証明できず**実機が必要なものが2つあります: システムのペーストダイアログ
+（`UIPasteControl`。設定 `use_system_paste_control` の裏）と、キーボード拡張の実際のメモリ予算です。
+
 ## ホスト型 GitHub Actions
 
 `.github/workflows/` のワークフローは、macOS ランナーの Actions 分数を浪費しないよう意図的に
@@ -53,8 +73,12 @@ CodeQL 実行など）にメンテナが Actions タブから実行します。D
   （「データは収集されません」）を支えるものであり、交渉の余地はありません。
 - クリップボードの取得は**ユーザー起点**を維持してください（明示的な意図なしにペーストボードの
   値を読まないこと）。
-- ユーザー向けの文字列・ドキュメントは**英日バイリンガル**です（`Localizable.xcstrings`、
-  `*.md` / `*.ja.md` のペア）。
+- ユーザー向けの**文字列は3言語**です：日本語（カタログのソース言語）・英語・イタリア語を
+  `Resources/Localizable.xcstrings` に用意します（新しい文字列は3言語すべて必要）。リポジトリの
+  **ドキュメントは英日の2言語**のままです（`*.md` / `*.ja.md` のペア）。
+- **入力される文字は決して翻訳しないでください。** キーボードでは `KeyLabelType.localizedText(_:)` が
+  *機能ラベル*（改行・空白・次候補・タブの「戻る」）を表し、そのペイロードがカタログのキーになります。
+  `.text(_:)` はそのまま挿入される文字であり、ローカライズしてはいけません。
 - azooKey およびサードパーティの**クレジット**を保持してください（[CREDITS.ja.md](./CREDITS.ja.md) 参照）。
 
 ## 既知のテスト債務

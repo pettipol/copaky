@@ -2,13 +2,15 @@
 
 *English · [日本語](./README.ja.md)*
 
-**Copaky** is a privacy-focused Japanese keyboard for iOS / iPadOS, with an **offline clipboard manager**.
+**Copaky** is a privacy-focused Japanese keyboard for iPhone, with an **offline clipboard manager**.
 It is an **independent project** built on — and crediting — [azooKey](https://github.com/azooKey/azooKey)
 (MIT): it keeps azooKey's high-quality Japanese conversion engine while reworking the clipboard, privacy,
 and telemetry behaviour around a strict **on-device, no-network** model.
 
 > **Status: pre-release (v0.1).** Not on the App Store yet — real-device validation and TestFlight
-> dogfooding are in progress ahead of the first submission.
+> dogfooding are in progress ahead of the first submission. **v0.1 ships for iPhone only**: iPad is
+> deferred to v0.2, because the App Store does not allow dropping a device family once it has been
+> shipped (ITMS-90101).
 
 ## Based on azooKey
 
@@ -21,6 +23,11 @@ and refer to the upstream project:
 - Conversion engine, AzooKeyKanaKanjiConverter — https://github.com/azooKey/AzooKeyKanaKanjiConverter
 - macOS version, azooKey-Desktop — https://github.com/azooKey/azooKey-Desktop
 
+Copaky builds against a **fork** of the conversion engine —
+https://github.com/pettipol/AzooKeyKanaKanjiConverter (MIT, pinned by revision in
+`AzooKeyCore/Package.swift`) — which adds Italian (`it_IT`) as a keyboard language. Everything else in
+the engine is upstream azooKey's work.
+
 See [CREDITS.md](./CREDITS.md) for the full attribution and third-party licenses.
 
 ## Features
@@ -29,7 +36,16 @@ See [CREDITS.md](./CREDITS.md) for the full attribution and third-party licenses
 - **Offline clipboard manager** — a privacy-compliant, **user-initiated** clipboard history. It detects
   *that* the pasteboard changed (metadata only — no "pasted from…" banner) and reads/stores the value only
   on an explicit user action. Password / secure fields are never captured.
-- **QWERTY English** layout alongside Japanese.
+- **Latin tab — English and Italian** — one QWERTY layout alongside Japanese. Italian is opt-in ("Use
+  Italian" in Settings, **off by default**): when it is on, the language key cycles ja → en → it and
+  predictions come from an Italian dictionary; when it is off, behaviour is unchanged. Long-press gives
+  Western-European accents (è é ê ë · ù ú û ü · ì í î ï · ò ó ô ö õ · à á â ä ã · ñ · ç).
+- **Optional number hints** — the QWERTY top row can show each digit above its letter and type it on a
+  long press (**off by default**).
+- **Interface in Japanese, English and Italian** — including the keyboard's own functional key labels
+  (enter, space, next candidate, tab "back"), which follow the interface language instead of always being
+  Japanese. Any other system language falls back to English.
+- **Three bundled themes** — Copaky Light / Dark / Red, on top of azooKey's theme editor.
 - **Offline-true (v0.1)** — **neither** the keyboard extension **nor** the companion app makes any network
   calls. Custards are imported from local files only (no remote download), and there is no remote dictionary
   fetch. Clipboard history lives in the App Group container. No telemetry.
@@ -51,10 +67,12 @@ See [CREDITS.md](./CREDITS.md) for the full attribution and third-party licenses
 Requires a recent **Xcode** and a (free) Apple Developer account. The project uses git submodules.
 
 ```sh
-git clone --recursive <repo-url>
-cd azooKey
+git clone --recursive https://github.com/pettipol/copaky.git
+cd copaky
 open azooKey.xcodeproj      # then build & run the "MainApp" scheme
 ```
+
+(The Xcode project keeps its upstream name, `azooKey.xcodeproj`.)
 
 From the command line (iOS Simulator):
 
@@ -67,7 +85,7 @@ xcodebuild build -project azooKey.xcodeproj -scheme MainApp \
 ## Local-first CI
 
 This is an iOS / UIKit app (it cannot build on free Linux runners), so hosted **macOS** CI is billed 10×.
-On a private, single-developer repo with a capable Mac, the gate is **local**:
+With a single maintainer and a capable Mac, the gate is **local**:
 
 - [`scripts/ci-local.sh`](./scripts/ci-local.sh) — mirrors build + the full test suite (*green here ==
   green*). `--fast` runs build + the clipboard tests only.

@@ -19,7 +19,7 @@ Copaky は **azooKey をベースにした独立プロジェクト**であり、
 
 | コンポーネント | 役割 | ライセンス |
 |---|---|---|
-| [AzooKeyKanaKanjiConverter](https://github.com/azooKey/AzooKeyKanaKanjiConverter) | かな漢字変換エンジン | MIT |
+| [AzooKeyKanaKanjiConverter](https://github.com/azooKey/AzooKeyKanaKanjiConverter) — 実際には Copaky の[フォーク](https://github.com/pettipol/AzooKeyKanaKanjiConverter)を使用 | かな漢字変換エンジン | MIT |
 | [CustardKit](https://github.com/azooKey/CustardKit) | カスタムタブ／カスタムキーのデータ形式 | MIT |
 | [SwiftyMarisa](https://github.com/komamitsu/SwiftyMarisa) / marisa-trie | LOUDS／trie 辞書検索 | BSD-2-Clause |
 | [Swift Algorithms](https://github.com/apple/swift-algorithms) | ユーティリティ | Apache-2.0 |
@@ -27,6 +27,13 @@ Copaky は **azooKey をベースにした独立プロジェクト**であり、
 | Swift Numerics / swift-argument-parser | ユーティリティ | Apache-2.0 |
 | swift-transformers (tokenizers / Jinja) | トークナイズ支援 | 上流を参照（Apache-2.0） |
 | [llama.cpp](https://github.com/ggerganov/llama.cpp) | **Zenzai** ニューラル変換の CPU 推論 | MIT |
+
+> **変換エンジンのフォークについて。** Copaky は上流の変換エンジンを直接リンクしていません。
+> `AzooKeyCore/Package.swift` が https://github.com/pettipol/AzooKeyKanaKanjiConverter を固定リビジョン
+> で参照しています。このフォークは azooKey の AzooKeyKanaKanjiConverter（MIT, © 三輪敬太／ensan および
+> コントリビューター）に、Copaky の変更を1点だけ加えたものです — キーボード言語としての `it_IT`
+> （イタリア語の `UITextChecker`、イタリア語のみの予測、ラテン文字の候補）。上流の著作権表示はすべて
+> 保持しており、フォークも MIT です。
 
 > **Zenzai は v2 に延期。** ニューラル変換は **Copaky v0.1 には含まれません**。v0.1 は azooKey のクラシック
 > な（非ニューラル）変換を使用します。`zenz` GGUF モデル（**CC-BY-SA-4.0**）は v0.1 に**バンドルしていません**。
