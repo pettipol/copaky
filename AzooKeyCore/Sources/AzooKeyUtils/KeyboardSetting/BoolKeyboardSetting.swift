@@ -264,7 +264,9 @@ public extension KeyboardSettingKey where Self == EnableItalianKeyboardLanguage 
 /// dialog does not exist on the Simulator, so nothing about this can be proven there.
 public struct UseSystemPasteControl: BoolKeyboardSettingKey {
     public static let title: LocalizedStringKey = "システムのペーストボタンを使う"
-    public static let explanation: LocalizedStringKey = "クリップボード履歴への追加を、iOS標準のペーストボタンで行います。確認バナーが表示されなくなります。試験的な機能です。"
+    // 断定しないこと: バナーが消えるかどうかは実機でしか確かめられない仮説であり、結果ではない。
+    // Do not assert it: whether the banner disappears is our hypothesis, testable only on a device.
+    public static let explanation: LocalizedStringKey = "クリップボード履歴への追加を、iOS標準のペーストボタンで行います。確認バナーが出なくなることを狙った試験的な機能で、実機での確認が必要です。"
     public static let defaultValue = false
     public static let key: String = "use_system_paste_control"
     public static let requireFullAccess: Bool = true

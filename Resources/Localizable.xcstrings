@@ -1,6 +1,54 @@
 {
   "sourceLanguage" : "ja",
   "strings" : {
+    "システムのペーストボタンを使う" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use the system paste button"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usa il pulsante Incolla di sistema"
+          }
+        }
+      }
+    },
+    "クリップボード履歴への追加を、iOS標準のペーストボタンで行います。確認バナーが出なくなることを狙った試験的な機能で、実機での確認が必要です。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adds to the clipboard history through Apple's own paste button. Experimental: it is meant to avoid the system's confirmation banner, and that still has to be confirmed on a real device."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aggiunge agli appunti tramite il pulsante Incolla di iOS. Sperimentale: dovrebbe evitare il banner di conferma del sistema, ma questo va ancora confermato su un telefono vero."
+          }
+        }
+      }
+    },
+    "クリップボードの内容を履歴に追加します" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adds the clipboard contents to the history"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aggiunge il contenuto degli appunti alla cronologia"
+          }
+        }
+      }
+    },
     "オフのときは、よく使う設定だけを表示します。検索は隠れている設定も対象にします。" : {
       "localizations" : {
         "en" : {
