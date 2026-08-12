@@ -32,6 +32,10 @@ private enum L {
     static let clipboardTab = ["コピー履歴", "clipboard_history_tab", "doc.badge.clock"]
     /// Flick key whose LONG-PRESS toggles the tab bar (FlickCustomKeySetting: ☆123 → .toggleTabBar).
     static let tabBarToggleKey = ["☆123", "123"]
+    /// The bar button carrying our own mark (CopakyMark). Present on EVERY tab, unlike ☆123 which
+    /// only exists on the flick layouts. The glyph is what XCUI actually exposes; the accessibility
+    /// label is kept alongside it for when VoiceOver labelling wins.
+    static let tabBarButton = ["写", "タブバーを開く", "Open the tab bar"]
     static let numberHintsToggle = ["Show numbers on the top row", "上段に数字を表示", "Mostra i numeri nella riga superiore"]
     static let italianToggle = ["Use Italian", "イタリア語を使う", "Usa l'italiano"]
     /// Enter key in its plain "return" state — localized since the key-label fix (Design.getEnterKeyText).
@@ -504,12 +508,24 @@ final class CopakyCampaignTests: XCTestCase {
         dump(safari, "12-after-capture")
     }
 
+    /// Is the clipboard panel on screen?
+    ///
+    /// Do NOT answer this by looking for the capture button alone. With `use_system_paste_control` ON
+    /// that button is REPLACED by Apple's paste control, so a panel that had opened perfectly was
+    /// reported as "clipboard tab not found" — the suite blamed Full Access for a state our own
+    /// feature had created. Verified on the phone 2026-08-12: the open panel carried a Button
+    /// labelled 'Incolla' and no capture bar at all.
+    /// システムのペーストボタンがONだと取り込みバーが置き換わるため、両方を見て判定する。
+    private func clipboardPanelIsOpen(timeout: TimeInterval = 2) -> Bool {
+        firstMatch(in: safari, labels: L.captureBar + L.systemPasteControl, timeout: timeout) != nil
+    }
+
     /// Open the コピー履歴 (clipboard history) tab from Copaky's tab bar.
     /// Navigation: long-press the ☆123 flick key → `.toggleTabBar` shows the tab bar → tap the pinned
     /// clipboard item (SF Symbol doc.badge.clock, added by the setting's onEnabled).
     private func openClipboardTab() throws {
         dismissCopakyNotice(in: safari)
-        if firstMatch(in: safari, labels: L.captureBar, timeout: 2) != nil { return }
+        if clipboardPanelIsOpen() { return }
 
         // Try to reach the clipboard tab item directly (tab bar may already be visible).
         func tapClipboardItem() -> Bool {
@@ -519,7 +535,25 @@ final class CopakyCampaignTests: XCTestCase {
             if let tab = firstMatch(in: safari, labels: L.clipboardTab, timeout: 1) { tab.tap(); return true }
             return false
         }
-        if tapClipboardItem(), firstMatch(in: safari, labels: L.captureBar, timeout: 2) != nil { return }
+        if tapClipboardItem(), clipboardPanelIsOpen() { return }
+
+        // Open the tab bar with the 写 bar button — a plain TAP on our own mark, and the only route
+        // that exists on the QWERTY tabs. Verified on the phone (2026-08-12): the ☆123 long-press
+        // below is a FLICK-tab key, so on a Latin layout the old path found nothing and the caller
+        // skipped with "clipboard tab is not on the bar" while Copaky was running perfectly.
+        // QWERTYタブには☆123が無いため、バーのボタン（写）をタップして開く。
+        let barButton = safari.descendants(matching: .any)
+            .matching(NSPredicate(format: "label IN %@", L.tabBarButton)).firstMatch
+        if barButton.waitForExistence(timeout: 4) {
+            barButton.tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+            dismissCopakyNotice(in: safari)
+            shot("clipboard-tabbar-open-barbutton")
+            if tapClipboardItem() {
+                RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+                if clipboardPanelIsOpen() { return }
+            }
+        }
 
         // Open the tab bar via the ☆123 key long-press, then tap the clipboard item.
         let keyPred = NSPredicate(format: "label IN %@", L.tabBarToggleKey)
@@ -531,7 +565,7 @@ final class CopakyCampaignTests: XCTestCase {
             shot("clipboard-tabbar-open")
             if tapClipboardItem() {
                 RunLoop.current.run(until: Date().addingTimeInterval(0.8))
-                if firstMatch(in: safari, labels: L.captureBar, timeout: 2) != nil { return }
+                if clipboardPanelIsOpen() { return }
             }
         }
 
@@ -999,8 +1033,24 @@ final class CopakyCampaignTests: XCTestCase {
     /// genuine cross-app paste as far as iOS's permission accounting is concerned.
     /// 実機専用。ペースト許可の仕組みはシミュレータに存在しないため、ここでしか確かめられない。
     func test40_device_systemPasteControlDelivers() throws {
-        let marker = "COPAKY-PROBE-\(UInt32.random(in: 100_000 ... 999_999))"
-        UIPasteboard.general.string = marker
+        // Seeding the pasteboard from the runner does NOT work on a device: iOS answers
+        // "Pasteboard com.apple.UIKit.pboard.general is not available at this time" to a process that
+        // is not the foreground app, and the write is silently lost. That failure is poisonous here —
+        // an empty pasteboard leaves Apple's control with nothing to hand over, which on screen is
+        // indistinguishable from "iOS refused to deliver", the very thing this test must decide.
+        // So prefer a marker seeded from the HOST before the run:
+        //   pymobiledevice3 developer core-device copy "COPAKY-PROBE-123456"
+        //   TEST_RUNNER_COPAKY_PASTE_MARKER="COPAKY-PROBE-123456" xcodebuild test …
+        // 実機ではランナーからペーストボードに書けないため、ホスト側で仕込んだ文字列を使う。
+        let marker: String
+        if let seeded = ProcessInfo.processInfo.environment["COPAKY_PASTE_MARKER"], !seeded.isEmpty {
+            marker = seeded
+            note("40-marker-source", "seeded from the host before the run")
+        } else {
+            marker = "COPAKY-PROBE-\(UInt32.random(in: 100_000 ... 999_999))"
+            UIPasteboard.general.string = marker
+            note("40-marker-source", "seeded in-process by the runner (works on the Simulator)")
+        }
         note("40-marker", marker)
 
         XCTAssertTrue(enableCopakySetting(L.systemPasteToggle),
@@ -1012,12 +1062,10 @@ final class CopakyCampaignTests: XCTestCase {
         XCTAssertTrue(focusSafariAddressBar(), "No field focused in Safari — nothing to host the keyboard")
         switchToCopaky(in: safari)
         dismissCopakyNotice(in: safari)
-        guard let clipboardTab = firstMatch(in: safari, labels: L.clipboardTab, timeout: 8) else {
-            dump(safari, "40-no-clipboard-tab")
-            shot("40-no-clipboard-tab")
-            throw XCTSkip("Clipboard tab is not on the bar — Full Access or the tab setting is off")
-        }
-        clipboardTab.tap()
+        // Use the shared helper rather than looking the tab up directly: the tab bar is CLOSED by
+        // default, so on the phone the direct lookup found nothing and this test skipped — reporting
+        // "Full Access or the tab setting is off" when both were on and Copaky was running fine.
+        try openClipboardTab()
         RunLoop.current.run(until: Date().addingTimeInterval(1.5))
         shot("40-clipboard-tab")
         dump(safari, "40-tree")

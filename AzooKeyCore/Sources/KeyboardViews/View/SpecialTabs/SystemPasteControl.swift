@@ -87,7 +87,7 @@ struct SystemPasteControl: UIViewRepresentable {
         var onPaste: ((String) -> Void)?
 
         override func canPaste(_ itemProviders: [NSItemProvider]) -> Bool {
-            let textual = itemProviders.filter { $0.canLoadObject(ofClass: NSString.self) }
+            let textual = itemProviders.filter(Self.carriesText)
             pasteLog.info("canPaste: \(itemProviders.count, privacy: .public) provider, \(textual.count, privacy: .public) testuali")
             return !textual.isEmpty
         }
@@ -95,30 +95,61 @@ struct SystemPasteControl: UIViewRepresentable {
         override func paste(itemProviders: [NSItemProvider]) {
             pasteLog.info("paste: il sistema ha consegnato \(itemProviders.count, privacy: .public) provider")
             // One item is enough: the history stores a single string per entry.
-            guard let provider = itemProviders.first(where: { $0.canLoadObject(ofClass: NSString.self) }) else {
-                pasteLog.error("paste: nessun provider caricabile come stringa — niente da salvare")
+            guard let provider = itemProviders.first(where: Self.carriesText) else {
+                pasteLog.error("paste: nessun provider caricabile come testo — niente da salvare")
                 return
             }
-            // loadObject calls back off the main thread and the history is @MainActor: bridge to
-            // String (Sendable) inside the continuation, then resume on this view's isolation.
-            // loadObject は別スレッドで返るため、Sendable な String に変換してから戻る。
+            // The load calls back off the main thread and the history is @MainActor: everything that
+            // crosses back is a String (Sendable).
+            // 読み込みは別スレッドで返るため、Sendable な String だけを戻す。
             Task { [weak self] in
-                let text: String? = await withCheckedContinuation { continuation in
-                    provider.loadObject(ofClass: NSString.self) { object, error in
-                        if let error {
-                            // Length/kind only — never the value.
-                            pasteLog.error("loadObject fallito: \(error.localizedDescription, privacy: .public)")
-                        } else if object == nil {
-                            pasteLog.error("loadObject: oggetto nullo senza errore")
-                        }
-                        continuation.resume(returning: (object as? NSString).map(String.init))
-                    }
-                }
+                let text = await Self.loadPlainText(from: provider)
                 if let text {
                     pasteLog.info("consegnato: \(text.count, privacy: .public) caratteri")
                     self?.onPaste?(text)
                 } else {
                     pasteLog.error("nessun testo consegnato al termine del caricamento")
+                }
+            }
+        }
+
+        private static func carriesText(_ provider: NSItemProvider) -> Bool {
+            provider.canLoadObject(ofClass: String.self)
+                || provider.hasItemConformingToTypeIdentifier(UTType.plainText.identifier)
+        }
+
+        /// Two routes, deliberately.
+        ///
+        /// The obvious one — `loadObject(ofClass: NSString.self)` — is exactly what FAILED on a real
+        /// phone (2026-08-12): `canLoadObject` answered yes, iOS delivered the provider on the tap, and
+        /// the load then died with «could not cast an item to class NSString». The text was there; only
+        /// our way of asking for it was wrong, and the whole prototype read as "iOS refuses to deliver".
+        /// So: bridge through Swift's `String` first, and if that refuses, take the raw bytes for
+        /// public.plain-text and decode them ourselves.
+        /// NSString へのキャストは実機で失敗するため、String ブリッジ→生データの二段構えにする。
+        private static func loadPlainText(from provider: NSItemProvider) async -> String? {
+            if provider.canLoadObject(ofClass: String.self) {
+                let viaObject: String? = await withCheckedContinuation { continuation in
+                    _ = provider.loadObject(ofClass: String.self) { object, error in
+                        if let error {
+                            // Length/kind only — never the value.
+                            pasteLog.error("loadObject(String) fallito: \(error.localizedDescription, privacy: .public)")
+                        }
+                        continuation.resume(returning: object)
+                    }
+                }
+                if let viaObject { return viaObject }
+            }
+            return await withCheckedContinuation { continuation in
+                provider.loadDataRepresentation(forTypeIdentifier: UTType.plainText.identifier) { data, error in
+                    if let error {
+                        pasteLog.error("loadDataRepresentation fallito: \(error.localizedDescription, privacy: .public)")
+                    }
+                    guard let data else {
+                        continuation.resume(returning: nil)
+                        return
+                    }
+                    continuation.resume(returning: String(data: data, encoding: .utf8))
                 }
             }
         }
