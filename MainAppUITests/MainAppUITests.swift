@@ -132,11 +132,20 @@ final class CopakyCampaignTests: XCTestCase {
         // the globe had cycled away from Copaky. Every marker below exists only in our layouts:
         // ☆123 and 小ﾞﾟ on the flick tab, Aあ on the QWERTY tabs, 逆順/お知らせ in our bars.
         // マーカーはCopaky固有のものだけにする（空白・改行は純正キーボードにも存在する）。
-        let markers = ["☆123", "小ﾞﾟ", "Aあ", "あいう", "逆順", "お知らせ"]
-        let match = app.descendants(matching: .any).matching(NSPredicate(format: "label IN %@", markers)).firstMatch
-        if match.exists { return true }
-        let kb = app.keyboards.firstMatch
-        return kb.exists && kb.keys.count == 0 && kb.frame.height > 150
+        // 写 is our own brand mark (CopakyMark, on the bar button): the single most reliable marker,
+        // because it is a glyph we draw ourselves and no system keyboard can carry it.
+        // 写は自社ブランドマークなので、純正キーボードには絶対に存在しない。
+        //
+        // Learned on a real phone (2026-08-12), where the previous list matched NOTHING while Copaky
+        // was plainly the active keyboard: on the QWERTY tabs the language key reads 「あ」 alone, not
+        // "Aあ". 「あ」 is deliberately NOT added here — Apple's own kana keyboard has that key too, so
+        // it would hand a pass to the system keyboard, which is the exact bug this list exists to stop.
+        let markers = ["写", "☆123", "小ﾞﾟ", "Aあ", "あいう", "逆順", "お知らせ"]
+        return app.descendants(matching: .any).matching(NSPredicate(format: "label IN %@", markers)).firstMatch.exists
+        // Deliberately NO "any keyboard that exposes no keys is ours" fallback. Every SwiftUI-drawn
+        // third-party keyboard has that shape, and this very test phone also carries SwiftKey and
+        // Gboard: the fallback could certify the WRONG keyboard and the suite would happily test it.
+        // 「キーが0個の入力ビュー＝Copaky」判定は誤検知の温床なので置かない。
     }
 
     /// First-activation in-keyboard notices (お知らせ: 4 stacked emoji-tab data updates) cover the
