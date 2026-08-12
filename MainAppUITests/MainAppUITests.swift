@@ -40,6 +40,12 @@ private enum L {
     static let spaceKey = ["空白", "Space", "Spazio"]
     /// Back key of the clipboard and emoji tabs — localized since the key-label fix.
     static let backKey = ["戻る", "Back", "Indietro"]
+    /// Master switch that reveals every settings section (the paste-control row lives behind it).
+    static let showAllSettings = ["Show all settings", "すべての設定を表示", "Mostra tutte le impostazioni"]
+    /// Experimental setting that swaps our capture button for Apple's `UIPasteControl`.
+    static let systemPasteToggle = ["Use the system paste button", "システムのペーストボタンを使う", "Usa il pulsante Incolla di sistema"]
+    /// `UIPasteControl` vends a button whose label iOS localizes for us.
+    static let systemPasteControl = ["Paste", "ペースト", "Incolla"]
 }
 
 @MainActor
@@ -896,5 +902,143 @@ final class CopakyCampaignTests: XCTestCase {
         let pasteControl = safari.descendants(matching: .any)
             .matching(NSPredicate(format: "label IN %@", ["Paste", "ペースト", "Incolla"])).firstMatch
         XCTAssertTrue(pasteControl.waitForExistence(timeout: 4), "UIPasteControl did not render inside the keyboard's input view")
+    }
+
+    // MARK: - 40 · Device only: does iOS actually DELIVER a paste into the input view?
+
+    /// Record a fact in the result bundle. Assertions say pass/fail; this says *what was observed*,
+    /// which is what a prototype round is actually for.
+    private func note(_ name: String, _ body: String) {
+        let a = XCTAttachment(string: body)
+        a.name = name
+        a.lifetime = .keepAlways
+        add(a)
+    }
+
+    /// Drive one of the app's own `Toggle`s to a value, scrolling it into view first.
+    ///
+    /// Never trusts the tap: a tap on the CELL does not flip a SwiftUI `Toggle` inside a `Form`
+    /// (only the switch on the right does), so this re-reads the value every round and retries.
+    /// タップを信用せず、毎回値を読み直す（セルのタップではトグルは反転しない）。
+    @discardableResult
+    private func driveSwitch(_ labels: [String], to on: Bool, scrolls maxScrolls: Int = 10) -> Bool {
+        let pred = NSPredicate(format: "label IN %@", labels)
+        func current() -> XCUIElement { mainApp.switches.matching(pred).firstMatch }
+        var scrolled = 0
+        while !current().exists && scrolled < maxScrolls {
+            mainApp.swipeUp()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.4))
+            scrolled += 1
+        }
+        guard current().exists else { return false }
+        let wanted = on ? "1" : "0"
+        var taps = 0
+        while current().value as? String != wanted && taps < 4 {
+            current().coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+            // enabling the clipboard history raises a confirmation alert; dismiss whatever appears
+            if mainApp.alerts.buttons["OK"].waitForExistence(timeout: 1.5) { mainApp.alerts.buttons["OK"].tap() }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+            taps += 1
+        }
+        return current().value as? String == wanted
+    }
+
+    /// Open the app's settings, reveal every section, and switch one row ON.
+    @discardableResult
+    private func enableCopakySetting(_ labels: [String]) -> Bool {
+        mainApp.launch()
+        if let close = firstMatch(in: mainApp, labels: L.closeOnboarding, timeout: 4) { close.tap() }
+        openSettingsTab()
+        // The paste-control row lives inside a section that only exists with this master switch ON.
+        driveSwitch(L.showAllSettings, to: true)
+        return driveSwitch(labels, to: true)
+    }
+
+    /// Focus Safari's own address bar.
+    ///
+    /// Deliberately NOT the fixture page: that one is served from the Mac's loopback address, which
+    /// a phone cannot reach, and this question needs *a* text field, not a particular one.
+    /// 実機ではローカルのテストページに到達できないため、Safariのアドレス欄を入力先に使う。
+    private func focusSafariAddressBar() -> Bool {
+        safari.launch()
+        RunLoop.current.run(until: Date().addingTimeInterval(2.0))
+        let pred = NSPredicate(format: "identifier == 'URL' OR identifier == 'TabBarItemTitle' OR label CONTAINS[c] 'indirizzo' OR label CONTAINS[c] 'search or enter' OR label CONTAINS[c] 'enter website'")
+        for q in [safari.textFields.matching(pred), safari.searchFields.matching(pred), safari.buttons.matching(pred)] where q.firstMatch.exists {
+            q.firstMatch.tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(1.5))
+            return true
+        }
+        // iOS 26 keeps the address field in the BOTTOM bar by default.
+        safari.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.93)).tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(1.5))
+        return safari.keyboards.firstMatch.exists || copakyActive(in: safari)
+    }
+
+    /// **Device only** — §10 of `docs/PIANO_QUALITA_2026-08.md`.
+    ///
+    /// The Simulator has no paste-permission subsystem at all (no dialog, no "Paste from Other Apps"
+    /// row), which is why `test34` above only checks that the control DRAWS. This one asks the
+    /// question the whole prototype exists for: when the user taps Apple's control inside a keyboard
+    /// extension's input view, does iOS hand the text over?
+    ///
+    /// What it establishes: that the control renders, whether it is enabled before being touched,
+    /// and whether the text actually arrived (a tile carrying the seeded marker appears in the
+    /// clipboard panel). What it does NOT establish: anything about the banner — that is a system
+    /// HUD, and the attached screenshots are the evidence a human reads.
+    ///
+    /// The pasteboard is seeded from the test runner, a DIFFERENT app from Copaky, so this is a
+    /// genuine cross-app paste as far as iOS's permission accounting is concerned.
+    /// 実機専用。ペースト許可の仕組みはシミュレータに存在しないため、ここでしか確かめられない。
+    func test40_device_systemPasteControlDelivers() throws {
+        let marker = "COPAKY-PROBE-\(UInt32.random(in: 100_000 ... 999_999))"
+        UIPasteboard.general.string = marker
+        note("40-marker", marker)
+
+        XCTAssertTrue(enableCopakySetting(L.systemPasteToggle),
+                      "Could not switch ON 'use the system paste button' — the prototype was never armed")
+        // The panel only exists if the clipboard tab is on the bar.
+        driveSwitch(L.clipboardToggle, to: true)
+        shot("40-settings")
+
+        XCTAssertTrue(focusSafariAddressBar(), "No field focused in Safari — nothing to host the keyboard")
+        switchToCopaky(in: safari)
+        dismissCopakyNotice(in: safari)
+        guard let clipboardTab = firstMatch(in: safari, labels: L.clipboardTab, timeout: 8) else {
+            dump(safari, "40-no-clipboard-tab")
+            shot("40-no-clipboard-tab")
+            throw XCTSkip("Clipboard tab is not on the bar — Full Access or the tab setting is off")
+        }
+        clipboardTab.tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(1.5))
+        shot("40-clipboard-tab")
+        dump(safari, "40-tree")
+
+        let control = safari.descendants(matching: .any)
+            .matching(NSPredicate(format: "label IN %@", L.systemPasteControl)).firstMatch
+        let rendered = control.waitForExistence(timeout: 6)
+        note("40-rendered", rendered ? "UIPasteControl RENDERED inside the input view" : "UIPasteControl DID NOT render")
+        guard rendered else {
+            shot("40-not-rendered")
+            XCTFail("UIPasteControl did not render inside the keyboard's input view")
+            return
+        }
+        // Enabled-ness BEFORE the touch is a real signal: a control iOS refuses to arm never fires.
+        note("40-state-before-tap", "isEnabled=\(control.isEnabled) isHittable=\(control.isHittable) frame=\(control.frame)")
+        shot("40-before-tap")
+
+        control.tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(2.0))
+        shot("40-just-after-tap")   // the banner, if any, lives for ~3s — this is where it shows
+
+        // Delivery, not decoration: the seeded text has to come back as a tile in the panel.
+        let deliveredTile = safari.descendants(matching: .any)
+            .matching(NSPredicate(format: "label CONTAINS %@", marker)).firstMatch
+        let delivered = deliveredTile.waitForExistence(timeout: 6)
+        RunLoop.current.run(until: Date().addingTimeInterval(1.5))
+        shot("40-after-wait")
+        note("40-delivered", delivered
+             ? "iOS DELIVERED the text: a tile carrying the marker appeared in the panel"
+             : "NOTHING arrived: no tile carries the marker (read the paste-control log on the Mac to tell 'not delivered' from 'not tapped')")
+        XCTAssertTrue(delivered, "iOS never delivered the pasted text to the keyboard's input view")
     }
 }
