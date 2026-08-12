@@ -5,6 +5,13 @@
 //  Drives the phase A/B/C2 checklist in reports/sim_test_2026-07.md (workspace repo).
 //  Tests are ordered (test01_, test02_, …) and some depend on state created by earlier
 //  tests (keyboard enabled in Settings, Full Access granted). Run the whole class in order.
+//  The KEYBOARD TAB is inherited too, and not only within one run: `KeyboardViewController
+//  .variableStates` is a process-level `static let`, so the tab a test leaves behind survives host-app
+//  relaunches and even whole `xcodebuild test` invocations, as long as the extension process lives.
+//  A test that needs a particular tab must therefore ASK for it (switchToJapaneseFlickTab /
+//  switchToEnglishTab), never assume the default. The keyboard LAYOUT of those tabs is a setting the
+//  Simulator only takes device-wide: scripts/seed_sim_settings.sh.
+//  タブは拡張プロセスに残る（static variableStates）ため、必要なタブは各テストが明示的に選ぶこと。
 //  Simulator locale is it_IT (Settings in Italian). Since commit c47f9765 the app ships an Italian
 //  localization, and since the key-label fix the KEYBOARD's functional labels are localized too
 //  (KeyLabelType.localizedText) — so a label that used to be Japanese on every device is now
@@ -250,10 +257,20 @@ final class CopakyCampaignTests: XCTestCase {
     }
 
     /// Tap a sequence of Copaky keys by label.
+    ///
+    /// On a miss it attaches the element tree and a screenshot BEFORE failing: with
+    /// `continueAfterFailure = false` the assertion aborts the test immediately, so evidence gathered
+    /// after it would never be recorded — and "key not found" is otherwise indistinguishable between
+    /// "wrong layout on screen", "wrong tab", and "keyboard not up at all".
+    /// キーが見つからない場合は、アサート前に要素ツリーとスクリーンショットを保存する。
     private func tapKeys(_ labels: [String], in app: XCUIApplication) {
         for label in labels {
             let key = app.descendants(matching: .any)[label]
-            XCTAssertTrue(key.waitForExistence(timeout: 4), "Key '\(label)' not found on Copaky keyboard")
+            if !key.waitForExistence(timeout: 4) {
+                dump(app, "key-not-found-\(label)")
+                shot("key-not-found-\(label)")
+            }
+            XCTAssertTrue(key.exists, "Key '\(label)' not found on Copaky keyboard")
             key.tap()
         }
     }
@@ -653,9 +670,82 @@ final class CopakyCampaignTests: XCTestCase {
 
     // MARK: - 20 · C2: flick typing + conversion candidates (C2 smoke)
 
+    /// True when the Japanese FLICK layout is on screen: 「か」 is a row head that exists only there
+    /// (on the QWERTY Japanese tab the same kana is typed as "ka").
+    private func flickKanaVisible(in app: XCUIApplication, timeout: TimeInterval = 0) -> Bool {
+        let key = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "か")).firstMatch
+        return timeout > 0 ? key.waitForExistence(timeout: timeout) : key.exists
+    }
+
+    /// Bring Copaky to the Japanese FLICK tab, whatever tab the run before it left on screen.
+    ///
+    /// Why a test must do this explicitly: `KeyboardViewController.variableStates` is a process-level
+    /// `static let`, so its `TabManager` outlives one keyboard appearance — `closeKeyboard()` stores
+    /// the current tab and the next `initialize()` RESTORES it (`TabManager.initialize`), and the
+    /// extension process survives host-app relaunches. A test that moved to the Latin tab therefore
+    /// hands the NEXT test a Latin keyboard. That is deliberate product behaviour (a user who picks
+    /// English must not be pushed back to Japanese on every reload), so the test states the tab it
+    /// needs instead of inheriting one.
+    /// タブは拡張プロセスの static な variableStates に残るので、テスト側で明示的に日本語タブへ移動する。
+    ///
+    /// The flick LAYOUT itself is not reachable from the keyboard UI: the Japanese tab is flick or
+    /// QWERTY according to `keyboard_type` (`JapaneseKeyboardLayout`, default `.flick`), and on the
+    /// Simulator only the orchestrator can set it — the App Group is not provisioned, so the app's own
+    /// switch never reaches the extension (`scripts/seed_sim_settings.sh keyboard_type=flick`).
+    /// A Japanese tab that comes up as QWERTY is therefore reported as the setup problem it is.
+    private func switchToJapaneseFlickTab(in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
+        dismissCopakyNotice(in: app)
+        if flickKanaVisible(in: app, timeout: 2) { return }
+
+        // 1. Latin QWERTY tab → the language-switch key carries the TARGET language's shortSymbol,
+        //    so 「あ」 is the one that goes BACK to Japanese (mirror of switchToEnglishTab's "A").
+        let toJapanese = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "あ")).firstMatch
+        if toJapanese.exists && toJapanese.isHittable {
+            toJapanese.tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+            dismissCopakyNotice(in: app)
+            if flickKanaVisible(in: app, timeout: 2) { return }
+        }
+
+        // 2. Tab-bar route (works from the special tabs too, where there is no language-switch key):
+        //    「あいう」 is the system `user_japanese` item. Open the bar first if it is not showing.
+        var kanaTab = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "あいう")).firstMatch
+        if !kanaTab.exists, let barButton = firstMatch(in: app, labels: L.tabBarButton, timeout: 2), barButton.isHittable {
+            barButton.tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+            kanaTab = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "あいう")).firstMatch
+        }
+        if kanaTab.exists && kanaTab.isHittable {
+            kanaTab.tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+            dismissCopakyNotice(in: app)
+            if flickKanaVisible(in: app, timeout: 2) { return }
+        }
+
+        // Evidence BEFORE the failure: continueAfterFailure is false, so nothing runs after it.
+        dump(app, "20-no-japanese-flick-tab")
+        shot("20-no-japanese-flick-tab")
+        // Tell the two causes apart: on the Japanese tab the switch key offers "A" (go to English),
+        // so "A" present + no kana means the Japanese tab is on the QWERTY layout, not that the tab
+        // switch failed. 「A」が出ていれば日本語タブに居る＝レイアウトがローマ字入力ということ。
+        let onJapaneseTab = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "A")).firstMatch.exists
+        if onJapaneseTab {
+            XCTFail("""
+                Japanese tab is on the QWERTY layout, so there is no 「か」 key. Seed the layout before \
+                the run: scripts/seed_sim_settings.sh keyboard_type=flick (on the Simulator the App \
+                Group is not provisioned, so the app's own setting never reaches the extension).
+                """, file: file, line: line)
+        } else {
+            XCTFail("Could not reach Copaky's Japanese tab (neither the 「あ」 switch key nor the 「あいう」 tab-bar item worked)", file: file, line: line)
+        }
+    }
+
     func test20_C2_flickTypingConversion() throws {
         _ = focusField("textarea-field")
         switchToCopaky(in: safari)
+        // The tab is inherited from whatever ran before (static VariableStates) — ask for the one
+        // this test is about instead of assuming it. / 直前のテストが残したタブに依存しない。
+        switchToJapaneseFlickTab(in: safari)
         // Tap-only kana (row heads): か + な → candidates should include 仮名
         tapKeys(["か", "な"], in: safari)
         RunLoop.current.run(until: Date().addingTimeInterval(1))
@@ -672,12 +762,25 @@ final class CopakyCampaignTests: XCTestCase {
 
     // MARK: - 30 · Copaky extension: accent variations on long-press (EN QWERTY)
 
-    /// Switch Copaky's internal tab to English QWERTY via the language-switch key. The key shows the
-    /// TARGET language's shortSymbol (QwertyLanguageSwitchKeyModel.shortSymbol): "A" when currently on
-    /// the Japanese tab, "あ" when already on English (a no-op tap-avoidance case).
+    /// Switch Copaky's internal tab to the Latin one, from EITHER Japanese layout.
+    ///
+    /// Two different keys do this, and which one exists depends on the tab the previous test left
+    /// behind (the tab survives in the extension's static `VariableStates` — see
+    /// `switchToJapaneseFlickTab`): the FLICK Japanese tab carries 「ABC」, the QWERTY Japanese tab
+    /// carries the language-switch key, which shows the TARGET language's shortSymbol
+    /// (`QwertyLanguageSwitchKeyModel.shortSymbol`) — "A" from Japanese, 「あ」 when already on Latin
+    /// (the no-op case this must not tap).
+    /// フリック日本語タブでは「ABC」、ローマ字タブでは言語切替キー — 直前のタブに依存しないよう両方見る。
     private func switchToEnglishTab(in app: XCUIApplication) {
         dismissCopakyNotice(in: app)
-        let toEnglish = app.descendants(matching: .any)["A"]
+        let abcKey = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "ABC")).firstMatch
+        if abcKey.waitForExistence(timeout: 2) && abcKey.isHittable {
+            abcKey.tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+            dismissCopakyNotice(in: app)
+            return
+        }
+        let toEnglish = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "A")).firstMatch
         if toEnglish.waitForExistence(timeout: 2) && toEnglish.isHittable {
             toEnglish.tap()
             RunLoop.current.run(until: Date().addingTimeInterval(0.8))
@@ -770,16 +873,10 @@ final class CopakyCampaignTests: XCTestCase {
         // the orchestrator must pre-navigate with `xcrun simctl openurl` — here we only activate.
         let field = activatePreNavigatedField("plain-text")
         switchToCopaky(in: safari)
-        // Flick JP tab → EN via the ABC key; on the QWERTY JP tab use the language-switch key.
-        // (Orchestrator must set keyboard_type_en=roman so the EN tab is QWERTY, not flick.)
-        let abcKey = safari.descendants(matching: .any)["ABC"]
-        if abcKey.waitForExistence(timeout: 2) && abcKey.isHittable {
-            abcKey.tap()
-            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
-            dismissCopakyNotice(in: safari)
-        } else {
-            switchToEnglishTab(in: safari)
-        }
+        // Flick JP tab → EN via the ABC key; on the QWERTY JP tab use the language-switch key. Both
+        // routes live in switchToEnglishTab. (Orchestrator must set keyboard_type_en=roman so the EN
+        // tab is QWERTY, not flick: scripts/seed_sim_settings.sh keyboard_type_en=roman.)
+        switchToEnglishTab(in: safari)
         shot("31-english-tab")
         // firstMatch everywhere: the magnifier bubble duplicates the key label during the press
         let qKey = safari.descendants(matching: .any).matching(NSPredicate(format: "label == 'q'")).firstMatch
