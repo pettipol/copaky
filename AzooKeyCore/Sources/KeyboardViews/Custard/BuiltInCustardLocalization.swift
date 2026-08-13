@@ -25,6 +25,12 @@ public extension Custard {
     /// Copaky: 組み込みカスタードの日本語の機能ラベルのみをUI言語に解決する。
     /// ユーザーが作成・読み込んだカスタードのラベルは一切変更しない。
     func localizingFunctionalLabels() -> Custard {
+        // Copaky: JAPANESE tabs keep their Japanese layout labels (空白/全角/次候補) whatever the
+        // UI language — Apple's own JP layouts do the same, and on the space key it is the visual
+        // cue that the key CONVERTS instead of inserting a space (the Latin tabs look identical
+        // otherwise). Error/navigation messages still follow the UI language everywhere.
+        // 日本語タブの空白・次候補などは常に日本語（変換動作の目印）。案内文はUI言語に追従。
+        let keepLayoutLabels = self.language == .ja_JP
         var custard = self
         var interface = custard.interface
         for (position, key) in interface.keys {
@@ -32,13 +38,14 @@ public extension Custard {
                 continue
             }
             var changed = false
-            if case let .text(label) = customKey.design.label, let localized = Self.localizedFunctionalLabel(label) {
+            if case let .text(label) = customKey.design.label,
+               let localized = Self.localizedFunctionalLabel(label, keepLayoutLabels: keepLayoutLabels) {
                 customKey.design.label = .text(localized)
                 changed = true
             }
             for index in customKey.variations.indices {
                 if case let .text(label) = customKey.variations[index].key.design.label,
-                   let localized = Self.localizedFunctionalLabel(label) {
+                   let localized = Self.localizedFunctionalLabel(label, keepLayoutLabels: keepLayoutLabels) {
                     customKey.variations[index].key.design.label = .text(localized)
                     changed = true
                 }
@@ -51,21 +58,28 @@ public extension Custard {
         return custard
     }
 
+    /// Layout labels from CustardKit's `flickSpace()` — kept Japanese on Japanese tabs.
+    /// 配列ラベル（日本語タブでは日本語のまま）。
+    private static var layoutLabels: Set<String> {
+        ["空白", "全角", "次候補"]
+    }
+
     /// The Japanese functional labels our built-in custards can carry. Characters a key TYPES are not
     /// here and must never be: this list holds words, not input.
     /// 組み込みカスタードが持つ機能ラベル（打鍵される文字は含めない）。
     private static var functionalLabels: Set<String> {
-        [
-            // CustardKit: flickSpace()
-            "空白", "全角", "次候補",
+        layoutLabels.union([
             // Copaky: ErrorCustard
             "カスタードファイルが見つかりません\n正しく読み込めているか確認してください",
             "アプリで確認する", "前のタブに戻る", "ひらがなタブに移動",
-        ]
+        ])
     }
 
-    private static func localizedFunctionalLabel(_ label: String) -> String? {
+    private static func localizedFunctionalLabel(_ label: String, keepLayoutLabels: Bool) -> String? {
         guard functionalLabels.contains(label) else {
+            return nil
+        }
+        if keepLayoutLabels && layoutLabels.contains(label) {
             return nil
         }
         let localized = String(localized: String.LocalizationValue(label), bundle: .main)

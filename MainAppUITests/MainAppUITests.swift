@@ -1017,6 +1017,132 @@ final class CopakyCampaignTests: XCTestCase {
         XCTAssertTrue(italian.exists, "Italian ('IT') never appeared on the language-switch key with the toggle ON")
     }
 
+    // MARK: - 35 · Italian lexicon: bundled predictions on the Latin tab
+
+    /// The bundled 50k-word frequency lexicon must produce Italian candidates — including the
+    /// accent-fix ("citta" → "città", "perche" → "perché") — and the space bar on the Latin tab must
+    /// insert a plain space. This is the regression net for the two findings of the user's Italian
+    /// round: dead predictions and "the space bar is not a space bar" (they were typing on the
+    /// visually identical Japanese QWERTY).
+    /// 同梱イタリア語辞書の候補（アクセント補正込み）と、ラテン文字タブの空白キーの動作を検証する。
+    func test35_italianLexiconOffersAccentedCompletions() throws {
+        // 1. Italian ON via MainApp settings (same idempotent dance as test33)
+        mainApp.launch()
+        if let close = firstMatch(in: mainApp, labels: L.closeOnboarding, timeout: 4) {
+            close.tap()
+        }
+        openSettingsTab()
+        var row = firstMatch(in: mainApp, labels: L.italianToggle, timeout: 6)
+        var swipes = 0
+        while row == nil && swipes < 8 {
+            mainApp.swipeUp()
+            swipes += 1
+            row = firstMatch(in: mainApp, labels: L.italianToggle, timeout: 2)
+        }
+        guard let row else {
+            dump(mainApp, "35-no-toggle")
+            XCTFail("Italian toggle not found in MainApp settings")
+            return
+        }
+        let sw = mainApp.switches.matching(NSPredicate(format: "label IN %@", L.italianToggle)).firstMatch
+        if (sw.exists ? (sw.value as? String) : nil) != "1" {
+            (sw.exists ? sw : row).coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+        }
+
+        // 2. Latin tab, Italian active. The switch key label alone is ambiguous (current vs next),
+        // so PROBE with real typing and cycle until the lexicon answers in Italian.
+        _ = activatePreNavigatedField("plain-text")
+        switchToCopaky(in: safari)
+        dismissCopakyNotice(in: safari)
+        let abcKey = safari.descendants(matching: .any)["ABC"]
+        if abcKey.waitForExistence(timeout: 3) && abcKey.isHittable {
+            abcKey.tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+            dismissCopakyNotice(in: safari)
+        }
+        var accented = safari.descendants(matching: .any)
+            .matching(NSPredicate(format: "label == %@", "perché")).firstMatch
+        var attempts = 0
+        while attempts < 3 {
+            tapKeys(["p", "e", "r", "c", "h", "e"], in: safari)
+            if accented.waitForExistence(timeout: 3) {
+                break
+            }
+            // wrong Latin language (or still English): clear and cycle the language key once
+            for _ in 0..<6 {
+                let del = safari.descendants(matching: .any)
+                    .matching(NSPredicate(format: "label IN %@", ["delete", "削除", "Elimina", "⌫"])).firstMatch
+                if del.exists && del.isHittable { del.tap() } else { break }
+            }
+            let switchKey = safari.descendants(matching: .any)
+                .matching(NSPredicate(format: "label CONTAINS %@ OR label CONTAINS %@ OR label CONTAINS %@", "IT", "A", "あ")).firstMatch
+            if switchKey.exists && switchKey.isHittable {
+                switchKey.tap()
+                RunLoop.current.run(until: Date().addingTimeInterval(0.6))
+            }
+            attempts += 1
+            accented = safari.descendants(matching: .any)
+                .matching(NSPredicate(format: "label == %@", "perché")).firstMatch
+        }
+        if !accented.exists {
+            dump(safari, "35-no-perche")
+            shot("35-no-perche")
+        }
+        XCTAssertTrue(accented.exists, "typing 'perche' with Italian active must offer the accent fix 'perché'")
+
+        // 3. Tap the candidate: the field must now contain the accented word.
+        accented.tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+        let field = safari.webViews.textFields.firstMatch
+        let value = (field.value as? String) ?? ""
+        XCTAssertTrue(value.contains("perché"), "tapping the candidate must commit 'perché', field shows: \(value)")
+
+        // 4. Space bar inserts a plain space on the Latin tab (the user's own report).
+        tapKeys(["c", "i", "a", "o"], in: safari)
+        let space = safari.descendants(matching: .any)
+            .matching(NSPredicate(format: "label IN %@", ["space", "Spazio", "空白"])).firstMatch
+        XCTAssertTrue(space.waitForExistence(timeout: 3), "space bar not found on the Latin tab")
+        space.tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+        let after = (field.value as? String) ?? ""
+        XCTAssertTrue(after.contains("ciao "), "space on the Latin tab must insert a space, field shows: \(after)")
+        shot("35-done")
+    }
+
+    // MARK: - 36 · The Japanese tab keeps Japanese caps — the cue that tells the two QWERTYs apart
+
+    /// The Japanese QWERTY and the Latin QWERTY look identical; on the Japanese one the space bar
+    /// CONVERTS. Apple keeps 空白/改行 on its own JP layouts whatever the UI language, and so do we:
+    /// these labels are the one visual cue. The Latin tab stays localized ("space"/"Newline" on an
+    /// English simulator).
+    /// 日本語タブの空白・改行は常に日本語、ラテン文字タブはUI言語に追従することを検証する。
+    func test36_japaneseTabKeepsJapaneseCaps() throws {
+        _ = activatePreNavigatedField("plain-text")
+        switchToCopaky(in: safari)
+        dismissCopakyNotice(in: safari)
+
+        // Japanese tab: 空白 must be there, the localized "space" must not.
+        switchToJapaneseFlickTab(in: safari)
+        let jpSpace = safari.descendants(matching: .any)["空白"]
+        if !jpSpace.waitForExistence(timeout: 4) {
+            dump(safari, "36-no-kuuhaku")
+            shot("36-no-kuuhaku")
+        }
+        XCTAssertTrue(jpSpace.exists, "the Japanese tab must cap its space key 空白 whatever the UI language")
+
+        // Latin tab: localized caps.
+        switchToEnglishTab(in: safari)
+        let latinSpace = safari.descendants(matching: .any)
+            .matching(NSPredicate(format: "label IN %@", ["space", "Spazio"])).firstMatch
+        if !latinSpace.waitForExistence(timeout: 4) {
+            dump(safari, "36-no-latin-space")
+            shot("36-no-latin-space")
+        }
+        XCTAssertTrue(latinSpace.exists, "the Latin tab must localize its space cap on an English simulator")
+        shot("36-done")
+    }
+
     // MARK: - 34 · Copaky extension: the system paste control renders inside the input view
 
     /// Apple does not document putting `UIPasteControl` inside a keyboard extension's input view, so

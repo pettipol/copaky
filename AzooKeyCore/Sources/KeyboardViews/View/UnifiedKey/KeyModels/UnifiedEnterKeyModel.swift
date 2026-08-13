@@ -45,6 +45,13 @@ struct UnifiedEnterKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>
 
     func label<ThemeExtension>(width: CGFloat, theme: ThemeData<ThemeExtension>, states: VariableStates, color: Color?) -> KeyLabel<Extension> where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         let text = Design.language.getEnterKeyText(states.enterKeyState)
+        // Copaky: on the JAPANESE tab the enter cap stays Japanese (確定/改行…) whatever the UI
+        // language — Apple does the same on its JP layouts, and it is the one visual cue that
+        // tells the Japanese QWERTY apart from the visually identical Latin QWERTY.
+        // 日本語タブでは表示言語に関わらず日本語のまま（ラテン文字タブとの見分けの手がかり）。
+        if states.keyboardLanguage == .ja_JP {
+            return KeyLabel(.text(text), width: width, textSize: textSize, textColor: color ?? specialTextColor(states: states, theme: theme))
+        }
         return KeyLabel(.localizedText(text), width: width, textSize: textSize, textColor: color ?? specialTextColor(states: states, theme: theme))
     }
 
