@@ -101,28 +101,49 @@ for pair in ${PAIRS[@]+"${PAIRS[@]}"}; do
   echo "set      $key = $value ($type)"
 done
 
-# A build installed via `simctl install` (unsigned, no App Group) resolves the suite to the
-# extension's OWN PluginKitPlugin container, not the device-wide domain — mirror every write
-# there too, or manual (non-runner) sessions read stale values. Found empirically 2026-08-13.
-# simctlインストール版は拡張自身のコンテナ側を読むため、そちらにも同じ値を書き込む。
+# WHERE the extension really reads from depends on how the build was installed:
+#   - runner/Xcode SIGNED build → the App Group IS provisioned on the Simulator and the live domain
+#     is the SHARED group container (Containers/Shared/AppGroup/<uuid>/…) — the same file the
+#     MainApp writes. This is the PRIMARY target.
+#   - unsigned `simctl install` build → no App Group; the extension falls back to its own
+#     PluginKitPlugin container (and possibly the device-wide domain).
+# Mirror every write into ALL of them; each install creates fresh container UUIDs, so resolve by
+# metadata identifier every time. Found empirically 2026-08-13/14.
+# 署名ビルドは共有AppGroupコンテナ、無署名ビルドは拡張自身のコンテナを読む。全部に書き込む。
+mirror_into() {
+  local CP="$1" tag="$2"
+  mkdir -p "$(dirname "$CP")"
+  [[ -f "$CP" ]] || plutil -create xml1 "$CP" 2>/dev/null || true
+  local key value type pair
+  for key in ${DELETES[@]+"${DELETES[@]}"}; do
+    $PB -c "Delete :$key" "$CP" >/dev/null 2>&1 || true
+  done
+  for pair in ${PAIRS[@]+"${PAIRS[@]}"}; do
+    key="${pair%%=*}"; value="${pair#*=}"; type="$(plist_type "$value")"
+    $PB -c "Delete :$key" "$CP" >/dev/null 2>&1 || true
+    $PB -c "Add :$key $type $value" "$CP" >/dev/null 2>&1 || true
+  done
+  echo "mirrored into $tag: $CP"
+}
+
+APPGROUP_BASE="$HOME/Library/Developer/CoreSimulator/Devices/$UDID/data/Containers/Shared/AppGroup"
+if [[ -d "$APPGROUP_BASE" ]]; then
+  for d in "$APPGROUP_BASE"/*/; do
+    M="$d.com.apple.mobile_container_manager.metadata.plist"
+    [[ -f "$M" ]] || continue
+    if $PB -c "Print :MCMMetadataIdentifier" "$M" 2>/dev/null | grep -qx "$GROUP_ID"; then
+      mirror_into "$d/Library/Preferences/$GROUP_ID.plist" "shared App Group container (signed builds)"
+    fi
+  done
+fi
+
 PLUGIN_BASE="$HOME/Library/Developer/CoreSimulator/Devices/$UDID/data/Containers/Data/PluginKitPlugin"
 if [[ -d "$PLUGIN_BASE" ]]; then
   for d in "$PLUGIN_BASE"/*/; do
     M="$d.com.apple.mobile_container_manager.metadata.plist"
     [[ -f "$M" ]] || continue
     if $PB -c "Print :MCMMetadataIdentifier" "$M" 2>/dev/null | grep -q "copaky"; then
-      CP="$d/Library/Preferences/$GROUP_ID.plist"
-      mkdir -p "$(dirname "$CP")"
-      [[ -f "$CP" ]] || plutil -create xml1 "$CP" 2>/dev/null || true
-      for key in ${DELETES[@]+"${DELETES[@]}"}; do
-        $PB -c "Delete :$key" "$CP" >/dev/null 2>&1 || true
-      done
-      for pair in ${PAIRS[@]+"${PAIRS[@]}"}; do
-        key="${pair%%=*}"; value="${pair#*=}"; type="$(plist_type "$value")"
-        $PB -c "Delete :$key" "$CP" >/dev/null 2>&1 || true
-        $PB -c "Add :$key $type $value" "$CP" >/dev/null 2>&1 || true
-      done
-      echo "mirrored into extension container: $CP"
+      mirror_into "$d/Library/Preferences/$GROUP_ID.plist" "extension container (unsigned builds)"
     fi
   done
 fi

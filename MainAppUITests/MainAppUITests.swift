@@ -895,7 +895,11 @@ final class CopakyCampaignTests: XCTestCase {
     /// `KeyLabelType.text(String)` rendered `Text(verbatim:)`, so the enter key kept showing 改行/確定
     /// on an English or Italian phone even though its VoiceOver label WAS translated. Functional
     /// labels now go through `KeyLabelType.localizedText` and resolve against the string catalog.
-    /// キーの機能ラベルがUI言語に追従することの回帰テスト。
+    /// This covers the LATIN tab, which follows the UI language ("Newline"/"space" on an EN device);
+    /// the JAPANESE tab is deliberately ALWAYS Japanese (space 空白, enter 改行/確定), matching how
+    /// Apple's own keyboard behaves — that is asserted by test36, not here.
+    /// キーの機能ラベルがUI言語に追従することの回帰テスト（ラテンタブのみ）。日本語タブは常に日本語のまま
+    /// （test36でカバー）。
     func test32_functionalKeyLabelsFollowUILanguage() throws {
         let language = Locale.preferredLanguages.first ?? "en"
         let expectedEnter: String
@@ -911,7 +915,8 @@ final class CopakyCampaignTests: XCTestCase {
         _ = activatePreNavigatedField("plain-text")
         switchToCopaky(in: safari)
         dismissCopakyNotice(in: safari)
-        shot("32-keyboard-\(language)")
+        switchToEnglishTab(in: safari)
+        shot("32-latin-tab-\(language)")
 
         // firstMatch: the magnifier bubble can duplicate a label during transient presses.
         let enter = safari.descendants(matching: .any)
