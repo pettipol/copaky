@@ -109,6 +109,14 @@ struct OpenSourceSoftwaresLicenseView: View {
                     Text("本アプリケーションは基礎的な語彙の基盤としてIPAdicを使用しています。")
                     Text(license_ipadic)
                 }
+                // Copaky: the bundled Italian frequency lexicon (CC BY) requires attribution in the
+                // shipped app, not only in the repository. / 同梱イタリア語辞書のCC BY表記。
+                Section {
+                    Text(verbatim: "Leipzig Corpora Collection").font(.title).padding()
+                    Text("本アプリケーションはイタリア語の予測入力のため、Leipzig Corpora Collection由来の頻度辞書を使用しています（CC BY・© Universität Leipzig / Sächsische Akademie der Wissenschaften / InfAI）。")
+                    FallbackLink(verbatim: "Leipzig Corpora Collection", destination: "https://wortschatz.uni-leipzig.de/en")
+                    FallbackLink("License", destination: "https://wortschatz.uni-leipzig.de/en/usage")
+                }
                 Section {
                     Text(verbatim: "MeCab").font(.title).padding()
                     Text("本アプリケーションは形態素解析器としてMeCabを使用しています。")

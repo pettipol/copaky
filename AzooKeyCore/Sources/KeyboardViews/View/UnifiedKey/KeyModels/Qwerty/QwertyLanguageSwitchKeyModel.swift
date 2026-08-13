@@ -60,8 +60,21 @@ struct QwertyLanguageSwitchKeyModel<Extension: ApplicationSpecificKeyboardViewEx
     func longPressActions(variableStates _: VariableStates) -> LongpressActionType {
         .none
     }
-    func variationSpace(variableStates _: VariableStates) -> UnifiedVariationSpace {
-        .none
+    /// Copaky: with three languages in the cycle, long-pressing the key opens a direct-pick menu
+    /// (あ / A / IT) — tapping still cycles. With two languages a tap already toggles, so no menu.
+    /// Copaky: 3言語のときは長押しで直接選択メニューを表示（タップは従来どおり巡回）。
+    func variationSpace(variableStates: VariableStates) -> UnifiedVariationSpace {
+        let cycle = self.cycle
+        guard cycle.count > 2 else {
+            return .none
+        }
+        let elements = cycle.map { language in
+            QwertyVariationsModel.VariationElement(
+                label: .text(language.shortSymbol),
+                actions: actions(for: language)
+            )
+        }
+        return .linear(elements, direction: .right)
     }
 
     func label<ThemeExtension>(width: CGFloat, theme _: ThemeData<ThemeExtension>, states: VariableStates, color: Color?) -> KeyLabel<Extension> where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {

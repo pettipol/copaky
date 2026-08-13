@@ -10507,6 +10507,22 @@
         }
       }
     },
+    "本アプリケーションはイタリア語の予測入力のため、Leipzig Corpora Collection由来の頻度辞書を使用しています（CC BY・© Universität Leipzig / Sächsische Akademie der Wissenschaften / InfAI）。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "For Italian predictions, this application uses a frequency lexicon derived from the Leipzig Corpora Collection (CC BY — © Universität Leipzig / Sächsische Akademie der Wissenschaften / InfAI)."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Per i suggerimenti in italiano, questa applicazione utilizza un lessico di frequenza derivato dalla Leipzig Corpora Collection (CC BY — © Universität Leipzig / Sächsische Akademie der Wissenschaften / InfAI)."
+          }
+        }
+      }
+    },
     "本アプリケーションは固有名詞などの解析のためmecab-ipadic-NEologdを使用しています。" : {
       "localizations" : {
         "en" : {

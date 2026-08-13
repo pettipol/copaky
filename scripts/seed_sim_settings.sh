@@ -101,15 +101,46 @@ for pair in ${PAIRS[@]+"${PAIRS[@]}"}; do
   echo "set      $key = $value ($type)"
 done
 
+# A build installed via `simctl install` (unsigned, no App Group) resolves the suite to the
+# extension's OWN PluginKitPlugin container, not the device-wide domain — mirror every write
+# there too, or manual (non-runner) sessions read stale values. Found empirically 2026-08-13.
+# simctlインストール版は拡張自身のコンテナ側を読むため、そちらにも同じ値を書き込む。
+PLUGIN_BASE="$HOME/Library/Developer/CoreSimulator/Devices/$UDID/data/Containers/Data/PluginKitPlugin"
+if [[ -d "$PLUGIN_BASE" ]]; then
+  for d in "$PLUGIN_BASE"/*/; do
+    M="$d.com.apple.mobile_container_manager.metadata.plist"
+    [[ -f "$M" ]] || continue
+    if $PB -c "Print :MCMMetadataIdentifier" "$M" 2>/dev/null | grep -q "copaky"; then
+      CP="$d/Library/Preferences/$GROUP_ID.plist"
+      mkdir -p "$(dirname "$CP")"
+      [[ -f "$CP" ]] || plutil -create xml1 "$CP" 2>/dev/null || true
+      for key in ${DELETES[@]+"${DELETES[@]}"}; do
+        $PB -c "Delete :$key" "$CP" >/dev/null 2>&1 || true
+      done
+      for pair in ${PAIRS[@]+"${PAIRS[@]}"}; do
+        key="${pair%%=*}"; value="${pair#*=}"; type="$(plist_type "$value")"
+        $PB -c "Delete :$key" "$CP" >/dev/null 2>&1 || true
+        $PB -c "Add :$key $type $value" "$CP" >/dev/null 2>&1 || true
+      done
+      echo "mirrored into extension container: $CP"
+    fi
+  done
+fi
+
 killall cfprefsd 2>/dev/null || true
 sleep 0.3
 
 if [[ "$KILL_KEYBOARD" == 1 ]]; then
   # The extension re-reads its settings (and rebuilds the static VariableStates, so the tab goes back
-  # to the Japanese default) only on a fresh process.
-  xcrun simctl terminate "$UDID" "$KB_BUNDLE" >/dev/null 2>&1 \
-    && echo "terminated $KB_BUNDLE (settings + tab state re-read on next keyboard load)" \
-    || echo "note: $KB_BUNDLE was not running (nothing to terminate)"
+  # to the Japanese default) only on a fresh process. `simctl terminate` does NOT kill keyboard
+  # extensions (it silently reports "not running") — the process is named `Keyboard` with the appex
+  # path, so kill it by path. / simctl terminateは拡張には効かない：バイナリパスでkillする。
+  if pkill -f "$UDID.*azooKey.app/PlugIns/Keyboard.appex/Keyboard" 2>/dev/null; then
+    echo "killed the running keyboard extension process (settings + tab state re-read on next load)"
+  else
+    xcrun simctl terminate "$UDID" "$KB_BUNDLE" >/dev/null 2>&1 || true
+    echo "note: keyboard extension was not running (nothing to kill)"
+  fi
 fi
 
 echo "── device-wide domain now ──"

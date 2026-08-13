@@ -38,7 +38,14 @@ struct FlickNextCandidateKeyModel<Extension: ApplicationSpecificKeyboardViewExte
     }
 
     func label<ThemeExtension>(width: CGFloat, theme _: ThemeData<ThemeExtension>, states: VariableStates, color _: Color?) -> KeyLabel<Extension> where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
-        states.resultModel.results.isEmpty ? KeyLabel(.localizedText("空白"), width: width) : KeyLabel(.localizedText("次候補"), width: width)
+        // Copaky: same rule as the QWERTY models — the JAPANESE tab keeps Japanese caps whatever
+        // the UI language (this key replaces the flick space when 次候補キー is enabled).
+        // 日本語タブでは常に日本語表記（QWERTY側と同じ規則）。
+        let text = states.resultModel.results.isEmpty ? "空白" : "次候補"
+        if states.keyboardLanguage == .ja_JP {
+            return KeyLabel(.text(text), width: width)
+        }
+        return KeyLabel(.localizedText(text), width: width)
     }
     func backgroundStyleWhenUnpressed<ThemeExtension>(states _: VariableStates, theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         (theme.specialKeyFillColor.color, theme.specialKeyFillColor.blendMode)

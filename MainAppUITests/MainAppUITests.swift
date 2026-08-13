@@ -1302,6 +1302,17 @@ final class CopakyCampaignTests: XCTestCase {
             XCTFail("UIPasteControl did not render inside the keyboard's input view")
             return
         }
+        // A tile carrying the marker from an EARLIER run would make the post-tap check pass without
+        // any delivery. Prove the negative first: the marker must be absent BEFORE the tap, or the
+        // run is invalid (re-seed with a fresh marker).
+        // 直前のランの残骸で偽合格しないよう、タップ前にマーカー不在を確認する。
+        let staleTile = safari.descendants(matching: .any)
+            .matching(NSPredicate(format: "label CONTAINS %@", marker)).firstMatch
+        if staleTile.exists {
+            shot("40-stale-marker")
+            XCTFail("The marker is already in the history BEFORE the tap — stale run; seed a fresh marker")
+            return
+        }
         // Enabled-ness BEFORE the touch is a real signal: a control iOS refuses to arm never fires.
         note("40-state-before-tap", "isEnabled=\(control.isEnabled) isHittable=\(control.isHittable) frame=\(control.frame)")
         shot("40-before-tap")

@@ -45,7 +45,7 @@ let package = Package(
         // prefix match, elision support), UITextChecker as long-tail fallback. The fork branches
         // off the upstream revision 1def030b — the delta is the it_IT support only.
         // Copaky: it_IT 対応のためフォークを参照（イタリア語頻度辞書を同梱、upstream 1def030b 起点）。
-        .package(url: "https://github.com/pettipol/AzooKeyKanaKanjiConverter", revision: "bb359a1512e758f0f0d6c1c3f9640ced707b0c85", traits: ["ZenzaiCPU"]),
+        .package(url: "https://github.com/pettipol/AzooKeyKanaKanjiConverter", revision: "ccea501ac343b5eb744324275ef4b920c46ff503", traits: ["ZenzaiCPU"]),
         .package(url: "https://github.com/azooKey/CustardKit", revision: "7bddc14eb3f8f0145c6f3a4fea20cf394f8104e8"),
     ],
     targets: [

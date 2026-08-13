@@ -105,6 +105,14 @@ struct SystemPasteControl: UIViewRepresentable {
             Task { [weak self] in
                 let text = await Self.loadPlainText(from: provider)
                 if let text {
+                    // Reject oversized content on the BYTE count, before any grapheme-cluster walk:
+                    // the history would refuse it anyway (256 KiB cap), and counting characters of a
+                    // multi-megabyte string is exactly the kind of work that gets a keyboard
+                    // extension jetsam-killed. / 文字数を数える前にバイト長で弾く（jetsam対策）。
+                    guard text.utf8.count <= Self.maxAcceptedBytes else {
+                        pasteLog.error("consegna rifiutata: \(text.utf8.count, privacy: .public) byte oltre il limite")
+                        return
+                    }
                     pasteLog.info("consegnato: \(text.count, privacy: .public) caratteri")
                     self?.onPaste?(text)
                 } else {
@@ -112,6 +120,11 @@ struct SystemPasteControl: UIViewRepresentable {
                 }
             }
         }
+
+        /// Mirrors `ClipboardHistoryManager`'s byte cap: anything larger would be rejected there,
+        /// so it must be rejected HERE before any expensive work touches it.
+        /// ClipboardHistoryManager と同じ 256KiB 上限。
+        private static let maxAcceptedBytes = 256 * 1024
 
         private static func carriesText(_ provider: NSItemProvider) -> Bool {
             provider.canLoadObject(ofClass: String.self)
@@ -149,9 +162,29 @@ struct SystemPasteControl: UIViewRepresentable {
                         continuation.resume(returning: nil)
                         return
                     }
-                    continuation.resume(returning: String(data: data, encoding: .utf8))
+                    // Byte cap FIRST — before any decode allocates a second copy.
+                    // デコード前にバイト長で弾く。
+                    guard data.count <= maxAcceptedBytes else {
+                        pasteLog.error("dati rifiutati: \(data.count, privacy: .public) byte oltre il limite")
+                        continuation.resume(returning: nil)
+                        return
+                    }
+                    continuation.resume(returning: Self.decodePlainText(data))
                 }
             }
+        }
+
+        /// `public.plain-text` does not promise UTF-8: Apple documents UTF-16 variants as conforming.
+        /// Try UTF-8, then BOM-aware UTF-16, then both explicit endiannesses — never silently drop
+        /// text that iOS actually delivered. / plain-text は UTF-8 とは限らない：UTF-16 も試す。
+        private static func decodePlainText(_ data: Data) -> String? {
+            for encoding in [String.Encoding.utf8, .utf16, .utf16LittleEndian, .utf16BigEndian] {
+                if let text = String(data: data, encoding: encoding) {
+                    return text
+                }
+            }
+            pasteLog.error("decodifica fallita: \(data.count, privacy: .public) byte in nessuna codifica testo nota")
+            return nil
         }
     }
 }

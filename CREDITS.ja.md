@@ -32,8 +32,8 @@ Copaky は **azooKey をベースにした独立プロジェクト**であり、
 > `AzooKeyCore/Package.swift` が https://github.com/pettipol/AzooKeyKanaKanjiConverter を固定リビジョン
 > で参照しています。このフォークは azooKey の AzooKeyKanaKanjiConverter（MIT, © 三輪敬太／ensan および
 > コントリビューター）に、Copaky の変更を1点だけ加えたものです — キーボード言語としての `it_IT`
-> （イタリア語の `UITextChecker`、イタリア語のみの予測、ラテン文字の候補）。上流の著作権表示はすべて
-> 保持しており、フォークも MIT です。
+> （同梱のイタリア語頻度辞書による予測〔下の表を参照〕、フォールバックとしてのイタリア語
+> `UITextChecker`、ラテン文字の候補）。上流の著作権表示はすべて保持しており、フォークのコードも MIT です。
 
 > **Zenzai は v2 に延期。** ニューラル変換は **Copaky v0.1 には含まれません**。v0.1 は azooKey のクラシック
 > な（非ニューラル）変換を使用します。`zenz` GGUF モデル（**CC-BY-SA-4.0**）は v0.1 に**バンドルしていません**。
@@ -53,6 +53,7 @@ Copaky は **azooKey をベースにした独立プロジェクト**であり、
 | [Emoji-IME-Dictionary](https://github.com/peaceiris/emoji-ime-dictionary) | 絵文字候補 | LICENSE 参照 |
 | [Kaomojitoka to Google IME Dictionary](https://github.com/nikukyugamer/kaomojitoka-to-google-ime-dictionary) | 顔文字候補 | LICENSE 参照 |
 | [Kaomojic](https://github.com/mika-f/kaomojic) | 顔文字候補 | LICENSE 参照 |
+| [Leipzig Corpora Collection](https://wortschatz.uni-leipzig.de/en) | イタリア語頻度辞書（フォーク内の `it_words.txt`） | **CC BY** — © Universität Leipzig / Sächsische Akademie der Wissenschaften / InfAI（[利用条件](https://wortschatz.uni-leipzig.de/en/usage)）。詳細はフォークの `ITALIAN_LEXICON_LICENSE.md` |
 
 帰属表示に漏れや誤りがあると思われる場合は、issue を立ててください。正確なライセンス全文については、
 アプリ内の Acknowledgements 画面が引き続き信頼できる情報源です。

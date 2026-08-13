@@ -28,9 +28,10 @@ section of Settings; this file is a consolidated summary.
 
 > **Converter fork.** Copaky does not link the upstream converter directly: `AzooKeyCore/Package.swift`
 > pins https://github.com/pettipol/AzooKeyKanaKanjiConverter at a fixed revision. That fork is azooKey's
-> AzooKeyKanaKanjiConverter (MIT, © Keita Miwa / ensan and contributors) with a single Copaky addition —
-> `it_IT` as a keyboard language: Italian `UITextChecker`, Italian-only predictions, Latin-alphabet
-> candidates. All upstream copyright notices are preserved and the fork is MIT as well.
+> AzooKeyKanaKanjiConverter (MIT, © Keita Miwa / ensan and contributors) with one Copaky addition —
+> `it_IT` as a keyboard language: Italian-only predictions driven by a bundled frequency lexicon (see
+> the table below), with the Italian `UITextChecker` as fallback, and Latin-alphabet candidates.
+> All upstream copyright notices are preserved and the fork's code is MIT as well.
 
 > **Zenzai is deferred to v2.** Neural conversion is **not part of Copaky v0.1**: v0.1 uses azooKey's classic
 > (non-neural) conversion. The `zenz` GGUF model (**CC-BY-SA-4.0**) is **not bundled** with v0.1. The
@@ -50,6 +51,7 @@ section of Settings; this file is a consolidated summary.
 | [Emoji-IME-Dictionary](https://github.com/peaceiris/emoji-ime-dictionary) | Emoji candidates | see LICENSE |
 | [Kaomojitoka to Google IME Dictionary](https://github.com/nikukyugamer/kaomojitoka-to-google-ime-dictionary) | Kaomoji candidates | see LICENSE |
 | [Kaomojic](https://github.com/mika-f/kaomojic) | Kaomoji candidates | see LICENSE |
+| [Leipzig Corpora Collection](https://wortschatz.uni-leipzig.de/en) | Italian frequency lexicon (`it_words.txt` in the converter fork) | **CC BY** — © Universität Leipzig / Sächsische Akademie der Wissenschaften / InfAI ([terms](https://wortschatz.uni-leipzig.de/en/usage)); details in the fork's `ITALIAN_LEXICON_LICENSE.md` |
 
 If you believe an attribution is missing or incorrect, please open an issue. The in-app Acknowledgements
 screen remains the source of truth for the exact license texts.
