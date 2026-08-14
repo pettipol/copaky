@@ -43,6 +43,20 @@ xcodebuild archive \
   DEVELOPMENT_TEAM="$TEAM" -quiet
 
 # Export options live OUTSIDE the repo: they carry the team id, which stays untracked.
+#
+# MANUAL signing, deliberately. Xcode's cloud signing answers «Cloud signing permission error /
+# No profiles were found» with an App Manager API key: it cannot mint the App Store profiles for
+# us (measured 2026-08-14, with the distribution certificate already in the keychain). The
+# profiles are created once through the API instead — see docs/appstore-release-playbook/
+# 03-testflight.md for the certificate + profile recipe — and named here.
+# クラウド署名はApp Managerキーでは通らないため、プロファイルはAPIで作成し手動署名で書き出す。
+PROFILE_APP="${COPAKY_PROFILE_APP:-Copaky App Store}"
+PROFILE_KEYBOARD="${COPAKY_PROFILE_KEYBOARD:-Copaky Keyboard App Store}"
+if ! security find-identity -v -p codesigning 2>/dev/null | grep -q "Apple Distribution"; then
+  echo "FATAL: no 'Apple Distribution' identity in the keychain — create and import it first (playbook 03-testflight.md §'Il muro vero')" >&2
+  exit 1
+fi
+
 EXPORT_PLIST="$OUT_DIR/ExportOptions_$STAMP.plist"
 cat > "$EXPORT_PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -51,8 +65,14 @@ cat > "$EXPORT_PLIST" <<PLIST
 <dict>
     <key>method</key><string>app-store-connect</string>
     <key>destination</key><string>upload</string>
-    <key>signingStyle</key><string>automatic</string>
+    <key>signingStyle</key><string>manual</string>
     <key>teamID</key><string>$TEAM</string>
+    <key>signingCertificate</key><string>Apple Distribution</string>
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>com.pettipol.copaky</key><string>$PROFILE_APP</string>
+        <key>com.pettipol.copaky.keyboard</key><string>$PROFILE_KEYBOARD</string>
+    </dict>
     <key>uploadSymbols</key><true/>
     <key>manageAppVersionAndBuildNumber</key><false/>
 </dict>
@@ -63,7 +83,6 @@ echo "== 2/3 export+upload (destination=upload → straight to App Store Connect
 xcodebuild -exportArchive \
   -archivePath "$ARCHIVE" \
   -exportOptionsPlist "$EXPORT_PLIST" \
-  -allowProvisioningUpdates \
   -authenticationKeyPath "$ASC_KEY_PATH" \
   -authenticationKeyID "$ASC_KEY_ID" \
   -authenticationKeyIssuerID "$ASC_ISSUER_ID"
