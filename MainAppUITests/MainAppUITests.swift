@@ -1270,7 +1270,7 @@ final class CopakyCampaignTests: XCTestCase {
         //   pymobiledevice3 developer core-device copy "COPAKY-PROBE-123456"
         //   TEST_RUNNER_COPAKY_PASTE_MARKER="COPAKY-PROBE-123456" xcodebuild test …
         // 実機ではランナーからペーストボードに書けないため、ホスト側で仕込んだ文字列を使う。
-        let marker: String
+        var marker: String
         if let seeded = ProcessInfo.processInfo.environment["COPAKY_PASTE_MARKER"], !seeded.isEmpty {
             marker = seeded
             note("40-marker-source", "seeded from the host before the run")
@@ -1287,7 +1287,37 @@ final class CopakyCampaignTests: XCTestCase {
         driveSwitch(L.clipboardToggle, to: true)
         shot("40-settings")
 
-        XCTAssertTrue(focusSafariAddressBar(), "No field focused in Safari — nothing to host the keyboard")
+        // SELF-SEEDING (device): every host-side seeding route failed us at least once — the
+        // runner cannot write the pasteboard on a device, pymobiledevice3's tunnel needs sudo, and
+        // a human with 60 seconds is not an API. So the qa page carries a "Copy test marker"
+        // button: one in-page tap (user-gesture path) puts a FRESH unique marker on the pasteboard
+        // and shows its value for us to read back. Orchestrator pre-navigates Safari with:
+        //   xcrun devicectl device process launch --device <id> \
+        //     --payload-url https://copaky.app/qa com.apple.mobilesafari
+        // Falls back to the env/in-process marker + address bar when the page is not open.
+        // 実機はqaページのボタンで自己シード（ホストからの書き込みは全滅したため）。
+        safari.launch()
+        RunLoop.current.run(until: Date().addingTimeInterval(2.0))
+        let copyButton = safari.webViews.buttons["Copy test marker"].firstMatch
+        if copyButton.waitForExistence(timeout: 5), copyButton.isHittable {
+            copyButton.tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(1.0))
+            let shown = safari.webViews.staticTexts
+                .matching(NSPredicate(format: "label BEGINSWITH %@", "COPAKY-PROBE-")).firstMatch
+            if shown.waitForExistence(timeout: 3) {
+                marker = shown.label
+                note("40-marker-source", "self-seeded by the qa page button")
+                note("40-marker", marker)
+            }
+            // Host the keyboard on the page's plain field — steadier than the address bar.
+            let plain = safari.webViews.textFields.firstMatch
+            if plain.exists, plain.isHittable {
+                plain.tap()
+                RunLoop.current.run(until: Date().addingTimeInterval(1.2))
+            }
+        } else {
+            XCTAssertTrue(focusSafariAddressBar(), "No field focused in Safari — nothing to host the keyboard")
+        }
         switchToCopaky(in: safari)
         dismissCopakyNotice(in: safari)
         // Use the shared helper rather than looking the tab up directly: the tab bar is CLOSED by
