@@ -110,20 +110,38 @@ done
 # Mirror every write into ALL of them; each install creates fresh container UUIDs, so resolve by
 # metadata identifier every time. Found empirically 2026-08-13/14.
 # 署名ビルドは共有AppGroupコンテナ、無署名ビルドは拡張自身のコンテナを読む。全部に書き込む。
+# Every write is READ BACK before the mirror is called a success. Silently swallowing PlistBuddy
+# errors here would let the script announce a known test state it never established, and the run
+# that follows would blame the product for a seeding failure (Codex review 2026-08-14).
+# 書き込みは必ず読み戻して確認する（未反映のまま「成功」と言わないため）。
+MIRRORS_WRITTEN=0
 mirror_into() {
   local CP="$1" tag="$2"
   mkdir -p "$(dirname "$CP")"
   [[ -f "$CP" ]] || plutil -create xml1 "$CP" 2>/dev/null || true
-  local key value type pair
+  local key value type pair got
   for key in ${DELETES[@]+"${DELETES[@]}"}; do
     $PB -c "Delete :$key" "$CP" >/dev/null 2>&1 || true
+    if $PB -c "Print :$key" "$CP" >/dev/null 2>&1; then
+      echo "FATAL: $tag — key '$key' still present after delete: $CP" >&2
+      exit 1
+    fi
   done
   for pair in ${PAIRS[@]+"${PAIRS[@]}"}; do
     key="${pair%%=*}"; value="${pair#*=}"; type="$(plist_type "$value")"
     $PB -c "Delete :$key" "$CP" >/dev/null 2>&1 || true
-    $PB -c "Add :$key $type $value" "$CP" >/dev/null 2>&1 || true
+    if ! $PB -c "Add :$key $type $value" "$CP" >/dev/null 2>&1; then
+      echo "FATAL: $tag — could not write '$key' into $CP" >&2
+      exit 1
+    fi
+    got="$($PB -c "Print :$key" "$CP" 2>/dev/null)"
+    if [[ "$got" != "$value" ]]; then
+      echo "FATAL: $tag — read-back mismatch for '$key': wrote '$value', read '$got' ($CP)" >&2
+      exit 1
+    fi
   done
-  echo "mirrored into $tag: $CP"
+  MIRRORS_WRITTEN=$((MIRRORS_WRITTEN + 1))
+  echo "mirrored into $tag: $CP (read-back OK)"
 }
 
 APPGROUP_BASE="$HOME/Library/Developer/CoreSimulator/Devices/$UDID/data/Containers/Shared/AppGroup"
@@ -146,6 +164,20 @@ if [[ -d "$PLUGIN_BASE" ]]; then
       mirror_into "$d/Library/Preferences/$GROUP_ID.plist" "extension container (unsigned builds)"
     fi
   done
+fi
+
+# A signed install reads the SHARED App Group container. Zero mirrors there means the settings
+# never reached the extension, whatever the device-wide domain says — say so loudly instead of
+# letting the next test run interpret an unseeded state as product behaviour.
+# 共有コンテナに1件も書けていない＝拡張には届いていない。黙って成功と言わない。
+if [[ "$MIRRORS_WRITTEN" == 0 ]]; then
+  echo "WARNING: no App Group / extension container was written (only the device-wide domain)." >&2
+  echo "         With a SIGNED build this means the keyboard will NOT see these settings." >&2
+  echo "         Run the keyboard once (open a text field, switch to Copaky) so its container exists, then re-run." >&2
+  if [[ "${COPAKY_SEED_REQUIRE_CONTAINER:-0}" == 1 ]]; then
+    echo "FATAL: COPAKY_SEED_REQUIRE_CONTAINER=1 and no container was written." >&2
+    exit 1
+  fi
 fi
 
 killall cfprefsd 2>/dev/null || true

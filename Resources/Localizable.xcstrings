@@ -3759,13 +3759,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "While composing, the space key will change into the 'Next Candidate' key"
+            "value" : "While composing JAPANESE, the space key becomes the 'Next Candidate' key. On the Latin tab the space key always inserts a space."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Durante la composizione, il tasto spazio si trasforma nel tasto «Candidato successivo»"
+            "value" : "Durante la composizione in GIAPPONESE, il tasto spazio diventa «Candidato successivo». Sul tab latino il tasto spazio inserisce sempre uno spazio."
           }
         }
       }

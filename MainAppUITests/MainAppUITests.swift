@@ -48,7 +48,9 @@ private enum L {
     /// Enter key in its plain "return" state — localized since the key-label fix (Design.getEnterKeyText).
     static let enterKeyReturn = ["改行", "Newline", "A capo"]
     /// Space key on the simple/flick keyboards — localized since the key-label fix.
-    static let spaceKey = ["空白", "Space", "Spazio"]
+    /// Lowercase variants included: the catalog ships them lowercase ("space"/"spazio", seen on
+    /// the phone 2026-08-14) and XCUI label matching is case-sensitive.
+    static let spaceKey = ["空白", "Space", "space", "Spazio", "spazio"]
     /// Back key of the clipboard and emoji tabs — localized since the key-label fix.
     static let backKey = ["戻る", "Back", "Indietro"]
     /// Master switch that reveals every settings section (the paste-control row lives behind it).
@@ -57,6 +59,15 @@ private enum L {
     static let systemPasteToggle = ["Use the system paste button", "システムのペーストボタンを使う", "Usa il pulsante Incolla di sistema"]
     /// `UIPasteControl` vends a button whose label iOS localizes for us.
     static let systemPasteControl = ["Paste", "ペースト", "Incolla"]
+    /// iOS Settings root row that leads to the installed-apps list (bottom of the root list).
+    static let settingsAppsRow = ["App", "Apps", "アプリ"]
+    /// Per-app Settings row governing cross-app paste (the row the §10 protocol pivots on).
+    /// Upstream writes ほかのApp, the shipped OS row says 他のApp — carry both.
+    static let pasteFromOtherAppsRow = ["Incolla da altre app", "Paste from Other Apps", "他のAppからペースト", "ほかのAppからペースト"]
+    /// The three states of that row; the protocol needs ASK.
+    static let pasteAsk = ["Chiedi", "Ask", "確認"]
+    /// Buttons that let a system paste prompt proceed, across OS languages and phrasings.
+    static let allowPasteButtons = ["Consenti di incollare", "Allow Paste", "ペーストを許可", "Consenti", "Allow", "許可", "Incolla", "Paste", "ペースト"]
 }
 
 @MainActor
@@ -65,10 +76,27 @@ final class CopakyCampaignTests: XCTestCase {
     let settings = XCUIApplication(bundleIdentifier: "com.apple.Preferences")
     let mainApp = XCUIApplication(bundleIdentifier: "com.pettipol.copaky")
     let safari = XCUIApplication(bundleIdentifier: "com.apple.mobilesafari")
+    /// System paste prompts are HUD-level: on a device they can attach to SpringBoard rather than
+    /// to the host app, so banner checks must look in both places.
+    let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
 
     override func setUpWithError() throws {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .portrait
+    }
+
+    /// True when the suite is running on a real phone rather than the Simulator.
+    ///
+    /// The distinction matters for seeding: on the Simulator the runner CAN write the pasteboard
+    /// in-process, on a device it cannot (iOS refuses the write to a non-foreground process), so
+    /// device runs must fail closed when the page-driven seeding did not happen.
+    /// 実機ではランナーからペーストボードに書けないため、シードの前提を厳格に扱う。
+    private var isDevice: Bool {
+        #if targetEnvironment(simulator)
+        false
+        #else
+        true
+        #endif
     }
 
     // MARK: - Evidence helpers
@@ -265,7 +293,12 @@ final class CopakyCampaignTests: XCTestCase {
     /// キーが見つからない場合は、アサート前に要素ツリーとスクリーンショットを保存する。
     private func tapKeys(_ labels: [String], in app: XCUIApplication) {
         for label in labels {
-            let key = app.descendants(matching: .any)[label]
+            // firstMatch, never the exact-match subscript: during a tap the magnifier bubble
+            // briefly DUPLICATES the key's label, and a multi-match crashes the runner with an
+            // unswallowable ObjC exception (paid on the phone 2026-08-14, test35 typing "perche").
+            // タップ中は拡大バブルがラベルを複製するため必ずfirstMatch。
+            let key = app.descendants(matching: .any)
+                .matching(NSPredicate(format: "label == %@", label)).firstMatch
             if !key.waitForExistence(timeout: 4) {
                 dump(app, "key-not-found-\(label)")
                 shot("key-not-found-\(label)")
@@ -1060,11 +1093,18 @@ final class CopakyCampaignTests: XCTestCase {
         _ = activatePreNavigatedField("plain-text")
         switchToCopaky(in: safari)
         dismissCopakyNotice(in: safari)
-        let abcKey = safari.descendants(matching: .any)["ABC"]
-        if abcKey.waitForExistence(timeout: 3) && abcKey.isHittable {
-            abcKey.tap()
+        // Reach the LATIN tab from EITHER JP layout with the proven helper: the bare "ABC" key
+        // only exists on the flick tab, so a phone left on the QWERTY JP tab typed straight into
+        // the IME (field read ペrチェ…, paid 2026-08-14 — the JP tab converts romaji, it does not
+        // fail loudly). Then one more cycle reaches Italian (order JP→EN→IT): the switch key
+        // exposes the NEXT language as its own "IT" sub-element (the anchor test33 verifies).
+        switchToEnglishTab(in: safari)
+        dismissCopakyNotice(in: safari)
+        let itNext = safari.descendants(matching: .any)
+            .matching(NSPredicate(format: "label == %@", "IT")).firstMatch
+        if itNext.waitForExistence(timeout: 4), itNext.isHittable {
+            itNext.tap()
             RunLoop.current.run(until: Date().addingTimeInterval(0.8))
-            dismissCopakyNotice(in: safari)
         }
         var accented = safari.descendants(matching: .any)
             .matching(NSPredicate(format: "label == %@", "perché")).firstMatch
@@ -1080,8 +1120,10 @@ final class CopakyCampaignTests: XCTestCase {
                     .matching(NSPredicate(format: "label IN %@", ["delete", "削除", "Elimina", "⌫"])).firstMatch
                 if del.exists && del.isHittable { del.tap() } else { break }
             }
+            // Exact labels only: CONTAINS 'A' matched half the page and the first hit was
+            // rarely the switch key (paid 2026-08-14 on the phone).
             let switchKey = safari.descendants(matching: .any)
-                .matching(NSPredicate(format: "label CONTAINS %@ OR label CONTAINS %@ OR label CONTAINS %@", "IT", "A", "あ")).firstMatch
+                .matching(NSPredicate(format: "label IN %@", ["IT", "A", "あ"])).firstMatch
             if switchKey.exists && switchKey.isHittable {
                 switchKey.tap()
                 RunLoop.current.run(until: Date().addingTimeInterval(0.6))
@@ -1104,9 +1146,14 @@ final class CopakyCampaignTests: XCTestCase {
         XCTAssertTrue(value.contains("perché"), "tapping the candidate must commit 'perché', field shows: \(value)")
 
         // 4. Space bar inserts a plain space on the Latin tab (the user's own report).
+        // While COMPOSING with candidates on screen the same physical key relabels itself to the
+        // next-candidate caption («successivo»/次候補 — seen on the phone 2026-08-14), so the
+        // lookup must accept both states. What the user presses is the physical key; whether it
+        // INSERTS A SPACE is decided by the content assert below, not by the label.
         tapKeys(["c", "i", "a", "o"], in: safari)
+        let spaceLabels = L.spaceKey + ["successivo", "次候補", "next candidate", "Next candidate"]
         let space = safari.descendants(matching: .any)
-            .matching(NSPredicate(format: "label IN %@", ["space", "Spazio", "空白"])).firstMatch
+            .matching(NSPredicate(format: "label IN %@", spaceLabels)).firstMatch
         XCTAssertTrue(space.waitForExistence(timeout: 3), "space bar not found on the Latin tab")
         space.tap()
         RunLoop.current.run(until: Date().addingTimeInterval(0.8))
@@ -1296,8 +1343,15 @@ final class CopakyCampaignTests: XCTestCase {
         //     --payload-url https://copaky.app/qa com.apple.mobilesafari
         // Falls back to the env/in-process marker + address bar when the page is not open.
         // 実機はqaページのボタンで自己シード（ホストからの書き込みは全滅したため）。
+        // FAIL CLOSED on a device (Codex review 2026-08-14): if the page, the button, the echo or
+        // the field are missing, the runner-generated marker is NOT on the phone's pasteboard —
+        // Apple's control would then have nothing to hand over, and the run would report
+        // "iOS did not deliver" for what is really a broken setup. An unmet prerequisite must
+        // SKIP, never masquerade as a product verdict.
+        // 前提が整わない場合はスキップ（配信失敗と誤報しないため）。
         safari.launch()
         RunLoop.current.run(until: Date().addingTimeInterval(2.0))
+        let seededFromHost = !(ProcessInfo.processInfo.environment["COPAKY_PASTE_MARKER"] ?? "").isEmpty
         let copyButton = safari.webViews.buttons["Copy test marker"].firstMatch
         if copyButton.waitForExistence(timeout: 5), copyButton.isHittable {
             copyButton.tap()
@@ -1308,13 +1362,22 @@ final class CopakyCampaignTests: XCTestCase {
                 marker = shown.label
                 note("40-marker-source", "self-seeded by the qa page button")
                 note("40-marker", marker)
+            } else if isDevice && !seededFromHost {
+                dump(safari, "40-no-marker-echo")
+                throw XCTSkip("The qa page did not echo a marker: the pasteboard was never seeded, so a paste result would mean nothing")
             }
             // Host the keyboard on the page's plain field — steadier than the address bar.
             let plain = safari.webViews.textFields.firstMatch
             if plain.exists, plain.isHittable {
                 plain.tap()
                 RunLoop.current.run(until: Date().addingTimeInterval(1.2))
+            } else if isDevice {
+                dump(safari, "40-no-plain-field")
+                throw XCTSkip("No field to host the keyboard on the qa page")
             }
+        } else if isDevice && !seededFromHost {
+            dump(safari, "40-no-copy-button")
+            throw XCTSkip("qa page not open in Safari (pre-navigate with devicectl --payload-url https://copaky.app/qa) and no COPAKY_PASTE_MARKER seeded from the host — prerequisite unmet, not a delivery failure")
         } else {
             XCTAssertTrue(focusSafariAddressBar(), "No field focused in Safari — nothing to host the keyboard")
         }
@@ -1339,11 +1402,12 @@ final class CopakyCampaignTests: XCTestCase {
         }
         // A tile carrying the marker from an EARLIER run would make the post-tap check pass without
         // any delivery. Prove the negative first: the marker must be absent BEFORE the tap, or the
-        // run is invalid (re-seed with a fresh marker).
+        // run is invalid (re-seed with a fresh marker). Scoped to the keyboard area: the qa page
+        // ECHOES the marker in the web content, and an unscoped query matches that echo (paid
+        // 2026-08-14: the guard killed a valid run by reading the page, not the panel).
         // 直前のランの残骸で偽合格しないよう、タップ前にマーカー不在を確認する。
-        let staleTile = safari.descendants(matching: .any)
-            .matching(NSPredicate(format: "label CONTAINS %@", marker)).firstMatch
-        if staleTile.exists {
+        let panelTop = control.frame.minY - 24
+        if markerTile(marker, in: safari, notAbove: panelTop) != nil {
             shot("40-stale-marker")
             XCTFail("The marker is already in the history BEFORE the tap — stale run; seed a fresh marker")
             return
@@ -1356,15 +1420,241 @@ final class CopakyCampaignTests: XCTestCase {
         RunLoop.current.run(until: Date().addingTimeInterval(2.0))
         shot("40-just-after-tap")   // the banner, if any, lives for ~3s — this is where it shows
 
-        // Delivery, not decoration: the seeded text has to come back as a tile in the panel.
-        let deliveredTile = safari.descendants(matching: .any)
-            .matching(NSPredicate(format: "label CONTAINS %@", marker)).firstMatch
-        let delivered = deliveredTile.waitForExistence(timeout: 6)
+        // Delivery, not decoration: the seeded text has to come back as a tile IN THE PANEL
+        // (keyboard-area scoped — the page's own echo of the marker must not count).
+        let delivered = waitForMarkerTile(marker, in: safari, notAbove: panelTop, timeout: 6)
         RunLoop.current.run(until: Date().addingTimeInterval(1.5))
         shot("40-after-wait")
         note("40-delivered", delivered
              ? "iOS DELIVERED the text: a tile carrying the marker appeared in the panel"
              : "NOTHING arrived: no tile carries the marker (read the paste-control log on the Mac to tell 'not delivered' from 'not tapped')")
         XCTAssertTrue(delivered, "iOS never delivered the pasted text to the keyboard's input view")
+    }
+
+    // MARK: - 41 · Device only: §10 banner protocol (baseline → capsule → negative control)
+
+    /// Set iOS Settings ▸ Apps ▸ Copaky ▸ "Paste from Other Apps" to one of its three states.
+    /// Navigates by scrolling, never by typing: the search field would engage whatever keyboard is
+    /// active system-wide (possibly Copaky itself), which is the object under test.
+    /// 検索欄は使わない（被験対象のキーボードが出てしまう）。スクロールだけで辿る。
+    private func setPasteFromOtherApps(to value: [String]) throws {
+        settings.launch()
+        RunLoop.current.run(until: Date().addingTimeInterval(1.5))
+        guard tapFirst(in: settings, labels: L.settingsAppsRow, timeout: 4, scrollUpTo: 12) else { return }
+        // The apps list is alphabetical; Copaky sits under C, a few swipes at most.
+        // The CELLS carry no label (paid 2026-08-14: a cells-query matched nothing and the loop
+        // swiped past the whole alphabet) — the label and the bundle-id identifier live on the
+        // inner BUTTON, so query buttons, anchored on the bundle id.
+        let copaky = settings.buttons.matching(
+            NSPredicate(format: "identifier == %@ OR label BEGINSWITH %@", "com.pettipol.copaky", "Copaky")).firstMatch
+        var swipes = 0
+        while !copaky.exists && swipes < 20 {
+            settings.swipeUp()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+            swipes += 1
+        }
+        guard copaky.waitForExistence(timeout: 3) else {
+            dump(settings, "41-no-copaky-in-apps")
+            XCTFail("Copaky not found in the Settings apps list")
+            return
+        }
+        copaky.tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+        guard tapFirst(in: settings, labels: L.pasteFromOtherAppsRow, timeout: 5, scrollUpTo: 8) else { return }
+        guard tapFirst(in: settings, labels: value, timeout: 5) else { return }
+        shot("41-permission-row-set")
+    }
+
+    /// A history TILE carrying `marker`, distinguished from the qa page's own echo of it.
+    ///
+    /// Self-seeding displays the marker's value in the WEB CONTENT, so a bare
+    /// `descendants… CONTAINS marker` matches the page and not the panel — the stale guard then
+    /// kills valid runs and, worse, the delivery check could false-PASS without any delivery.
+    /// Only a match INSIDE the keyboard area counts: at or below `floorY` when the caller knows
+    /// where the panel starts (capsule/capture-bar top), else the bottom 55% of the screen.
+    /// qaページはマーカー値を画面に表示するため、キーボード領域内の一致だけをタイルと数える。
+    private func markerTile(_ marker: String, in app: XCUIApplication, notAbove floorY: CGFloat? = nil) -> XCUIElement? {
+        let cutoff = floorY ?? (app.frame.height * 0.45)
+        let q = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label CONTAINS %@", marker))
+        for i in 0..<min(q.count, 8) {
+            let el = q.element(boundBy: i)
+            if el.exists, el.frame.minY >= cutoff { return el }
+        }
+        return nil
+    }
+
+    /// Poll `markerTile` for up to `timeout` seconds (per-index queries have no waitForExistence).
+    private func waitForMarkerTile(_ marker: String, in app: XCUIApplication, notAbove floorY: CGFloat? = nil,
+                                   timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        repeat {
+            if markerTile(marker, in: app, notAbove: floorY) != nil { return true }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.4))
+        } while Date() < deadline
+        return false
+    }
+
+    /// The system paste prompt, wherever iOS hangs it (host app or SpringBoard).
+    private func pastePrompt(timeout: TimeInterval) -> XCUIElement? {
+        let deadline = Date().addingTimeInterval(timeout)
+        repeat {
+            for candidate in [safari.alerts.firstMatch, springboard.alerts.firstMatch] where candidate.exists {
+                return candidate
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+        } while Date() < deadline
+        return nil
+    }
+
+    /// Tap the qa page's "Copy test marker" button (fresh unique value each tap), read the value
+    /// back from the page, and park the caret in the page's plain field. Requires Safari to be
+    /// PRE-NAVIGATED to https://copaky.app/qa by the orchestrator (devicectl --payload-url).
+    private func seedMarkerFromQaPage(evidence prefix: String) throws -> String {
+        safari.launch()
+        RunLoop.current.run(until: Date().addingTimeInterval(2.0))
+        let copyButton = safari.webViews.buttons["Copy test marker"].firstMatch
+        guard copyButton.waitForExistence(timeout: 6), copyButton.isHittable else {
+            dump(safari, "\(prefix)-no-copy-button")
+            throw XCTSkip("qa page not open in Safari — pre-navigate with devicectl --payload-url https://copaky.app/qa")
+        }
+        copyButton.tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(1.0))
+        let shown = safari.webViews.staticTexts
+            .matching(NSPredicate(format: "label BEGINSWITH %@", "COPAKY-PROBE-")).firstMatch
+        guard shown.waitForExistence(timeout: 4) else {
+            dump(safari, "\(prefix)-no-marker-label")
+            throw XCTSkip("qa page did not echo the marker value back")
+        }
+        let marker = shown.label
+        note("\(prefix)-marker", marker)
+        let plain = safari.webViews.textFields.firstMatch
+        if plain.exists, plain.isHittable {
+            plain.tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(1.2))
+        }
+        return marker
+    }
+
+    /// **Device only** — the OTHER half of §10, the one test40 cannot answer: the banner.
+    ///
+    /// With "Paste from Other Apps" on ASK, tapping OUR old capture button must raise the system
+    /// paste prompt — that arms the probe (a silent run with the permission on Allow proves
+    /// nothing, the trap already paid for once). Then Apple's `UIPasteControl` capsule is tapped
+    /// under the same ASK regime: whether the prompt appears again is THE observation this test
+    /// exists to record — it is noted and screenshotted, not asserted, because either outcome is
+    /// decision-relevant. Delivery, however, IS asserted on both paths. Ends with a negative
+    /// control: a second capsule tap with no fresh copy must not conjure new content.
+    /// バナーの有無は記録すべき観察であり、断定はしない。配信は両経路とも断定する。
+    func test41_device_pasteBannerProtocol() throws {
+        // 0 — permission → ASK (the §10 precondition that voids every earlier "no banner" claim)
+        try setPasteFromOtherApps(to: L.pasteAsk)
+
+        // 1 — baseline arm: clipboard tab ON, capsule OFF (the OLD capture button must be on duty)
+        XCTAssertTrue(enableCopakySetting(L.clipboardToggle), "Could not switch the clipboard tab ON")
+        driveSwitch(L.systemPasteToggle, to: false)
+        shot("41-settings-baseline")
+
+        let marker1 = try seedMarkerFromQaPage(evidence: "41-baseline")
+        switchToCopaky(in: safari)
+        dismissCopakyNotice(in: safari)
+        try openClipboardTab()
+        // Tap with retry, re-resolving each round: the お知らせ notice can animate in BETWEEN the
+        // lookup and the tap, and a tap on a stale element crashes the runner with an unswallowable
+        // ObjC exception (paid 2026-08-14). The panel top is remembered BEFORE tapping — the element
+        // may be gone afterwards.
+        var baselineFloor = safari.frame.height * 0.45
+        var baselineTapped = false
+        for _ in 0..<3 {
+            dismissCopakyNotice(in: safari)
+            if let el = firstMatch(in: safari, labels: L.captureBar, timeout: 4), el.isHittable {
+                baselineFloor = el.frame.minY - 24
+                el.tap()
+                baselineTapped = true
+                break
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+        }
+        guard baselineTapped else {
+            dump(safari, "41-no-capture-bar")
+            shot("41-no-capture-bar")
+            XCTFail("Old capture bar not found/hittable — baseline cannot be armed")
+            return
+        }
+        let baselinePrompt = pastePrompt(timeout: 5)
+        shot("41-baseline-after-tap")   // the prompt, if any, is IN this shot
+        note("41-baseline-banner", baselinePrompt != nil
+             ? "ARMED: the system paste prompt appeared for the old capture button"
+             : "NOT ARMED: no prompt for the old button — permission flip did not take, round is void")
+        XCTAssertNotNil(baselinePrompt,
+                        "With 'Paste from Other Apps' on ASK the old capture button must raise the system prompt; nothing appeared, so the probe is not armed and no capsule observation would mean anything")
+        if let prompt = baselinePrompt {
+            let allow = prompt.buttons.matching(NSPredicate(format: "label IN %@", L.allowPasteButtons)).firstMatch
+            if allow.waitForExistence(timeout: 3) { allow.tap() }
+            RunLoop.current.run(until: Date().addingTimeInterval(1.5))
+        }
+        note("41-baseline-delivered", waitForMarkerTile(marker1, in: safari, notAbove: baselineFloor, timeout: 6)
+             ? "old path delivered after Allow"
+             : "old path did NOT deliver even after Allow")
+        shot("41-baseline-delivered")
+
+        // 2 — capsule under ASK: the observation the §10 decision hangs on
+        XCTAssertTrue(enableCopakySetting(L.systemPasteToggle),
+                      "Could not switch ON 'use the system paste button'")
+        let marker2 = try seedMarkerFromQaPage(evidence: "41-capsule")
+        switchToCopaky(in: safari)
+        dismissCopakyNotice(in: safari)
+        try openClipboardTab()
+        dismissCopakyNotice(in: safari)
+        let control = safari.descendants(matching: .any)
+            .matching(NSPredicate(format: "label IN %@", L.systemPasteControl)).firstMatch
+        guard control.waitForExistence(timeout: 6) else {
+            shot("41-capsule-not-rendered")
+            XCTFail("UIPasteControl did not render — capsule phase impossible")
+            return
+        }
+        let capsuleFloor = control.frame.minY - 24
+        if markerTile(marker2, in: safari, notAbove: capsuleFloor) != nil {
+            XCTFail("marker already in history BEFORE the capsule tap — stale run")
+            return
+        }
+        note("41-capsule-state-before-tap", "isEnabled=\(control.isEnabled) isHittable=\(control.isHittable)")
+        control.tap()
+        let capsulePrompt = pastePrompt(timeout: 4)
+        shot("41-capsule-after-tap")    // banner lives ~3s; this shot is the evidence
+        note("41-capsule-banner", capsulePrompt != nil
+             ? "the system prompt APPEARED for UIPasteControl too (capsule does not bypass ASK)"
+             : "NO prompt for UIPasteControl (user-intent tap accepted silently under ASK)")
+        if let prompt = capsulePrompt {
+            let allow = prompt.buttons.matching(NSPredicate(format: "label IN %@", L.allowPasteButtons)).firstMatch
+            if allow.waitForExistence(timeout: 3) { allow.tap() }
+            RunLoop.current.run(until: Date().addingTimeInterval(1.5))
+        }
+        let capsuleDelivered = waitForMarkerTile(marker2, in: safari, notAbove: capsuleFloor, timeout: 6)
+        shot("41-capsule-delivered")
+        note("41-capsule-delivered", capsuleDelivered
+             ? "capsule path delivered: tile with the fresh marker is in the panel"
+             : "capsule path did NOT deliver")
+        XCTAssertTrue(capsuleDelivered, "The capsule never delivered the fresh marker under ASK")
+
+        // 3 — negative control: no fresh copy → a second tap must not conjure new content.
+        // Counts are keyboard-area scoped for the same reason as the tile checks above.
+        func probeTileCount() -> Int {
+            let q = safari.descendants(matching: .any)
+                .matching(NSPredicate(format: "label CONTAINS %@", "COPAKY-PROBE-"))
+            var n = 0
+            for i in 0..<min(q.count, 12) {
+                let el = q.element(boundBy: i)
+                if el.exists, el.frame.minY >= capsuleFloor { n += 1 }
+            }
+            return n
+        }
+        let tilesBefore = probeTileCount()
+        if control.exists, control.isHittable { control.tap() }
+        RunLoop.current.run(until: Date().addingTimeInterval(2.0))
+        let tilesAfter = probeTileCount()
+        shot("41-negative-control")
+        note("41-negative-control", "probe tiles before=\(tilesBefore) after=\(tilesAfter) (re-paste of the SAME pasteboard may legally re-deliver; what must not happen is a NEW unknown value)")
+        XCTAssertLessThanOrEqual(tilesAfter, tilesBefore + 1, "Negative control: unexpected flood of new tiles after a tap with no fresh copy")
     }
 }
