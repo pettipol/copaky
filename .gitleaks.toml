@@ -25,9 +25,17 @@ description = "Apple DEVELOPMENT_TEAM in a tracked file — belongs in the gitig
 regex = '''DEVELOPMENT_TEAM\s*[=:]\s*[A-Z0-9]{10}\b'''
 tags = ["copaky", "signing"]
 
-[rules.allowlist]
+[[rules.allowlists]]
 # Copaky.xcconfig documents the format for contributors with a placeholder; that is the whole
-# point of the file and must not trip the rule.
+# point of the file and must not trip the rule. `condition = "AND"` is load-bearing here: without
+# it, `regexes` and `paths` combine with the gitleaks default OR, and the `paths` entry alone
+# would allowlist ANY DEVELOPMENT_TEAM value written into Copaky.xcconfig — including a real one.
+# `[[rules.allowlists]]` (plural) is the spelling documented for gitleaks 8.30.1 (the older
+# `[rules.allowlist]` singular still parses and also honors `condition` on this version, but the
+# README marks it superseded since v8.21.0). Verified empirically: a real 10-char team ID in
+# Copaky.xcconfig is flagged, the YOUR_TEAM_ID placeholder is not.
+condition = "AND"
+regexTarget = "match"
 regexes = ['''DEVELOPMENT_TEAM\s*=\s*YOUR_TEAM_ID''']
 paths = ['''Copaky\.xcconfig$''']
 
@@ -47,6 +55,12 @@ paths = ['''Copaky\.xcconfig$''']
 # 9S3UXHYP65 and 3Z7SZTTG3V — UPSTREAM azooKey's own team IDs, publicly in ensan's repository
 # since 2020. That is the practical evidence that an Apple Team ID is not a credential: it is
 # not rotatable and it ships inside every IPA's embedded.mobileprovision anyway.
+#
+# This MUST be its own [[rules.allowlists]] table, separate from the AND-conditioned one above —
+# TOML array-of-tables keys apply to whichever table header came last, so folding `commits` into
+# the block above would make it inherit `condition = "AND"` too and require the regex/path match
+# these commits don't have, silently un-suppressing all five.
+[[rules.allowlists]]
 commits = [
   "bf07ff2ebe2896af7dc20744d67d1d10c3021d2c",  # 2020-09-03 upstream (KanaKanjier)
   "f2a7b82ed0695adccb5d2106e5ab9d48517a3809",  # 2020-12-01 upstream (KanaKanjier)

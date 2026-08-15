@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Git invokes pre-merge-commit (not pre-commit) when finalizing a merge — without this file the
+# secret gate below would be silently skipped on every merge.
+exec "$(dirname "$0")/pre-commit" "$@"

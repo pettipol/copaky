@@ -34,4 +34,28 @@ else
   [ "${COPAKY_ALLOW_NO_GITLEAKS:-0}" = "1" ] || exit 1
   echo "⚠ COPAKY_ALLOW_NO_GITLEAKS=1 set — proceeding WITHOUT a secret scan."
 fi
+
+# Home-directory path gate. This is the one leak class this repo has actually had: a personal
+# /Users/<username>/… path baked into a tracked file (gitleaks does not flag it — it is not a
+# secret, just a name). Fail closed on any STAGED file whose content matches. Placeholders like
+# /Users/YOUR_NAME are deliberately excluded (uppercase first segment character).
+HOME_PATH_RE='/Users/[a-z][A-Za-z0-9._-]*'
+leak_found=0
+while IFS= read -r -d '' f; do
+  # Skip binary files: `git diff --cached --numstat` reports "-" for add/del counts on them.
+  case "$(git diff --cached --numstat -- "$f" | cut -f1)" in
+    -) continue ;;
+  esac
+  if git show ":$f" 2>/dev/null | grep -qE "$HOME_PATH_RE"; then
+    echo "  ✘ $f"
+    leak_found=1
+  fi
+done < <(git diff --cached --name-only --diff-filter=ACM -z)
+
+if [ "$leak_found" = 1 ]; then
+  echo "✘ pre-commit BLOCKED: staged file(s) above contain an absolute home-directory path (/Users/<name>/…)."
+  echo "  Use a placeholder (e.g. /Users/YOUR_NAME) or a relative/~ path instead."
+  exit 1
+fi
+
 exit 0

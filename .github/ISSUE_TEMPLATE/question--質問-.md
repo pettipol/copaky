@@ -1,9 +1,9 @@
 ---
 name: Question (質問)
-about: Ask anything about azooKey
+about: Ask anything about Copaky
 title: "question: <Description of question>"
 labels: question
-assignees: ensan-hcl
+assignees: ''
 
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: Feature request (機能の提案)
-about: Suggest an idea for azooKey (azooKeyへの機能の提案)
+about: Suggest an idea for Copaky (Copakyへの機能の提案)
 title: "feat: <Description of feature>"
 labels: enhancement
 assignees: ''

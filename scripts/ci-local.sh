@@ -30,6 +30,16 @@ fi
 echo "▶ [0/3] String Catalog lint…"
 python3 "$REPO/scripts/lint_string_catalog.py" || fail=1
 
+# Home-directory path gate on TRACKED files — same check as the pre-commit hook (staged), here run
+# over everything already committed so it also catches paths that slipped in before the hook existed.
+echo "▶ [0/3] Home-directory path scan…"
+HOME_PATH_HITS="$(git -C "$REPO" ls-files -z | xargs -0 grep -nIE '/Users/[a-z][A-Za-z0-9._-]*' 2>/dev/null || true)"
+if [ -n "$HOME_PATH_HITS" ]; then
+  echo "✘ absolute home-directory path(s) found in tracked files:"
+  echo "$HOME_PATH_HITS"
+  fail=1
+fi
+
 echo "▶ [1/3] Build MainApp ($([ $FAST = 1 ] && echo fast || echo full))…"
 xcodebuild build -project "$REPO/azooKey.xcodeproj" -scheme MainApp \
   -destination "$SIM" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO -quiet \
