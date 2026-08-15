@@ -68,6 +68,15 @@ private enum L {
     static let pasteAsk = ["Chiedi", "Ask", "確認"]
     /// Buttons that let a system paste prompt proceed, across OS languages and phrasings.
     static let allowPasteButtons = ["Consenti di incollare", "Allow Paste", "ペーストを許可", "Consenti", "Allow", "許可", "Incolla", "Paste", "ペースト"]
+    /// Tips tab (TabItem "使い方") — the app's default landing screen.
+    static let tipsTab = ["使い方", "Usage", "Come si usa"]
+    /// Themes tab (TabItem "着せ替え") — same set already proven in CopakyScreenshotTests.swift.
+    static let themesTab = ["着せ替え", "Themes", "Temi"]
+    /// NavigationLink into `OpenSourceSoftwaresLicenseView` from the Settings tab (base string is the
+    /// English word itself, so it has no separate ja localization — see Resources/Localizable.xcstrings).
+    static let ossAcknowledgements = ["Acknowledgements", "Ringraziamenti"]
+    /// NavigationLink into `ContactView` from the Settings tab.
+    static let contactLink = ["お問い合わせ", "Contact", "Contatti"]
 }
 
 @MainActor
@@ -1656,5 +1665,296 @@ final class CopakyCampaignTests: XCTestCase {
         shot("41-negative-control")
         note("41-negative-control", "probe tiles before=\(tilesBefore) after=\(tilesAfter) (re-paste of the SAME pasteboard may legally re-deliver; what must not happen is a NEW unknown value)")
         XCTAssertLessThanOrEqual(tilesAfter, tilesBefore + 1, "Negative control: unexpected flood of new tiles after a tap with no fresh copy")
+    }
+
+    // MARK: - 42 · Memory protocol phase C: sustained Japanese across many kana, then Italian, then back
+
+    /// Print a memory-protocol phase marker. The actual SAMPLING (physFootprint over time) is a HOST
+    /// concern — `scripts/memory_phase_c.sh` watches the keyboard extension process from outside this
+    /// test — so all this needs to produce is timestamped, greppable markers the host can align its
+    /// samples against.
+    /// メモリのサンプリングはホスト側スクリプトの役目。ここではタイムスタンプ付きマーカーを出すだけでよい。
+    private func memcMarker(_ phase: String) {
+        print("MEMC|\(phase)|\(ISO8601DateFormatter().string(from: Date()))")
+    }
+
+    /// Clear whatever the last kana group produced (composing buffer, or — once a candidate has been
+    /// cycled onto the space key and tapped — plain committed text) before the next group starts.
+    /// Repeated DELETE, not a candidate pick: telling "genuine kanji/kana candidate" apart from "kana
+    /// row-head key relabelled" by label alone is not reliable enough for an unattended load pass
+    /// (playbook §4.2/§5), so this sweep does not try — it only needs the field empty for the next group.
+    /// 次のグループの前に入力内容を消す。候補選択ではなく削除キー連打（ラベルだけでは候補と鍵の区別が
+    /// 信頼できないため）。
+    private func clearTyped(atLeast charCount: Int, in app: XCUIApplication) {
+        let delLabels = ["delete", "削除", "Elimina", "⌫"]
+        for _ in 0..<(charCount + 3) {
+            let del = app.descendants(matching: .any).matching(NSPredicate(format: "label IN %@", delLabels)).firstMatch
+            if del.exists && del.isHittable {
+                del.tap()
+            } else {
+                break
+            }
+        }
+    }
+
+    /// Phase C of the memory protocol (reports/sim_test_2026-07.md): sustained Japanese typing across
+    /// MANY different kana row-heads (dictionary/candidate lookup on many different reading prefixes,
+    /// not the same one repeated), a clipboard-tab detour, a run of Italian Latin typing, then back to
+    /// Japanese — the shape `scripts/memory_phase_c.sh` is built to watch from outside.
+    ///
+    /// This test does NOT assert on memory itself — the Simulator's absolute values are not meaningful
+    /// for the jetsam budget (playbook §1 point 3) — it only has to exercise the keyboard in a
+    /// recognisable, repeatable way and print `MEMC|` markers the host script can align its samples
+    /// against. A candidate that never appears, or a clipboard tab that is unreachable on the unsigned
+    /// Simulator (playbook §5), must not fail this test — it is a load pass, not a functional check.
+    /// メモリ自体はここでは断定しない（シミュレータの絶対値は無意味）。この関数の役割は再現性のある負荷と
+    /// タイムスタンプ付きマーカーの提供のみ。候補が出ない・クリップボードタブに届かない、はここでは失敗にしない。
+    func test42_memoryPhaseC_japaneseTypingAcrossKana() throws {
+        let kanaGroups: [[String]] = [
+            ["か", "な"], ["さ", "か"], ["た", "な"], ["は", "な"], ["ま", "た"], ["や", "ま"],
+            ["ら", "か"], ["わ", "た"], ["あ", "さ"], ["な", "ま"], ["か", "さ", "た"], ["は", "ま", "や"],
+        ]
+
+        _ = focusField("textarea-field")
+        switchToCopaky(in: safari)
+        switchToJapaneseFlickTab(in: safari)
+
+        for (i, group) in kanaGroups.enumerated() {
+            tapKeys(group, in: safari)
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))   // let candidates compute
+            if i == 0 || i == kanaGroups.count - 1 {
+                shot("42-jp-\(i)")
+            }
+            clearTyped(atLeast: group.count, in: safari)
+            memcMarker("jp-\(i)")
+        }
+
+        // Clipboard tab detour — best-effort, same dance as test11/test12. `openClipboardTab` throws
+        // `XCTSkip` when the App Group is not provisioned (unsigned Simulator, playbook §5); catching
+        // it here converts that into a marker instead of skipping the WHOLE test.
+        do {
+            try openClipboardTab()
+            memcMarker("clipboard")
+        } catch {
+            memcMarker("clipboard-skipped")
+        }
+
+        // Italian on the Latin tab — same per-letter tapping as test35, no candidate handling needed
+        // (plain Latin letters, not composing kana). ~40 letters across 8 words.
+        switchToEnglishTab(in: safari)
+        let italianWords = ["perche", "citta", "andro", "piu", "cosi", "puo", "societa", "grazie"]
+        let spaceLabels = L.spaceKey + ["successivo", "次候補", "next candidate", "Next candidate"]
+        for word in italianWords {
+            tapKeys(word.map { String($0) }, in: safari)
+            let space = safari.descendants(matching: .any)
+                .matching(NSPredicate(format: "label IN %@", spaceLabels)).firstMatch
+            if space.waitForExistence(timeout: 3), space.isHittable {
+                space.tap()
+                RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+            }
+        }
+        memcMarker("it")
+
+        // Back to Japanese for a final push.
+        switchToJapaneseFlickTab(in: safari)
+        for group in kanaGroups.prefix(3) {
+            tapKeys(group, in: safari)
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+            clearTyped(atLeast: group.count, in: safari)
+        }
+        memcMarker("end")
+    }
+
+    // MARK: - 50 · Accessibility audit inventory across the Settings screens
+
+    /// One collected accessibility-audit issue, flattened to plain strings so it can be JSON-encoded
+    /// without depending on the shape of `XCUIAccessibilityAuditIssue` itself (playbook §4.2).
+    @available(iOS 17.0, *)
+    private struct A11yIssueRecord: Codable {
+        let screen: String
+        let auditType: String
+        let compact: String
+        let detailed: String
+        let element: String
+    }
+
+    /// `XCUIAccessibilityAuditType` has no `CustomStringConvertible`; name the iOS-available bits (the
+    /// header gates `.action`/`.parentChild` to macOS only — XCUIAccessibilityAuditTypes.h) so log
+    /// lines read "contrast"/"dynamicType"/… instead of an opaque option-set integer.
+    @available(iOS 17.0, *)
+    private func auditTypeName(_ type: XCUIAccessibilityAuditType) -> String {
+        let names: [(XCUIAccessibilityAuditType, String)] = [
+            (.contrast, "contrast"),
+            (.elementDetection, "elementDetection"),
+            (.hitRegion, "hitRegion"),
+            (.sufficientElementDescription, "sufficientElementDescription"),
+            (.dynamicType, "dynamicType"),
+            (.textClipped, "textClipped"),
+            (.trait, "trait"),
+        ]
+        let matched = names.filter { type.contains($0.0) }.map(\.1)
+        return matched.isEmpty ? "unknown" : matched.joined(separator: "+")
+    }
+
+    /// Runs `performAccessibilityAudit` against whatever is on screen and RETURNS every issue found
+    /// instead of letting the closure fail the test: this is an inventory (playbook §4.2), not a gate.
+    /// Prints one `A11Y-ISSUE|` line per issue (greppable straight from the xcodebuild log, no xcresult
+    /// export needed) plus a trailing `A11Y-SUMMARY|` count. Returns an array rather than taking an
+    /// `inout` collector: `performAccessibilityAudit`'s optional closure parameter is implicitly
+    /// `@escaping`, and an escaping closure cannot capture an `inout` parameter.
+    /// 監査は一覧作成であってゲートではないため、closureは常にtrueを返しテストを失敗させない。
+    @available(iOS 17.0, *)
+    private func auditScreen(_ name: String, in app: XCUIApplication) -> [A11yIssueRecord] {
+        var found: [A11yIssueRecord] = []
+        do {
+            try app.performAccessibilityAudit { issue in
+                let compact = issue.compactDescription.replacingOccurrences(of: "\n", with: " ")
+                let type = self.auditTypeName(issue.auditType)
+                let elementBrief = issue.element.map { String($0.debugDescription.prefix(200)) } ?? "(no element)"
+                found.append(A11yIssueRecord(
+                    screen: name, auditType: type, compact: compact,
+                    detailed: issue.detailedDescription, element: elementBrief
+                ))
+                print("A11Y-ISSUE|\(name)|\(type)|\(compact)")
+                return true   // inventory only — never fail the test on a found issue
+            }
+        } catch {
+            print("A11Y-SKIP|\(name)|audit threw: \(error)")
+        }
+        print("A11Y-SUMMARY|\(name)|\(found.count)")
+        return found
+    }
+
+    /// Best-effort tap for the audit sweep below: returns false instead of failing the test when the
+    /// element never shows up, so one missing/renamed screen does not abort the whole inventory.
+    /// 監査の網羅性を優先し、要素が無くてもテストを落とさない探索専用のタップ（スクロールなし）。
+    @discardableResult
+    private func softTap(_ labels: [String], in app: XCUIApplication, timeout: TimeInterval = 6) -> Bool {
+        guard let el = firstMatch(in: app, labels: labels, timeout: timeout), el.isHittable else { return false }
+        el.tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+        return true
+    }
+
+    /// Same as `softTap`, but scrolls the Form down first — several Settings rows targeted by test50
+    /// (Acknowledgements, Contact) sit below the fold and `firstMatch` alone does not scroll.
+    @discardableResult
+    private func softTapScrolling(_ labels: [String], in app: XCUIApplication, maxSwipes: Int = 10) -> Bool {
+        var el = firstMatch(in: app, labels: labels, timeout: 2)
+        var swipes = 0
+        while (el == nil || el?.isHittable != true) && swipes < maxSwipes {
+            app.swipeUp()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.4))
+            el = firstMatch(in: app, labels: labels, timeout: 2)
+            swipes += 1
+        }
+        guard let target = el, target.isHittable else { return false }
+        target.tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+        return true
+    }
+
+    /// Pop the current navigation stack via the leading nav-bar button (back chevron), best-effort.
+    private func softBack(_ app: XCUIApplication) {
+        let back = app.navigationBars.buttons.element(boundBy: 0)
+        if back.exists && back.isHittable {
+            back.tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+        }
+    }
+
+    /// Accessibility-audit inventory (playbook §4.2) over every principal screen reachable from the tab
+    /// bar / Settings root: Tips, Settings in its short "Essenziali" form, Settings with every section
+    /// shown, the OSS-license screen, the Contact screen, and the Themes tab. Every issue found is
+    /// RECORDED, never failed on — the closure always returns `true` — because this is a census for a
+    /// human to triage (reports/a11y_audit_*.md), not a regression gate. The only thing this test can
+    /// fail on is the harness throwing before any screen is reached; a screen that cannot be navigated
+    /// to is logged as `A11Y-SKIP` and the sweep continues to the next one.
+    /// 各画面の監査結果を収集するだけの一覧作成テスト。個々のissueでは失敗させない
+    /// （画面遷移の失敗のみSKIPとして記録し、次の画面へ続行する）。
+    func test50_accessibilityAudit_settingsScreens() throws {
+        guard #available(iOS 17.0, *) else {
+            throw XCTSkip("performAccessibilityAudit (XCUIAccessibilityAuditType) needs iOS 17+, this run is older")
+        }
+
+        mainApp.launch()
+        if let close = firstMatch(in: mainApp, labels: L.closeOnboarding, timeout: 4) { close.tap() }
+
+        var issues: [A11yIssueRecord] = []
+
+        // 1 · Tips — the app's default landing tab (ContentView.TabSelection.tips)
+        if softTap(L.tipsTab, in: mainApp) {
+            shot("50-tips")
+            issues += auditScreen("Tips", in: mainApp)
+        } else {
+            print("A11Y-SKIP|Tips|tab bar item not found")
+        }
+
+        // 2 · Settings — "Essenziali" short list (settings_show_all_sections OFF)
+        openSettingsTab()
+        if driveSwitch(L.showAllSettings, to: false) {
+            shot("50-settings-essentials")
+            issues += auditScreen("Impostazioni (Essenziali)", in: mainApp)
+        } else {
+            print("A11Y-SKIP|Impostazioni (Essenziali)|could not confirm 'Mostra tutte le impostazioni' OFF")
+        }
+
+        // 3 · Settings — every section (settings_show_all_sections ON)
+        if driveSwitch(L.showAllSettings, to: true) {
+            shot("50-settings-all")
+            issues += auditScreen("Impostazioni (tutte le sezioni)", in: mainApp)
+        } else {
+            print("A11Y-SKIP|Impostazioni (tutte le sezioni)|could not confirm 'Mostra tutte le impostazioni' ON")
+        }
+
+        // 4 · OSS license screen (OpenSourceSoftwaresLicenseView), reached from the all-sections list
+        if softTapScrolling(L.ossAcknowledgements, in: mainApp) {
+            shot("50-oss-license")
+            issues += auditScreen("Licenze OSS", in: mainApp)
+            softBack(mainApp)
+        } else {
+            print("A11Y-SKIP|Licenze OSS|link 'Acknowledgements' not found")
+        }
+
+        // 5 · Contact screen (ContactView)
+        if softTapScrolling(L.contactLink, in: mainApp) {
+            shot("50-contact")
+            issues += auditScreen("Contatti", in: mainApp)
+            softBack(mainApp)
+        } else {
+            print("A11Y-SKIP|Contatti|link 'お問い合わせ' not found")
+        }
+
+        // 6 · Themes tab (ThemeTabView)
+        if softTap(L.themesTab, in: mainApp) {
+            shot("50-themes")
+            issues += auditScreen("Temi", in: mainApp)
+        } else {
+            print("A11Y-SKIP|Temi|tab bar item not found")
+        }
+
+        // 7 · "Appunti" (clipboard) — there is no such MainApp screen: clipboard history lives INSIDE
+        // the keyboard extension's own tab bar (openClipboardTab), which needs a signed build /
+        // provisioned App Group (playbook §5) — an unsigned-sim UI test cannot reach it from here.
+        // 「Appunti」画面はMainApp側に存在しない（キーボード拡張のタブとしてのみ存在し、署名ビルドが必要）。
+        print("A11Y-SKIP|Appunti|not a standalone MainApp screen — it is the keyboard extension's own clipboard tab, unreachable without a signed build (see openClipboardTab)")
+
+        // Report: JSON + a human-readable list, both attached to the result bundle, on top of the
+        // per-issue A11Y-ISSUE / A11Y-SUMMARY lines already printed above.
+        XCTContext.runActivity(named: "Accessibility audit inventory") { activity in
+            if let jsonData = try? JSONEncoder().encode(issues) {
+                let jsonAttachment = XCTAttachment(data: jsonData, uniformTypeIdentifier: "public.json")
+                jsonAttachment.name = "a11y-audit-issues.json"
+                jsonAttachment.lifetime = .keepAlways
+                activity.add(jsonAttachment)
+            }
+            let readable = issues.isEmpty
+                ? "No accessibility issues recorded across the audited screens."
+                : issues.map { "[\($0.screen)] \($0.auditType): \($0.compact)" }.joined(separator: "\n")
+            let textAttachment = XCTAttachment(string: readable)
+            textAttachment.name = "a11y-audit-issues.txt"
+            textAttachment.lifetime = .keepAlways
+            activity.add(textAttachment)
+        }
     }
 }
