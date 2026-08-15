@@ -7,10 +7,10 @@ It is an **independent project** built on — and crediting — [azooKey](https:
 (MIT): it keeps azooKey's high-quality Japanese conversion engine while reworking the clipboard, privacy,
 and telemetry behaviour around a strict **on-device, no-network** model.
 
-> **Status: pre-release (v0.1).** Not on the App Store yet — real-device validation and TestFlight
-> dogfooding are in progress ahead of the first submission. **v0.1 ships for iPhone only**: iPad is
-> deferred to v0.2, because the App Store does not allow dropping a device family once it has been
-> shipped (ITMS-90101).
+> **Status: pre-release (v0.1).** Not on the App Store yet. Real-device validation is done and the
+> first signed build is on TestFlight for internal dogfooding, ahead of the first submission.
+> **v0.1 ships for iPhone only**: iPad is deferred to v0.2, because the App Store does not allow
+> dropping a device family once it has been shipped (ITMS-90101).
 
 ## Based on azooKey
 
