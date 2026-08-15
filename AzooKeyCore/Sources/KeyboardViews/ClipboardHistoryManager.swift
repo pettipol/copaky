@@ -15,14 +15,23 @@ struct ClipboardHistoryItem: Equatable, Comparable, Hashable, Codable, Identifia
     var createdData: Date
     var pinnedDate: Date?
 
+    /// Pinned items sort above unpinned ones; within each group, by date. This must be a strict weak
+    /// ordering: the previous version compared a PINNED lhs against an UNPINNED rhs by creation date,
+    /// so `a < b` and `b < a` could both be true and `sort(by: >)` produced an order that depended on
+    /// the algorithm's comparison sequence (found by the fuzz/property test P4, 2026-08-15).
+    /// ピン留めは常に上、同じ群の中では日付順。以前は「ピン留め lhs 対 未ピン rhs」を作成日で比べていたため
+    /// 厳密弱順序が壊れ、並び順がアルゴリズム依存になっていた（fuzz テスト P4 で検出）。
     static func < (lhs: ClipboardHistoryItem, rhs: ClipboardHistoryItem) -> Bool {
-        if let rPinnedDate = rhs.pinnedDate {
-            if let lPinnedDate = lhs.pinnedDate {
-                return lPinnedDate < rPinnedDate
-            }
+        switch (lhs.pinnedDate, rhs.pinnedDate) {
+        case let (lPinned?, rPinned?):
+            return lPinned < rPinned
+        case (nil, .some):
             return true
+        case (.some, nil):
+            return false
+        case (nil, nil):
+            return lhs.createdData < rhs.createdData
         }
-        return lhs.createdData < rhs.createdData
     }
 
     var id: Int {
