@@ -133,8 +133,16 @@ for line in sys.stdin:
 }
 
 SAMPLER_PID=""
+SAMPLER_PGID=""
 UDID=""
 
+# `set -m` (job control) makes bash give the NEXT backgrounded job its own process group, with a
+# PGID equal to the job's own PID — that PGID is what lets stop_sampler() kill exactly this sampler
+# (and, in device mode, the `pymobiledevice3 | python3` pipe underneath it) without a global
+# `pkill -f` pattern that could hit another device's or another session's monitor process too
+# (memory phase C review, finding C). `set +m` right after so the rest of the script keeps its
+# normal non-interactive job-control behaviour (no "[1]+ Done" chatter at exit).
+# `set -m` でジョブに専用のプロセスグループを与え、そのPGIDだけをkillする（他セッションを巻き込まない）。
 start_sampler() {
   if [[ "$MODE" == "sim" ]]; then
     UDID="$(resolve_sim_udid)"
@@ -142,24 +150,26 @@ start_sampler() {
       echo "ERROR: no booted/known Simulator named '$SIM_NAME' (xcrun simctl list devices)" >&2
       exit 1
     fi
+    set -m
     sample_sim "$UDID" &
   else
+    set -m
     sample_device &
   fi
   SAMPLER_PID=$!
-  log "sampler started (pid $SAMPLER_PID, mode=$MODE) → $CSV"
+  SAMPLER_PGID=$SAMPLER_PID
+  set +m
+  log "sampler started (pid $SAMPLER_PID, pgid $SAMPLER_PGID, mode=$MODE) → $CSV"
 }
 
 stop_sampler() {
-  if [[ -n "$SAMPLER_PID" ]]; then
-    kill "$SAMPLER_PID" 2>/dev/null || true
-    wait "$SAMPLER_PID" 2>/dev/null || true
+  if [[ -n "$SAMPLER_PGID" ]]; then
+    kill -- "-$SAMPLER_PGID" 2>/dev/null || true
+    sleep 0.2
+    kill -9 -- "-$SAMPLER_PGID" 2>/dev/null || true
   fi
-  if [[ "$MODE" == "device" ]]; then
-    # Belt-and-suspenders: $SAMPLER_PID under job control (off by default in non-interactive scripts)
-    # is only the LAST element of the `pymobiledevice3 | python3` pipe; kill the upstream by pattern
-    # too, scoped narrowly enough not to touch anything else running on the Mac.
-    pkill -f "developer dvt sysmon process monitor process" 2>/dev/null || true
+  if [[ -n "$SAMPLER_PID" ]]; then
+    wait "$SAMPLER_PID" 2>/dev/null || true
   fi
   log "sampler stopped"
 }
@@ -178,15 +188,26 @@ done
 # (§5); test42 needs the JAPANESE tab as flick (kana row-heads) and the ENGLISH/Italian tab as QWERTY
 # (tapKeys looks up single-letter keys "p"/"e"/"r"/…, which only exist on the roman layout — the flick
 # Latin layout groups letters as "ABC"/"DEF"/… instead, same prerequisite test30/31/33 already
-# document). This also TERMINATES the running extension, which is the state we want the sampler to
-# start counting from anyway.
+# document). Also seeds enable_italian_keyboard_language=true (BoolKeyboardSetting.swift:249-253
+# defaults it to false): on a device the user's own setting is already ON, but the Simulator's App
+# Group isn't provisioned either, so without this the language-switch key never offers "IT" and
+# test42's Italian phase records a soft it-skipped instead of exercising anything. This also
+# TERMINATES the running extension, which is the state we want the sampler to start counting from
+# anyway.
 # シミュレータはApp Group未提供のため、拡張が読む設定をここで直接注入する（test30/31/33と同じ前提）。
+# イタリア語設定も同じ理由でここに含める（実機ではユーザー設定が既にON）。
 if [[ "$MODE" == "sim" ]]; then
   SEED_UDID="$(resolve_sim_udid)"
   if [[ -n "$SEED_UDID" ]]; then
-    log "seeding keyboard layout settings on $SEED_UDID (keyboard_type=flick, keyboard_type_en=roman)"
+    log "seeding keyboard layout settings on $SEED_UDID (keyboard_type=flick, keyboard_type_en=roman, enable_italian_keyboard_language=true)"
     bash "$REPO_DIR/scripts/seed_sim_settings.sh" \
-      --udid "$SEED_UDID" keyboard_type=flick keyboard_type_en=roman || true
+      --udid "$SEED_UDID" keyboard_type=flick keyboard_type_en=roman enable_italian_keyboard_language=true || true
+    # Stale-runner guard. Observed three times on 2026-08-15: `xcodebuild test` compiled the edited
+    # test file but the Simulator RAN the previously installed UI-test runner — every run was exactly
+    # one build behind (old MEMC markers after a marker-format change, a missing print after adding
+    # it). Uninstalling the runner forces a fresh install of the bundle that was just built.
+    # 直前のビルドではなく一つ前のテストランナーが実行される事象を3回観測: ランナーを毎回アンインストールする。
+    xcrun simctl uninstall "$SEED_UDID" com.pettipol.copaky.uitests.xctrunner 2>/dev/null || true
   fi
 fi
 
@@ -211,6 +232,15 @@ else
 fi
 XCODEBUILD_STATUS=$?
 
+# Monitor the sampler itself: if it died mid-run (crash, killed by something else) the CSV silently
+# stops growing and a "zero samples" verdict below would look like a product problem instead of a
+# harness one. Check BEFORE stop_sampler intentionally kills it (memory phase C review, finding B).
+SAMPLER_DIED=0
+if [[ -n "$SAMPLER_PID" ]] && ! kill -0 "$SAMPLER_PID" 2>/dev/null; then
+  log "ERROR: sampler process (pid $SAMPLER_PID) was not running when the test finished — it died mid-run"
+  SAMPLER_DIED=1
+fi
+
 stop_sampler
 trap - EXIT
 
@@ -219,7 +249,8 @@ log "=== MEMC markers ($XCLOG) ==="
 grep '^MEMC|' "$XCLOG" || echo "(none found — the test may not have run; check the log above)"
 
 log "=== physFootprint summary ($CSV) ==="
-/usr/bin/python3 - "$XCLOG" "$CSV" <<'PY'
+SUMMARY_STATUS=0
+/usr/bin/python3 - "$XCLOG" "$CSV" <<'PY' || SUMMARY_STATUS=$?
 import sys, csv
 from datetime import datetime
 
@@ -231,20 +262,23 @@ def parse_iso(ts):
         ts = ts[:-1] + "+00:00"
     return datetime.fromisoformat(ts)
 
-markers = []
+# markers[phase][edge] = timestamp, edge in {"start", "end"} — see MainAppUITests.memcMarker.
+markers = {}
+malformed = 0
 with open(xclog_path, errors="replace") as f:
     for line in f:
         line = line.strip()
         if not line.startswith("MEMC|"):
             continue
-        parts = line.split("|", 2)
-        if len(parts) != 3:
+        parts = line.split("|", 3)
+        if len(parts) != 4 or parts[2] not in ("start", "end"):
+            malformed += 1
             continue
-        _, phase, ts = parts
+        _, phase, edge, ts = parts
         try:
-            markers.append((phase, parse_iso(ts)))
+            markers.setdefault(phase, {})[edge] = parse_iso(ts)
         except ValueError:
-            continue
+            malformed += 1
 
 try:
     with open(csv_path) as f:
@@ -259,27 +293,92 @@ for r in rows:
     except (KeyError, ValueError):
         continue
 
-print(f"markers: {len(markers)}")
+total_marker_lines = sum(len(edges) for edges in markers.values())
+print(f"markers: {total_marker_lines} ({len(markers)} phases)")
+if malformed:
+    print(f"malformed MEMC lines skipped: {malformed}")
 print(f"samples: {len(samples)}")
+
+ok = True
 if not samples:
-    print("no samples recorded — nothing more to summarize")
-    sys.exit(0)
+    print("FAIL: zero samples recorded — the sampler produced no data")
+    ok = False
 
-mb = [b / (1024 * 1024) for _, b in samples]
-print(f"min: {min(mb):.2f} MB")
-print(f"max: {max(mb):.2f} MB")
-print(f"avg: {sum(mb) / len(mb):.2f} MB")
+# ---- required marker set (memory phase C review, finding B): every jp-N with BOTH edges, one of
+# clipboard/clipboard-skipped, one of it/it-skipped, and a final "end". Missing any of these means
+# the run is not trustworthy enough to summarize as a pass. ------------------------------------
+required_jp = [f"jp-{i}" for i in range(12)]
+missing_edges = [p for p in required_jp if not {"start", "end"} <= markers.get(p, {}).keys()]
+if missing_edges:
+    print(f"FAIL: missing start+end markers for: {', '.join(missing_edges)}")
+    ok = False
 
-if markers:
-    print("--- per-phase max (window = [marker_i, marker_i+1)) ---")
-    for i, (phase, ts) in enumerate(markers):
-        end = markers[i + 1][1] if i + 1 < len(markers) else None
-        window = [b for t, b in samples if t >= ts and (end is None or t < end)]
-        if window:
-            print(f"{phase}: max={max(window) / (1024 * 1024):.2f} MB (n={len(window)})")
-        else:
-            print(f"{phase}: no samples in window")
+clipboard_phase = next((p for p in ("clipboard", "clipboard-skipped") if p in markers), None)
+if clipboard_phase is None:
+    print("FAIL: no 'clipboard' or 'clipboard-skipped' marker found")
+    ok = False
+
+italian_phase = next((p for p in ("it", "it-skipped") if p in markers), None)
+if italian_phase is None:
+    print("FAIL: no 'it' or 'it-skipped' marker found")
+    ok = False
+
+if "end" not in markers:
+    print("FAIL: no final 'end' marker found — the test may not have completed")
+    ok = False
+
+# ---- per-phase attribution: window = [start, end] for a paired phase, a single instant for "end" -
+print("--- per-phase samples ---")
+ordered_phases = sorted(markers, key=lambda p: min(markers[p].values()))
+phases_with_samples = 0
+for phase in ordered_phases:
+    edges = markers[phase]
+    start = edges.get("start", edges.get("end"))
+    end = edges.get("end", edges.get("start"))
+    window = [b for t, b in samples if start <= t <= end]
+    if window:
+        phases_with_samples += 1
+        print(f"{phase}: n={len(window)} max={max(window) / (1024 * 1024):.2f} MB")
+    else:
+        print(f"{phase}: no samples in window")
+print(f"phases with samples: {phases_with_samples}/{len(ordered_phases)}")
+
+# ---- required phases must ALSO carry at least one sample in their own window ------------------
+# Skipped when there are zero samples overall — every phase would show up "starved" and just repeat
+# the "zero samples recorded" FAIL above with no new information.
+if samples:
+    required_phases = required_jp + [p for p in (clipboard_phase, italian_phase) if p]
+    starved = []
+    for phase in required_phases:
+        edges = markers.get(phase, {})
+        start, end = edges.get("start"), edges.get("end")
+        if not (start and end):
+            continue   # already reported under missing_edges above
+        if not [b for t, b in samples if start <= t <= end]:
+            starved.append(phase)
+    if starved:
+        print(f"FAIL: zero samples inside the window of required phase(s): {', '.join(starved)}")
+        ok = False
+
+if samples:
+    mb = [b / (1024 * 1024) for _, b in samples]
+    print(f"min: {min(mb):.2f} MB")
+    print(f"max: {max(mb):.2f} MB")
+    print(f"avg: {sum(mb) / len(mb):.2f} MB")
+
+sys.exit(0 if ok else 1)
 PY
 
+FINAL_STATUS="$XCODEBUILD_STATUS"
+if [[ "$SAMPLER_DIED" == 1 && "$FINAL_STATUS" == 0 ]]; then
+  FINAL_STATUS=1
+fi
+if [[ "$SUMMARY_STATUS" != 0 ]]; then
+  log "summary validation FAILED (exit $SUMMARY_STATUS) — see FAIL lines above"
+  if [[ "$FINAL_STATUS" == 0 ]]; then
+    FINAL_STATUS=1
+  fi
+fi
+
 log "done. CSV=$CSV xcodebuild-log=$XCLOG result-bundle=$RESULT_BUNDLE"
-exit "$XCODEBUILD_STATUS"
+exit "$FINAL_STATUS"

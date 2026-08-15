@@ -317,6 +317,25 @@ final class CopakyCampaignTests: XCTestCase {
         }
     }
 
+    /// Non-asserting variant of `tapKeys` for LOAD exercises (test42): taps what it finds, records
+    /// what it does not, and reports how many keys were actually pressed instead of failing.
+    /// 負荷試験向けの非アサート版: 見つかったキーだけを押し、押せた数を返す。
+    @discardableResult
+    private func softTapKeys(_ labels: [String], in app: XCUIApplication, timeout: TimeInterval = 2) -> Int {
+        var pressed = 0
+        for label in labels {
+            let key = app.descendants(matching: .any)
+                .matching(NSPredicate(format: "label == %@", label)).firstMatch
+            if key.waitForExistence(timeout: timeout), key.isHittable {
+                key.tap()
+                pressed += 1
+            } else {
+                note("soft-key-missing", label)
+            }
+        }
+        return pressed
+    }
+
     // MARK: - 00 · Clear one-time update notices permanently (unblocks in-keyboard UI)
 
     /// The bundled emoji dictionary is older than the simulator's iOS, so azooKey shows several
@@ -1673,9 +1692,15 @@ final class CopakyCampaignTests: XCTestCase {
     /// concern — `scripts/memory_phase_c.sh` watches the keyboard extension process from outside this
     /// test — so all this needs to produce is timestamped, greppable markers the host can align its
     /// samples against.
-    /// メモリのサンプリングはホスト側スクリプトの役目。ここではタイムスタンプ付きマーカーを出すだけでよい。
-    private func memcMarker(_ phase: String) {
-        print("MEMC|\(phase)|\(ISO8601DateFormatter().string(from: Date()))")
+    ///
+    /// One phase gets TWO markers — `start` before its load and `end` after — instead of one printed
+    /// after the fact: a single post-load marker made the host script attribute samples to the WRONG
+    /// phase (it had no choice but to treat "marker seen" as "phase begins here"). `at:` lets a caller
+    /// back-date the `start` edge to before an outcome (e.g. clipboard open vs. skipped) was known,
+    /// so the bracket still covers the real load window even though the phase NAME is resolved late.
+    /// 1フェーズにつきマーカーを2個（開始・終了）出す。事後の1個だけでは負荷区間の帰属がずれてしまう。
+    private func memcMarker(_ phase: String, _ edge: String, at date: Date = Date()) {
+        print("MEMC|\(phase)|\(edge)|\(ISO8601DateFormatter().string(from: date))")
     }
 
     /// Clear whatever the last kana group produced (composing buffer, or — once a candidate has been
@@ -1720,49 +1745,141 @@ final class CopakyCampaignTests: XCTestCase {
         switchToJapaneseFlickTab(in: safari)
 
         for (i, group) in kanaGroups.enumerated() {
+            memcMarker("jp-\(i)", "start")
             tapKeys(group, in: safari)
             RunLoop.current.run(until: Date().addingTimeInterval(0.8))   // let candidates compute
             if i == 0 || i == kanaGroups.count - 1 {
                 shot("42-jp-\(i)")
             }
             clearTyped(atLeast: group.count, in: safari)
-            memcMarker("jp-\(i)")
+            memcMarker("jp-\(i)", "end")
         }
 
         // Clipboard tab detour — best-effort, same dance as test11/test12. `openClipboardTab` throws
         // `XCTSkip` when the App Group is not provisioned (unsigned Simulator, playbook §5); catching
-        // it here converts that into a marker instead of skipping the WHOLE test.
+        // it here converts that into a marker instead of skipping the WHOLE test. `clipboardStart` is
+        // captured BEFORE the attempt so the bracket still covers the real load even though the phase
+        // NAME (clipboard vs clipboard-skipped) is only known once the attempt is over.
+        let clipboardStart = Date()
+        var clipboardPhase = "clipboard"
+        var clipboardOpened = false
         do {
             try openClipboardTab()
-            memcMarker("clipboard")
+            clipboardOpened = true
         } catch {
-            memcMarker("clipboard-skipped")
+            clipboardPhase = "clipboard-skipped"
         }
-
-        // Italian on the Latin tab — same per-letter tapping as test35, no candidate handling needed
-        // (plain Latin letters, not composing kana). ~40 letters across 8 words.
-        switchToEnglishTab(in: safari)
-        let italianWords = ["perche", "citta", "andro", "piu", "cosi", "puo", "societa", "grazie"]
-        let spaceLabels = L.spaceKey + ["successivo", "次候補", "next candidate", "Next candidate"]
-        for word in italianWords {
-            tapKeys(word.map { String($0) }, in: safari)
-            let space = safari.descendants(matching: .any)
-                .matching(NSPredicate(format: "label IN %@", spaceLabels)).firstMatch
-            if space.waitForExistence(timeout: 3), space.isHittable {
-                space.tap()
-                RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+        // Close the detour EXPLICITLY: an open clipboard tab was left on screen here before, and
+        // switchToEnglishTab() below no-ops silently when it cannot find ABC/A — so the Italian phase
+        // ran on top of the clipboard panel instead of the Latin tab. Prefer the tab's own back key;
+        // fall back to re-selecting the Japanese flick tab to guarantee a known state either way.
+        // クリップボードタブは明示的に閉じる（開けっ放しだとイタリア語フェーズが違う画面を測ってしまう）。
+        if clipboardOpened {
+            let back = firstMatch(in: safari, labels: L.backKey, timeout: 3)
+            if let back, back.isHittable {
+                back.tap()
+                RunLoop.current.run(until: Date().addingTimeInterval(0.6))
             }
         }
-        memcMarker("it")
+        if clipboardPanelIsOpen(timeout: 1) {
+            switchToJapaneseFlickTab(in: safari)
+        }
+        XCTAssertTrue(flickKanaVisible(in: safari, timeout: 4), "main Copaky keyboard did not return after the clipboard detour")
+        memcMarker(clipboardPhase, "start", at: clipboardStart)
+        memcMarker(clipboardPhase, "end")
+
+        // Italian on the Latin tab — Italian must be SELECTED, never assumed: the default of
+        // enable_italian_keyboard_language is false (BoolKeyboardSetting.swift:249-253), so typing on
+        // an unselected Latin tab would silently measure English. Same proven transition as
+        // test33/test35 (switchToEnglishTab, then one more tap of the language-switch key to reach the
+        // "IT" shortSymbol); a soft skip with a reason is recorded instead of failing the whole load
+        // pass when the tab or the language cannot be reached (this test's own contract).
+        switchToEnglishTab(in: safari)
+        dismissCopakyNotice(in: safari)
+        let reachedLatin = safari.descendants(matching: .any)
+            .matching(NSPredicate(format: "label == %@ OR label == %@", "IT", "あ")).firstMatch
+            .waitForExistence(timeout: 4)
+        var itPhase = "it-skipped"
+        var itSkipReason = "latin-tab-not-reached"
+        if reachedLatin {
+            var italian = safari.descendants(matching: .any)
+                .matching(NSPredicate(format: "label == %@", "IT")).firstMatch
+            if !italian.waitForExistence(timeout: 4) {
+                let switchKey = safari.descendants(matching: .any)
+                    .matching(NSPredicate(format: "label == %@ OR label == %@", "A", "あ")).firstMatch
+                if switchKey.exists && switchKey.isHittable {
+                    switchKey.tap()
+                    RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+                }
+                italian = safari.descendants(matching: .any)
+                    .matching(NSPredicate(format: "label == %@", "IT")).firstMatch
+            }
+            if italian.exists && italian.isHittable {
+                italian.tap()
+                RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+                shot("42-after-it-tap")
+                // Evidence from the first Simulator run: the tap on «IT» landed the keyboard on the
+                // Japanese FLICK tab (screenshot in the xcresult), so verify the LATIN letters are
+                // really on screen before typing; if the flick tab came up, go back to the Latin tab
+                // once — latinKeyboardLanguage was already set to Italian by the tap — and re-check.
+                // 「IT」タップ後にフリック日本語タブへ戻る事象を観測: ラテン文字が本当に表示されているか確認する。
+                if flickKanaVisible(in: safari, timeout: 1) {
+                    switchToEnglishTab(in: safari)
+                }
+                let latinLetter = safari.descendants(matching: .any)
+                    .matching(NSPredicate(format: "label == %@", "p")).firstMatch
+                if latinLetter.waitForExistence(timeout: 4) {
+                    itPhase = "it"
+                    // Which Latin language is active is readable from the switch key itself: it
+                    // shows the NEXT language of the cycle (ja → en → it), so 「あ」 means Italian is
+                    // active, 「IT」 means English still is. Recorded as evidence, not asserted.
+                    // 言語切替キーは次の言語を示す: 「あ」ならイタリア語が有効、「IT」ならまだ英語。
+                    let nextIsJapanese = safari.descendants(matching: .any)
+                        .matching(NSPredicate(format: "label == %@", "あ")).firstMatch.exists
+                    let nextIsItalian = safari.descendants(matching: .any)
+                        .matching(NSPredicate(format: "label == %@", "IT")).firstMatch.exists
+                    let active = nextIsJapanese ? "italian" : (nextIsItalian ? "english" : "unknown")
+                    print("MEMC-INFO|latin-language-active|\(active)")
+                    note("42-latin-language-active", active)
+                } else {
+                    itSkipReason = "latin-letters-not-on-screen-after-it-tap"
+                }
+            } else {
+                itSkipReason = "italian-not-enabled"
+            }
+        }
+        if itPhase == "it-skipped" {
+            note("42-it-skip-reason", itSkipReason)
+            dump(safari, "42-it-skipped-\(itSkipReason)")
+        }
+        memcMarker(itPhase, "start")
+        if itPhase == "it" {
+            let italianWords = ["perche", "citta", "andro", "piu", "cosi", "puo", "societa", "grazie"]
+            let spaceLabels = L.spaceKey + ["successivo", "次候補", "next candidate", "Next candidate"]
+            for word in italianWords {
+                // Soft taps: this is a load exercise, a missing key must not abort the phase (the
+                // marker pair still brackets whatever was typed).
+                _ = softTapKeys(word.map { String($0) }, in: safari)
+                let space = safari.descendants(matching: .any)
+                    .matching(NSPredicate(format: "label IN %@", spaceLabels)).firstMatch
+                if space.waitForExistence(timeout: 3), space.isHittable {
+                    space.tap()
+                    RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+                }
+            }
+        }
+        memcMarker(itPhase, "end")
 
         // Back to Japanese for a final push.
         switchToJapaneseFlickTab(in: safari)
-        for group in kanaGroups.prefix(3) {
+        for (i, group) in kanaGroups.prefix(3).enumerated() {
+            memcMarker("jp-final-\(i)", "start")
             tapKeys(group, in: safari)
             RunLoop.current.run(until: Date().addingTimeInterval(0.8))
             clearTyped(atLeast: group.count, in: safari)
+            memcMarker("jp-final-\(i)", "end")
         }
-        memcMarker("end")
+        memcMarker("end", "end")
     }
 
     // MARK: - 50 · Accessibility audit inventory across the Settings screens

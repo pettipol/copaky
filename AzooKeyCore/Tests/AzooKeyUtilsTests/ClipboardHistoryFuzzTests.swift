@@ -46,6 +46,16 @@ final class ClipboardHistoryFuzzTests: XCTestCase {
     /// Seme fisso della campagna: ripetibilità bit-per-bit.
     static let seed: UInt64 = 0x5EED_C0FF_EE
 
+    /// Codifica CANONICA (`.sortedKeys`): senza, l'ordine delle chiavi JSON cambia da processo a
+    /// processo (hash seeding di Dictionary) e i mutanti per offset di byte non sono più gli stessi
+    /// tra due run con lo stesso seme — trovato dalla contro-review Codex confrontando due istogrammi.
+    /// キー順を固定しないとプロセスごとにJSONが変わり、同じシードでもミュータントが再現しない。
+    private static func canonicalEncoder() -> JSONEncoder {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        return encoder
+    }
+
     // MARK: - esito e istogramma
 
     private enum Outcome: Hashable, CustomStringConvertible {
@@ -170,7 +180,7 @@ final class ClipboardHistoryFuzzTests: XCTestCase {
             items.append(ClipboardHistoryItem(content: .text(content), createdData: created, pinnedDate: pinned))
         }
         let file = ClipboardHistoryManager.HistoryFile(schemaVersion: ClipboardHistoryManager.currentSchemaVersion, items: items)
-        return try! JSONEncoder().encode(file)
+        return try! Self.canonicalEncoder().encode(file)
     }
 
     /// Applica UNA delle 5 mutazioni della campagna a una copia dei byte di `base`. Deterministico:
@@ -221,7 +231,7 @@ final class ClipboardHistoryFuzzTests: XCTestCase {
     private func singleItemEnvelope(content: String, createdData: Date = Date(timeIntervalSinceReferenceDate: 700_000_000)) -> Data {
         let item = ClipboardHistoryItem(content: .text(content), createdData: createdData)
         let file = ClipboardHistoryManager.HistoryFile(schemaVersion: ClipboardHistoryManager.currentSchemaVersion, items: [item])
-        return try! JSONEncoder().encode(file)
+        return try! Self.canonicalEncoder().encode(file)
     }
 
     /// Stringa il cui `utf8.count` è ESATTAMENTE `totalBytes`, componendo unità grapheme-cluster a
@@ -248,12 +258,12 @@ final class ClipboardHistoryFuzzTests: XCTestCase {
             ClipboardHistoryItem(content: .text("p"), createdData: base.addingTimeInterval(Double(i)))
         }
         items.append(ClipboardHistoryItem(content: .text(""), createdData: base))
-        let zeroPadSize = try! JSONEncoder().encode(
+        let zeroPadSize = try! Self.canonicalEncoder().encode(
             ClipboardHistoryManager.HistoryFile(schemaVersion: ClipboardHistoryManager.currentSchemaVersion, items: items)
         ).count
         let padLength = max(0, targetBytes - zeroPadSize)
         items[items.count - 1].content = .text(String(repeating: "q", count: padLength))
-        return try! JSONEncoder().encode(
+        return try! Self.canonicalEncoder().encode(
             ClipboardHistoryManager.HistoryFile(schemaVersion: ClipboardHistoryManager.currentSchemaVersion, items: items)
         )
     }
@@ -264,7 +274,7 @@ final class ClipboardHistoryFuzzTests: XCTestCase {
             ClipboardHistoryItem(content: .text("x"), createdData: base.addingTimeInterval(Double(i)))
         }
         let file = ClipboardHistoryManager.HistoryFile(schemaVersion: ClipboardHistoryManager.currentSchemaVersion, items: items)
-        return try! JSONEncoder().encode(file)
+        return try! Self.canonicalEncoder().encode(file)
     }
 
     /// Deriva quanti item "minuscoli" (contenuto a 1 carattere) stanno in `targetBytes`, misurando
@@ -303,7 +313,7 @@ final class ClipboardHistoryFuzzTests: XCTestCase {
             ClipboardHistoryItem(content: .text("legacy-a"), createdData: base),
             ClipboardHistoryItem(content: .text("legacy-b"), createdData: base.addingTimeInterval(-5)),
         ]
-        return try! JSONEncoder().encode(items)
+        return try! Self.canonicalEncoder().encode(items)
     }
 
     private func legacyBareArrayWithCorruptedItem() -> Data {
@@ -469,5 +479,50 @@ final class ClipboardHistoryFuzzTests: XCTestCase {
             }
             try? FileManager.default.removeItem(at: url)
         }
+    }
+
+    // MARK: - assiomi del comparatore (oracolo indipendente dal sort)
+
+    /// P4 nel fuzz usa `<` sotto test come oracolo: un comparatore sempre-falso passerebbe. Qui gli
+    /// assiomi di strict weak ordering si verificano DIRETTAMENTE su un insieme fisso che copre tutte le
+    /// combinazioni fissato/non fissato, più l'ordine atteso dopo `sort(by: >)`: fissati per data di
+    /// pin decrescente, poi non fissati per data di creazione decrescente.
+    /// 厳密弱順序の公理（非反射・非対称・推移）を直接検証し、期待される並びも確認する。
+    func testComparatorIsStrictWeakOrderingAndPinnedSortFirst() {
+        let base = Date(timeIntervalSinceReferenceDate: 700_000_000)
+        func item(_ text: String, created: Double, pinned: Double? = nil) -> ClipboardHistoryItem {
+            ClipboardHistoryItem(content: .text(text), createdData: base.addingTimeInterval(created), pinnedDate: pinned.map { base.addingTimeInterval($0) })
+        }
+        // A/B/C è esattamente la tripla che rompeva la transitività prima della correzione.
+        let items = [
+            item("A", created: 10),
+            item("B", created: 1, pinned: 5),
+            item("C", created: 3),
+            item("D", created: 20, pinned: 2),
+            item("E", created: 7, pinned: 9),
+            item("F", created: 3),        // stessa data di C: equivalenti, né < né >
+            item("G", created: 0, pinned: 5) // stessa data di pin di B
+        ]
+        for x in items {
+            XCTAssertFalse(x < x, "irriflessività violata per \(x)")
+            for y in items {
+                XCTAssertFalse(x < y && y < x, "asimmetria violata per \(x) / \(y)")
+                for z in items where x < y && y < z {
+                    XCTAssertTrue(x < z, "transitività violata per \(x) < \(y) < \(z)")
+                }
+            }
+        }
+        let sorted = items.sorted(by: >)
+        let texts = sorted.map { item -> String in
+            if case .text(let t) = item.content { return t } else { return "?" }
+        }
+        // fissati prima (E pin 9, poi B/G pin 5 in un ordine qualsiasi fra loro, poi D pin 2),
+        // poi non fissati per creazione decrescente (A 10, poi C/F 3 in un ordine qualsiasi).
+        XCTAssertEqual(texts[0], "E")
+        XCTAssertEqual(Set(texts[1...2]), Set(["B", "G"]))
+        XCTAssertEqual(texts[3], "D")
+        XCTAssertEqual(texts[4], "A")
+        XCTAssertEqual(Set(texts[5...6]), Set(["C", "F"]))
+        XCTAssertTrue(sorted.prefix(4).allSatisfy { $0.pinnedDate != nil }, "i fissati devono precedere tutti i non fissati")
     }
 }

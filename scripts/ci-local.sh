@@ -30,13 +30,18 @@ fi
 echo "▶ [0/3] String Catalog lint…"
 python3 "$REPO/scripts/lint_string_catalog.py" || fail=1
 
-# Home-directory path gate on TRACKED files — same check as the pre-commit hook (staged), here run
-# over everything already committed so it also catches paths that slipped in before the hook existed.
-echo "▶ [0/3] Home-directory path scan…"
-HOME_PATH_HITS="$(git -C "$REPO" ls-files -z | xargs -0 grep -nIE '/Users/[a-z][A-Za-z0-9._-]*' 2>/dev/null || true)"
-if [ -n "$HOME_PATH_HITS" ]; then
-  echo "✘ absolute home-directory path(s) found in tracked files:"
-  echo "$HOME_PATH_HITS"
+# Home-directory path gate on the COMMITTED tree — same check as the pre-commit hook (staged), here
+# run over the blobs of HEAD (what a push actually publishes), not the working tree: an unstaged
+# cleanup must not hide a path that is still inside the commit being pushed. `git grep -I` skips
+# binaries; a non-zero exit other than "no match" (1) is a scanner error and fails closed.
+echo "▶ [0/3] Home-directory path scan (HEAD tree)…"
+HOME_PATH_HITS="$(git -C "$REPO" grep -I -nE '/Users/[a-z][A-Za-z0-9._-]*' HEAD -- 2>&1)"; rc=$?
+if [ $rc -eq 0 ]; then
+  echo "✘ absolute home-directory path(s) found in the committed tree:"
+  echo "$HOME_PATH_HITS" | sed 's/^HEAD://'
+  fail=1
+elif [ $rc -ne 1 ]; then
+  echo "✘ home-directory path scan could not run (git grep exit $rc): $HOME_PATH_HITS"
   fail=1
 fi
 

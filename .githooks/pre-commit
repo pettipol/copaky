@@ -46,8 +46,14 @@ while IFS= read -r -d '' f; do
   case "$(git diff --cached --numstat -- "$f" | cut -f1)" in
     -) continue ;;
   esac
-  if git show ":$f" 2>/dev/null | grep -qE "$HOME_PATH_RE"; then
+  # Read the INDEX blob (what will be committed), not the working tree. No `grep -q` here: with
+  # `pipefail` an early match makes grep exit first, `git show` gets SIGPIPE, the pipeline
+  # reports 141 and a REAL hit reads as "absent" (reproduced by the Codex counter-review on the
+  # 363 KB string catalog). Consume the whole stream and test the captured output instead.
+  hits="$(git show ":$f" 2>/dev/null | grep -nE "$HOME_PATH_RE" || true)"
+  if [ -n "$hits" ]; then
     echo "  ✘ $f"
+    echo "$hits" | head -3 | sed 's/^/      /'
     leak_found=1
   fi
 done < <(git diff --cached --name-only --diff-filter=ACM -z)
