@@ -18,67 +18,6 @@ struct OpenSourceSoftwaresLicenseView: View {
     BSD License (see the file BSD).
     """
 
-    // Copaky: llama.cpp and marisa-trie/SwiftyMarisa ship inside the binary because the converter's
-    // ZenzaiCPU trait links them, even though Zenzai (neural conversion) is not invoked in v0.1 —
-    // both are attributed here for that reason.
-    // llama.cppとmarisa-trie/SwiftyMarisaは変換エンジンのZenzaiCPUトレイト経由でバイナリに含まれるため、
-    // v0.1ではZenzai（ニューラル変換）を呼び出していなくても、その理由でここに表記する。
-    private let license_llama_cpp = """
-    MIT License
-
-    Copyright (c) 2023-2024 The ggml authors
-
-    Permission is hereby granted, free of charge, to any person obtaining a copy
-    of this software and associated documentation files (the "Software"), to deal
-    in the Software without restriction, including without limitation the rights
-    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-    copies of the Software, and to permit persons to whom the Software is
-    furnished to do so, subject to the following conditions:
-
-    The above copyright notice and this permission notice shall be included in all
-    copies or substantial portions of the Software.
-
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-    SOFTWARE.
-    """
-
-    private let license_swiftymarisa = """
-    SwiftyMarisa is dual-licensed under the BSD 2-clause license and the LGPL.
-
-    * The BSD 2-clause license
-
-    Copyright (c) 2016, Vladimir Solomenchuk
-    All rights reserved.
-
-    Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
-
-    - Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
-    - Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
-
-    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-    """
-
-    private let license_marisa_trie = """
-    libmarisa and its command line tools are licensed under BSD-2-Clause OR LGPL-2.1-or-later.
-
-    The BSD 2-clause license
-
-    Copyright (c) 2010-2025, Susumu Yata
-    All rights reserved.
-
-    Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
-
-    - Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
-    - Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
-
-    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-    """
-
     private let license_ipadic = """
     Copyright 2000, 2001, 2002, 2003 Nara Institute of Science
     and Technology.  All Rights Reserved.
@@ -257,29 +196,6 @@ struct OpenSourceSoftwaresLicenseView: View {
                             verbatim: "Swift Collections",
                             destination: "https://github.com/apple/swift-collections"
                         )
-                    }
-                    Section {
-                        Text(verbatim: "llama.cpp").font(.title).padding()
-                        Text("本アプリケーションは変換エンジンのZenzaiCPUトレイト経由でllama.cppをバイナリに同梱していますが、v0.1ではまだ呼び出していません。")
-                        FallbackLink(verbatim: "MIT License", destination: "https://github.com/ggml-org/llama.cpp/blob/master/LICENSE")
-                        FallbackLink(
-                            verbatim: "llama.cpp",
-                            destination: "https://github.com/ggml-org/llama.cpp"
-                        )
-                        Text(verbatim: "Prebuilt xcframework: https://github.com/azooKey/llama.cpp")
-                        Text(license_llama_cpp)
-                    }
-                    Section {
-                        Text(verbatim: "SwiftyMarisa / marisa-trie").font(.title).padding()
-                        Text("本アプリケーションは変換エンジンのZenzaiCPUトレイト経由でSwiftyMarisa（marisa-trieのSwiftラッパー）をバイナリに同梱していますが、v0.1ではまだ呼び出していません。")
-                        FallbackLink(verbatim: "BSD 2-Clause License (SwiftyMarisa)", destination: "https://github.com/ensan-hcl/SwiftyMarisa/blob/master/LICENSE.md")
-                        FallbackLink(
-                            verbatim: "SwiftyMarisa",
-                            destination: "https://github.com/ensan-hcl/SwiftyMarisa"
-                        )
-                        Text(license_swiftymarisa)
-                        FallbackLink(verbatim: "marisa-trie", destination: "https://github.com/s-yata/marisa-trie")
-                        Text(license_marisa_trie)
                     }
                 }
             }

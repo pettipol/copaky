@@ -35,8 +35,10 @@ section of Settings; this file is a consolidated summary.
 
 > **Zenzai is deferred to v2.** Neural conversion is **not part of Copaky v0.1**: v0.1 uses azooKey's classic
 > (non-neural) conversion. The `zenz` GGUF model (**CC-BY-SA-4.0**) is **not bundled** with v0.1. The
-> `llama.cpp` dependency is still linked through the converter package (the `ZenzaiCPU` trait) but is **not
-> invoked** in v0.1; full Zenzai integration is planned for v2.
+> `llama.cpp` / SwiftyMarisa rows above describe the engine's optional Zenzai path: since build 3 the
+> converter is pulled in **without** the `ZenzaiCPU` trait, so neither library is linked into the shipped
+> keyboard extension (verified with `otool -L` / `nm`: no `llama.framework`, no marisa symbols). Full Zenzai
+> integration is planned for v2.
 
 ## Dictionary & linguistic data
 
