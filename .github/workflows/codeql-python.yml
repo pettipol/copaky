@@ -1,0 +1,54 @@
+# CodeQL for the Python helper scripts ONLY — deliberately separate from codeql.yml.
+#
+# Why a second file instead of a trigger on the existing one: codeql.yml analyses `swift`, which
+# needs a macOS runner, and macOS minutes are billed 10x. Adding a push trigger there would fire
+# the expensive job too. This workflow pins itself to ubuntu-latest (1x) and to `python`, so it
+# is effectively free and can run on every push that touches a script.
+#
+# The Swift analysis stays manual in codeql.yml — run it before a public release.
+name: "CodeQL (python, ubuntu)"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '**/*.py'
+      - '.github/workflows/codeql-python.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - '**/*.py'
+      - '.github/workflows/codeql-python.yml'
+  workflow_dispatch:
+
+# A newer push supersedes an in-flight run for the same ref.
+concurrency:
+  group: codeql-python-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze python
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        # No submodules: the python scripts under scripts/ do not need them, and fetching the
+        # dictionary submodules would cost minutes for nothing.
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: python
+          build-mode: none
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:python"
