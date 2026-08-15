@@ -3077,18 +3077,18 @@
         }
       }
     },
-    "お問い合わせ内容を選んでください。ブラウザでGoogle Formが開きます。" : {
+    "お問い合わせ内容を選んでください。ブラウザでGitHubが開きます。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Please select the type of inquiry. Google Form will open in your browser."
+            "value" : "Please select the type of inquiry. GitHub will open in your browser."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Seleziona il tipo di richiesta. Si aprirà un modulo Google nel browser."
+            "value" : "Seleziona il tipo di richiesta. Si aprirà GitHub nel browser."
           }
         }
       }

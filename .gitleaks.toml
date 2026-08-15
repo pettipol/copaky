@@ -36,6 +36,12 @@ paths = ['''Copaky\.xcconfig$''']
 # scan that is always dirty is a scan nobody reads. Allowlisting them means a clean run still
 # MEANS something, and any NEW occurrence stands out immediately.
 #
+# BE PRECISE ABOUT WHAT "no leaks found" MEANS AFTER THIS: five COMMITS are suppressed, but they
+# carry 22 FINDINGS between them (the string repeats across build configurations and files). Empty
+# the list below and a full-history scan reports 22, not 5. "gitleaks is clean" on this repo is
+# therefore a statement about everything EXCEPT these five known commits — say it that way rather
+# than as an unqualified zero.
+#
 # Worth recording what these turned out to be: only d570030c (2026-07-08) is ours, 4XDQKU66NJ,
 # moved to the gitignored Copaky.local.xcconfig three weeks later. The other four carry
 # 9S3UXHYP65 and 3Z7SZTTG3V — UPSTREAM azooKey's own team IDs, publicly in ensan's repository
