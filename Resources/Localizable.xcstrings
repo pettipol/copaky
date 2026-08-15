@@ -1842,7 +1842,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Crea nuovo modello %"
+            "value" : "Crea nuovo modello %@"
           }
         }
       }
@@ -2671,6 +2671,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Visualizza azooKey su GitHub"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub で azooKey を見る"
           }
         }
       }
@@ -10567,6 +10573,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Questa applicazione utilizza SudachiDict come base per il vocabolario di base."
+          }
+        }
+      }
+    },
+    "本アプリケーションは変換エンジンのZenzaiCPUトレイト経由でSwiftyMarisa（marisa-trieのSwiftラッパー）をバイナリに同梱していますが、v0.1ではまだ呼び出していません。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This application bundles SwiftyMarisa (a Swift wrapper for marisa-trie) in its binary through the converter's ZenzaiCPU trait; it is not yet invoked in v0.1."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questa applicazione include nel binario SwiftyMarisa (un wrapper Swift di marisa-trie) tramite il trait ZenzaiCPU del convertitore; nella 0.1 non viene ancora usato."
+          }
+        }
+      }
+    },
+    "本アプリケーションは変換エンジンのZenzaiCPUトレイト経由でllama.cppをバイナリに同梱していますが、v0.1ではまだ呼び出していません。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This application bundles llama.cpp in its binary through the converter's ZenzaiCPU trait; it is not yet invoked in v0.1."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questa applicazione include llama.cpp nel binario tramite il trait ZenzaiCPU del convertitore; nella 0.1 non viene ancora usato."
           }
         }
       }

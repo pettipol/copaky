@@ -32,6 +32,12 @@
             "value" : "Using name data in 'Contacts' app, Copaky can perform more accurate conversion."
           }
         },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usando i nomi dell'app «Contatti», Copaky può eseguire una conversione più precisa."
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
