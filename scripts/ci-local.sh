@@ -14,6 +14,16 @@ SIM='platform=iOS Simulator,name=iPhone 17'
 FAST=0; [ "${1:-}" = "--fast" ] && FAST=1
 fail=0
 
+# Self-wire the git hooks. The hooks in .githooks/ (pre-commit secret scan, pre-push CI gate)
+# are INERT on a fresh clone until core.hooksPath points at them, and an instruction that lives
+# only in CONTRIBUTING.md is an instruction that gets skipped. Since this script is the
+# documented entry point for anyone building the project, it sets it here — idempotently, and
+# never overriding a hooksPath somebody chose deliberately.
+if [ -z "$(git -C "$REPO" config --local core.hooksPath || true)" ]; then
+  git -C "$REPO" config core.hooksPath .githooks \
+    && echo "✓ git hooks wired: core.hooksPath=.githooks (pre-commit secret scan, pre-push CI)"
+fi
+
 # Cheap and always run: an empty localization value renders as a BLANK label on device
 # (Foundation returns the empty value, it does not fall back to the key). Catching this costs
 # milliseconds; missing it costs a blank keycap on someone's phone.

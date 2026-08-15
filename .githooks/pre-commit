@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Copaky pre-commit gate — scans the STAGED DIFF for secrets before they enter local history.
+#
+# Why pre-commit and not just pre-push: once a commit containing a secret reaches a PUBLIC
+# repository, rewriting history does not un-publish it. Forks, clones and platform caches keep
+# the old objects, so the only real remedy is rotating the secret. Catching it here — before it
+# is even a commit — is the only cheap moment.
+#
+# Note on the existing pre-push hook: it runs the local CI (build + tests). It is NOT a secret
+# gate and never was. Before this file, the only secret gate in the whole chain was GitHub's
+# server-side push protection.
+#
+# Enable on a fresh clone:  git config core.hooksPath .githooks
+# Bypass (deliberately):    git commit --no-verify
+set -uo pipefail
+
+if command -v gitleaks >/dev/null 2>&1; then
+  # `gitleaks git --staged` is the SUPPORTED spelling on 8.x. The older `gitleaks protect
+  # --staged` still executes but is deprecated and hidden (it is absent from `gitleaks --help`),
+  # so it is not what this hook depends on.
+  if ! gitleaks git --staged --redact --no-banner "$(git rev-parse --show-toplevel)"; then
+    echo "✘ pre-commit BLOCKED: gitleaks flagged something in the staged changes."
+    echo "  Inspect with: git diff --cached"
+    echo "  If it is genuinely a false positive, commit with --no-verify and add a rule."
+    exit 1
+  fi
+else
+  # FAIL CLOSED. A hook that silently passes when its scanner is missing provides zero
+  # protection exactly on the machines least likely to have it — a fresh clone, a new
+  # contributor. Install gitleaks, or opt out explicitly and on the record.
+  echo "✘ pre-commit BLOCKED: gitleaks is not installed, so staged changes were NOT scanned."
+  echo "  Install it:  brew install gitleaks"
+  echo "  Or bypass deliberately:  COPAKY_ALLOW_NO_GITLEAKS=1 git commit …"
+  [ "${COPAKY_ALLOW_NO_GITLEAKS:-0}" = "1" ] || exit 1
+  echo "⚠ COPAKY_ALLOW_NO_GITLEAKS=1 set — proceeding WITHOUT a secret scan."
+fi
+exit 0

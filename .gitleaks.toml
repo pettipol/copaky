@@ -1,0 +1,50 @@
+# Copaky gitleaks configuration.
+#
+# ⚠ THE [extend] BLOCK IS LOAD-BEARING — DO NOT REMOVE IT.
+# Without `useDefault = true`, a .gitleaks.toml REPLACES the entire built-in ruleset (~170
+# provider rules: AWS keys, GitHub PATs, Stripe, private keys…) with whatever is written below.
+# A config file added as "extra hardening" would then be a coverage REGRESSION that silently
+# turns off every real detection. This was caught by an adversarial review that reproduced it
+# empirically before the file was ever committed.
+[extend]
+useDefault = true
+
+# --- Copaky-specific rule -------------------------------------------------------------------
+# The Apple Developer Team ID is not a credential — it is not rotatable and it ships inside
+# every IPA (Payload/*.app/embedded.mobileprovision carries it as TeamIdentifier). It is here
+# because it is machine-local configuration that does not belong in a tracked file, and because
+# it was in fact committed once, in July 2026, before being moved to the gitignored
+# Copaky.local.xcconfig. This rule makes that mistake fail loudly instead of quietly.
+#
+# The regex is delimiter-agnostic ON PURPOSE: pbxproj writes `DEVELOPMENT_TEAM = ABCDE12345;`
+# with a semicolon, xcconfig writes the same assignment WITHOUT one. A rule anchored on the
+# semicolon would match the historical form and miss the form the value actually lives in today.
+[[rules]]
+id = "copaky-apple-team-id"
+description = "Apple DEVELOPMENT_TEAM in a tracked file — belongs in the gitignored Copaky.local.xcconfig"
+regex = '''DEVELOPMENT_TEAM\s*[=:]\s*[A-Z0-9]{10}\b'''
+tags = ["copaky", "signing"]
+
+[rules.allowlist]
+# Copaky.xcconfig documents the format for contributors with a placeholder; that is the whole
+# point of the file and must not trip the rule.
+regexes = ['''DEVELOPMENT_TEAM\s*=\s*YOUR_TEAM_ID''']
+paths = ['''Copaky\.xcconfig$''']
+
+# The five historical commits that already carry a team ID. History is immutable and these are
+# public regardless, so flagging them forever would make every full-history scan noisy — and a
+# scan that is always dirty is a scan nobody reads. Allowlisting them means a clean run still
+# MEANS something, and any NEW occurrence stands out immediately.
+#
+# Worth recording what these turned out to be: only d570030c (2026-07-08) is ours, 4XDQKU66NJ,
+# moved to the gitignored Copaky.local.xcconfig three weeks later. The other four carry
+# 9S3UXHYP65 and 3Z7SZTTG3V — UPSTREAM azooKey's own team IDs, publicly in ensan's repository
+# since 2020. That is the practical evidence that an Apple Team ID is not a credential: it is
+# not rotatable and it ships inside every IPA's embedded.mobileprovision anyway.
+commits = [
+  "bf07ff2ebe2896af7dc20744d67d1d10c3021d2c",  # 2020-09-03 upstream (KanaKanjier)
+  "f2a7b82ed0695adccb5d2106e5ab9d48517a3809",  # 2020-12-01 upstream (KanaKanjier)
+  "6dfd09e0f5e3e9bc4f343bfbf9ebed09816c23b2",  # 2023-05-27 upstream
+  "be395857cee65712243b9d16b48cd92c3ca940af",  # 2025-05-11 upstream
+  "d570030c0b873ba4fe755a51881ae872168de140",  # 2026-07-08 ours — moved out of tracking later
+]

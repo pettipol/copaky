@@ -1,5 +1,22 @@
 # Copaky machine-local signing (personal DEVELOPMENT_TEAM — see Copaky.xcconfig)
-/Copaky.local.xcconfig
+# NOT root-anchored: a copy in a subdirectory must be ignored too.
+Copaky.local.xcconfig
+*.local.xcconfig
+
+# Credential-shaped files — none has ever been tracked and none should be. This is
+# defense in depth against a stray `git add .`, not a substitute for the gitleaks
+# pre-commit hook in .githooks/. Real signing material lives outside every repo.
+*.p8
+*.p12
+*.pem
+*.key
+*.mobileprovision
+*.certSigningRequest
+*.env
+.env.*
+# Release artefacts (they embed the provisioning profile and the team identifier)
+*.xcarchive/
+ExportOptions*.plist
 
 # azooKey Settings
 /Gen/generated/*.gen

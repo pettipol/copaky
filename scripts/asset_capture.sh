@@ -28,9 +28,12 @@ fi
 UDID="${COPAKY_UDID:-E0552C62-FFDB-4DF6-9040-2734DB5B2458}"
 SCHEME="CopakyUITests"
 UITEST_BUNDLE="azooKeyUITests"
-REPO_DIR="/Users/vittoriovillani/SviluppoTastieraOpen/vendor/azooKey"
+# Derived, not hard-coded: this repo is public, and an absolute /Users/<name>/… path both
+# leaks the developer's account name and makes the script useless to anyone else.
+# COPAKY_WORKSPACE overrides for a layout where the workspace is not the repo's parent.
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROJECT="$REPO_DIR/azooKey.xcodeproj"
-WORKSPACE="/Users/vittoriovillani/SviluppoTastieraOpen"
+WORKSPACE="${COPAKY_WORKSPACE:-$(cd "$REPO_DIR/../.." && pwd)}"
 OUT_DIR="$WORKSPACE/reports/asset_recapture/raw/${LANG_ARG}_${APPEAR}"
 ART_DIR="$WORKSPACE/reports/asset_recapture/_artifacts"
 DEST="id=$UDID"

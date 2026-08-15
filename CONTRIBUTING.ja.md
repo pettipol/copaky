@@ -30,11 +30,22 @@ iOS / UIKit アプリのため無料の Linux ランナーではビルドでき�
 
 - フルチェック: `scripts/ci-local.sh`（MainApp ビルド + `AzooKeyCore` 全テスト + オフライン監査）。
 - 高速チェック: `scripts/ci-local.sh --fast`（ビルド + `ClipboardHistoryManagerTests`）。
-- **pre-push フックを一度有効化してください:**
+- **git フックを一度有効化してください:**
   ```sh
   git config core.hooksPath .githooks
   ```
-  push のたびに高速チェックが走ります。単発の回避は `git push --no-verify`。
+  未設定の場合は `scripts/ci-local.sh` が自動で設定します（誰も有効化しないフックは誰も守りません）。
+  フックは2つあります。
+  - **pre-commit** — ステージした差分を [gitleaks](https://github.com/gitleaks/gitleaks) で
+    スキャンします（`brew install gitleaks`）。**fail closed** です：gitleaks が無い場合は
+    コミットを止めます（黙って素通りするスキャナーは、無いより悪いためです）。意図的に回避する
+    場合は `COPAKY_ALLOW_NO_GITLEAKS=1` を指定してください。
+  - **pre-push** — 高速チェックを実行します。単発の回避は `git push --no-verify`。
+
+  このリポジトリは公開されています。公開リポジトリに入ってしまった秘密情報は、履歴を書き換えても
+  公開を取り消せません（フォーク・クローン・キャッシュに古いオブジェクトが残ります）。実際の対処は
+  その秘密情報を無効化・再発行することだけです。だからこそ push の前ではなく、コミットが生まれる
+  前にスキャンします。
 
 **プルリクエストを開く前に、必ず `scripts/ci-local.sh` をグリーンにしてください。**
 

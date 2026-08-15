@@ -30,11 +30,21 @@ billed 10×. The source of truth is therefore **local**:
 
 - Full check: `scripts/ci-local.sh` (build MainApp + full `AzooKeyCore` test suite + advisory offline audit).
 - Fast check: `scripts/ci-local.sh --fast` (build + `ClipboardHistoryManagerTests`).
-- **Enable the pre-push hook once:**
+- **Enable the git hooks once:**
   ```sh
   git config core.hooksPath .githooks
   ```
-  It runs the fast check before every push. Bypass a single push with `git push --no-verify`.
+  Running `scripts/ci-local.sh` does this for you if you have not set it, since a hook nobody
+  enables protects nobody. Two hooks live there:
+  - **pre-commit** — scans the staged diff for secrets with [gitleaks](https://github.com/gitleaks/gitleaks)
+    (`brew install gitleaks`). It **fails closed**: if gitleaks is missing the commit is blocked,
+    because a scanner that silently skips is worse than no scanner. Override deliberately with
+    `COPAKY_ALLOW_NO_GITLEAKS=1`.
+  - **pre-push** — runs the fast check. Bypass a single push with `git push --no-verify`.
+
+  This repository is public. A secret that reaches a public repository cannot be un-published by
+  rewriting history — forks, clones and caches keep the old objects — so the only real remedy is
+  rotating the secret. That is why the scan runs before the commit exists, not before the push.
 
 **Always make `scripts/ci-local.sh` green before opening a pull request.**
 
