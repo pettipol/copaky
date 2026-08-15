@@ -12,7 +12,7 @@
 #
 # Usage:
 #   scripts/memory_phase_c.sh --mode sim
-#   scripts/memory_phase_c.sh --mode device
+#   scripts/memory_phase_c.sh --mode device [--configuration Release]
 #
 # Prerequisite (not started by this script — see docs/UI_TESTING_PLAYBOOK.md §4.1): the field-fixture
 # server must already be serving http://127.0.0.1:8377/kbtest.html for `sim` mode:
@@ -21,9 +21,11 @@
 set -uo pipefail
 
 MODE=""
+CONFIGURATION="${COPAKY_CONFIGURATION:-}"   # empty = the scheme's default (Debug); "Release" = the shipped kind
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --mode) MODE="$2"; shift 2 ;;
+    --configuration) CONFIGURATION="$2"; shift 2 ;;
     -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
     *) echo "ERROR: unknown argument '$1' (expected --mode device|sim)" >&2; exit 2 ;;
   esac
@@ -39,13 +41,19 @@ SCHEME="CopakyUITests"
 UITEST_BUNDLE="azooKeyUITests"
 TEST_ID="$UITEST_BUNDLE/CopakyCampaignTests/test42_memoryPhaseC_japaneseTypingAcrossKana"
 SIM_NAME="${COPAKY_SIM_NAME:-iPhone 17}"
-DEVICE_ID="${COPAKY_DEVICE_ID:-2902B1DD-4621-5324-9818-37C757CF15E9}"
+DEVICE_ID="${COPAKY_DEVICE_ID:-2902B1DD-4621-5324-9818-37C757CF15E9}"      # CoreDevice id — for xcodebuild
+# pymobiledevice3 addresses the phone by its lockdown UDID, NOT by the CoreDevice identifier above:
+# passing the CoreDevice id gives "Device not found" and the sampler dies before the first sample
+# (paid on 2026-08-15, first device run). Two ids for the same phone, on purpose.
+# pymobiledevice3 は CoreDevice ID ではなく lockdown UDID を要求する（同じ端末に2つのIDがある）。
+DEVICE_UDID="${COPAKY_DEVICE_UDID:-REDACTED-DEVICE-UDID}"   # lockdown UDID — for pymobiledevice3
 LOG_DIR="$HOME/copaky_device_logs"
 mkdir -p "$LOG_DIR"
 TS="$(date +%Y%m%d_%H%M%S)"
 CSV="$LOG_DIR/memc_${TS}.csv"
 XCLOG="$LOG_DIR/memc_${TS}_xcodebuild.log"
 RESULT_BUNDLE="$LOG_DIR/memc_${TS}.xcresult"
+RAW_DIR="$LOG_DIR/memc_${TS}_raw"; mkdir -p "$RAW_DIR"
 
 log() { echo "[$(date +%H:%M:%S)] $*"; }
 
@@ -109,27 +117,64 @@ sample_sim() {
 # --filter name=Keyboard で絞れるはずだが、効かない版に備えてPython側でも再確認する（実機は未検証）。
 sample_device() {
   echo "timestamp,pid,physFootprint_bytes" > "$CSV"
-  PATH="$HOME/.local/bin:$PATH" pymobiledevice3 developer dvt sysmon process monitor process \
-      --filter name=Keyboard --key pid --key name --key physFootprint \
-      --interval 1000 --choose first --userspace --udid "$DEVICE_ID" \
-    | /usr/bin/python3 -u -c '
-import sys, json, datetime
-for line in sys.stdin:
-    line = line.strip()
-    if not line:
-        continue
-    try:
-        rec = json.loads(line)
-    except json.JSONDecodeError:
-        continue
-    name = str(rec.get("name", ""))
-    if "keyboard" not in name.lower() and "copaky" not in name.lower():
-        continue
-    pid = rec.get("pid", "")
-    foot = rec.get("physFootprint", "")
-    ts = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
-    print(f"{ts},{pid},{foot}")
-' >> "$CSV"
+  # `monitor process` picks ONE process from the snapshot taken at start-up and errors out when
+  # nothing matches ("Failed to find a process matching the given filters in the current
+  # snapshot") — and the extension process does not exist until the test brings the keyboard up,
+  # and can be relaunched by iOS mid-run (new pid). So: keep re-attaching until we are stopped;
+  # every attach that fails or ends is retried after 2 s. Verified on the phone 2026-08-15 (the
+  # first device run had the sampler die at t=0 for exactly this reason).
+  # 拡張プロセスはキーボード表示まで存在せず、途中で再起動もする → 停止されるまで再接続を繰り返す。
+  #
+  # Output goes to a JSONL FILE per attach (`--output`), never through a pipe: pymobiledevice3
+  # block-buffers stdout when piped, so a 280 s run produced ZERO lines through `| python3`
+  # (5th device run) while `--output` wrote every second. The files are merged into the CSV by
+  # finalize_device_samples() after the test.
+  # パイプだと出力がバッファされ何も届かない（実測）→ 必ず --output でファイルに書き、後で CSV に変換する。
+  local n=0
+  while true; do
+    n=$((n + 1))
+    PATH="$HOME/.local/bin:$PATH" pymobiledevice3 developer dvt sysmon process monitor process \
+        --filter name=Keyboard --key pid --key name --key physFootprint \
+        --interval 1000 --choose last --udid "$DEVICE_UDID" \
+        --output "$RAW_DIR/attach_$(printf '%03d' "$n").jsonl" >/dev/null 2>&1
+    sleep 2
+  done
+}
+
+# Merge the per-attach JSONL files into the CSV the summarizer reads. `--key execName` is rejected
+# by the monitor, so the only handle is the process name: on this phone the sole third-party
+# keyboard is Copaky (checked with `sysmon process single`: name=Keyboard, execName …/azooKey.app/
+# PlugIns/Keyboard.appex/Keyboard).
+finalize_device_samples() {
+  /usr/bin/python3 - "$RAW_DIR" "$CSV" <<'PY'
+import sys, json, glob, os
+raw_dir, csv_path = sys.argv[1], sys.argv[2]
+rows = []
+for path in sorted(glob.glob(os.path.join(raw_dir, "attach_*.jsonl"))):
+    with open(path) as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rec = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            name = str(rec.get("name", ""))
+            if name != "Keyboard" and "copaky" not in name.lower():
+                continue
+            ts = rec.get("timestamp")
+            pid = rec.get("pid", "")
+            foot = rec.get("physFootprint", "")
+            if ts is None or foot == "":
+                continue
+            rows.append((ts, pid, foot))
+rows.sort()
+with open(csv_path, "a") as out:
+    for ts, pid, foot in rows:
+        out.write(f"{ts},{pid},{foot}\n")
+print(f"[device] merged {len(rows)} samples from {len(glob.glob(os.path.join(raw_dir, 'attach_*.jsonl')))} attach file(s)")
+PY
 }
 
 SAMPLER_PID=""
@@ -176,8 +221,12 @@ stop_sampler() {
 trap stop_sampler EXIT
 
 # ---- wait out any other xcodebuild run already in flight (repo convention, up to 30 min) ---------
+# Match REAL xcodebuild build/test/archive processes only — a bare `pgrep -f xcodebuild` also
+# matches shell wrappers and inspection commands that merely mention the word (this script waited
+# 11 minutes on itself on 2026-08-15 before that was noticed).
+# 本物の xcodebuild プロセスだけを待つ（単語を含むだけのシェルには反応しない）。
 waited=0
-while pgrep -fl xcodebuild >/dev/null 2>&1 && [[ $waited -lt 1800 ]]; do
+while pgrep -f "usr/bin/xcodebuild (build|test|archive|build-for-testing|test-without-building)" >/dev/null 2>&1 && [[ $waited -lt 1800 ]]; do
   log "another xcodebuild is running — waiting 30s ($waited/1800s elapsed)"
   sleep 30
   waited=$((waited + 30))
@@ -218,13 +267,37 @@ sleep 1   # let the first sample land before the run's own MEMC markers start
 log "running $TEST_ID (mode=$MODE)"
 if [[ "$MODE" == "sim" ]]; then
   xcodebuild test -project "$PROJECT" -scheme "$SCHEME" \
+    ${CONFIGURATION:+-configuration "$CONFIGURATION"} \
     -destination "platform=iOS Simulator,name=$SIM_NAME" \
     -only-testing:"$TEST_ID" \
     CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
     -resultBundlePath "$RESULT_BUNDLE" \
     2>&1 | tee "$XCLOG"
 else
+  # Pre-navigate Safari on the phone to the public copy of the field fixture (site/kbtest.html →
+  # https://copaky.app/kbtest): on device the test ACTIVATES Safari instead of launching it, because
+  # `launch()` restores the user's last tab and 127.0.0.1 would be the phone itself.
+  # 実機ではフィクスチャの公開コピーを先に開いておく（テスト側は activate のみ）。
+  # Same stale-runner guard as sim mode (the phone keeps the previously installed xctrunner too).
+  xcrun devicectl device uninstall app --device "$DEVICE_ID" com.pettipol.copaky.uitests.xctrunner >/dev/null 2>&1 || true
+  # Fresh extension process. iOS keeps a running keyboard-extension process alive across the app
+  # (re)install xcodebuild performs, so without this the run measures the PREVIOUS binary (seen
+  # 2026-08-15: the same pid, in the same bundle container, survived three runs — including the
+  # first "Release" one, which therefore measured Debug). Terminate it; the test's first keystroke
+  # spawns a new process from the binary that was just installed.
+  # 拡張プロセスは再インストール後も生き残る → 事前に終了させ、新しいバイナリで起動させる。
+  for kpid in $(xcrun devicectl device info processes --device "$DEVICE_ID" 2>/dev/null | awk '/azooKey.app\/PlugIns\/Keyboard.appex\/Keyboard/ {print $1}'); do
+    log "terminating stale Keyboard extension process pid $kpid"
+    xcrun devicectl device process terminate --device "$DEVICE_ID" --pid "$kpid" >/dev/null 2>&1 || true
+  done
+  log "pre-navigating Safari on the phone to https://copaky.app/kbtest"
+  xcrun devicectl device process launch --device "$DEVICE_ID" --payload-url "https://copaky.app/kbtest" com.apple.mobilesafari >/dev/null 2>&1 || \
+    log "WARN: devicectl could not open Safari — the test will fail on 'textarea-field not found' if the page is not open"
+  sleep 3
+  # `-configuration Release` measures the SHIPPED kind of binary (Debug builds carry unoptimised
+  # code and allocator debugging and read several MB higher — first device run: 47-51 MB Debug).
   xcodebuild test -project "$PROJECT" -scheme "$SCHEME" \
+    ${CONFIGURATION:+-configuration "$CONFIGURATION"} \
     -destination "platform=iOS,id=$DEVICE_ID" -allowProvisioningUpdates \
     -only-testing:"$TEST_ID" \
     -resultBundlePath "$RESULT_BUNDLE" \
@@ -243,6 +316,7 @@ fi
 
 stop_sampler
 trap - EXIT
+if [[ "$MODE" == "device" ]]; then finalize_device_samples; fi
 
 # ---- markers + summary -----------------------------------------------------------------------
 log "=== MEMC markers ($XCLOG) ==="

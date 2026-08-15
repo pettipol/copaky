@@ -63,9 +63,11 @@ private enum L {
     static let settingsAppsRow = ["App", "Apps", "アプリ"]
     /// Per-app Settings row governing cross-app paste (the row the §10 protocol pivots on).
     /// Upstream writes ほかのApp, the shipped OS row says 他のApp — carry both.
-    static let pasteFromOtherAppsRow = ["Incolla da altre app", "Paste from Other Apps", "他のAppからペースト", "ほかのAppからペースト"]
+    static let pasteFromOtherAppsRow = ["Incolla da altre app", "Paste from Other Apps", "他のAppからペースト", "ほかのAppからペースト", "ほかのアプリからペースト", "他のアプリからペースト"]   // iOS 18+ ja says アプリ, not App
+    static let pasteFromOtherAppsRowParts = ["Incolla da altre", "Paste from Other", "からペースト"]   // CONTAINS fallback
     /// The three states of that row; the protocol needs ASK.
     static let pasteAsk = ["Chiedi", "Ask", "確認"]
+    static let pasteDeny = ["Nega", "Deny", "拒否"]
     /// Buttons that let a system paste prompt proceed, across OS languages and phrasings.
     static let allowPasteButtons = ["Consenti di incollare", "Allow Paste", "ペーストを許可", "Consenti", "Allow", "許可", "Incolla", "Paste", "ペースト"]
     /// Tips tab (TabItem "使い方") — the app's default landing screen.
@@ -77,6 +79,20 @@ private enum L {
     static let ossAcknowledgements = ["Acknowledgements", "Ringraziamenti"]
     /// NavigationLink into `ContactView` from the Settings tab.
     static let contactLink = ["お問い合わせ", "Contact", "Contatti"]
+    /// iOS Settings root row for the light/dark appearance picker (test44).
+    static let displayBrightnessRow = ["Schermo e luminosità", "Display & Brightness", "画面表示と明るさ"]
+    /// The two appearance swatches inside that row's top ASPETTO/APPEARANCE section.
+    static let appearanceLight = ["Chiaro", "Light", "ライト"]
+    static let appearanceDark = ["Scuro", "Dark", "ダーク"]
+    /// Settings ▸ General row leading to the language/region picker (test44).
+    static let languageAndRegionRow = ["Lingua e zona", "Lingua e Zona", "Lingua e Regione", "Language & Region", "言語と地域"]
+    /// Row inside Language & Region whose value shows/sets the system UI language.
+    static let iPhoneLanguageRow = ["Lingua iPhone", "Lingua dell'iPhone", "iPhone Language", "iPhoneの使用言語"]
+    /// Confirmation button on the "change language?" sheet — label is a PREFIX/substring, not a
+    /// fixed string (the target language name is interpolated into it), hence CONTAINS matching.
+    static let changeToPrefixes = ["Cambia in", "Change to", "に変更", "Continua", "Continue", "続ける"]   // iOS 26: sheet «…iPhone verrà riavviato» → Continua
+    /// Buttons that decline a system paste prompt (test45 asset capture).
+    static let dontAllowButton = ["Non consentire", "Don't Allow", "許可しない"]
 }
 
 @MainActor
@@ -163,6 +179,48 @@ final class CopakyCampaignTests: XCTestCase {
         } while tries <= scrollUpTo
         XCTFail("Element not found for labels \(labels)", file: file, line: line)
         return false
+    }
+
+    /// First existing element whose label CONTAINS (case-insensitive) any of `substrings`.
+    ///
+    /// Unlike `firstMatch` (exact label/identifier/title match), this is for rows whose accessibility
+    /// label is COMPOSITE (e.g. Settings list cells that combine a title with a value, or a
+    /// confirmation button whose label interpolates the target name) — used by test44/test45.
+    /// ラベルが複合的な行（値を含むセルや、対象名を埋め込んだ確認ボタン）向けの部分一致版。
+    private func firstMatchContains(in app: XCUIApplication, substrings: [String], timeout: TimeInterval = 6) -> XCUIElement? {
+        let pred = NSCompoundPredicate(orPredicateWithSubpredicates:
+            substrings.map { NSPredicate(format: "label CONTAINS[c] %@", $0) })
+        let queries: [XCUIElementQuery] = [
+            app.buttons.matching(pred),
+            app.cells.matching(pred),
+            app.staticTexts.matching(pred),
+            app.otherElements.matching(pred),
+        ]
+        let deadline = Date().addingTimeInterval(timeout)
+        repeat {
+            for q in queries where q.firstMatch.exists {
+                return q.firstMatch
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+        } while Date() < deadline
+        return nil
+    }
+
+    /// `firstMatchContains`, scrolling the screen down first when nothing is visible yet.
+    @discardableResult
+    private func tapContainsScrolling(in app: XCUIApplication, substrings: [String], maxSwipes: Int = 8, timeout: TimeInterval = 3) -> Bool {
+        var el = firstMatchContains(in: app, substrings: substrings, timeout: timeout)
+        var swipes = 0
+        while (el == nil || el?.isHittable != true) && swipes < maxSwipes {
+            app.swipeUp()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.4))
+            el = firstMatchContains(in: app, substrings: substrings, timeout: timeout)
+            swipes += 1
+        }
+        guard let target = el, target.isHittable else { return false }
+        target.tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+        return true
     }
 
     /// The software keyboard element of the host app.
@@ -1468,6 +1526,7 @@ final class CopakyCampaignTests: XCTestCase {
     private func setPasteFromOtherApps(to value: [String]) throws {
         settings.launch()
         RunLoop.current.run(until: Date().addingTimeInterval(1.5))
+        settingsGoRoot()
         guard tapFirst(in: settings, labels: L.settingsAppsRow, timeout: 4, scrollUpTo: 12) else { return }
         // The apps list is alphabetical; Copaky sits under C, a few swipes at most.
         // The CELLS carry no label (paid 2026-08-14: a cells-query matched nothing and the loop
@@ -1488,7 +1547,13 @@ final class CopakyCampaignTests: XCTestCase {
         }
         copaky.tap()
         RunLoop.current.run(until: Date().addingTimeInterval(0.8))
-        guard tapFirst(in: settings, labels: L.pasteFromOtherAppsRow, timeout: 5, scrollUpTo: 8) else { return }
+        if !tapFirst(in: settings, labels: L.pasteFromOtherAppsRow, timeout: 5, scrollUpTo: 8) {
+            guard tapContainsScrolling(in: settings, substrings: L.pasteFromOtherAppsRowParts, maxSwipes: 8, timeout: 4) else {
+                dump(settings, "41-no-paste-row")
+                XCTFail("'Paste from Other Apps' row not found on Copaky's settings page")
+                return
+            }
+        }
         guard tapFirst(in: settings, labels: value, timeout: 5) else { return }
         shot("41-permission-row-set")
     }
@@ -1710,6 +1775,49 @@ final class CopakyCampaignTests: XCTestCase {
     /// (playbook §4.2/§5), so this sweep does not try — it only needs the field empty for the next group.
     /// 次のグループの前に入力内容を消す。候補選択ではなく削除キー連打（ラベルだけでは候補と鍵の区別が
     /// 信頼できないため）。
+    /// Reach the Japanese tab and report its layout: `true` = flick (kana keys on screen), `false` =
+    /// QWERTY/romaji (letter keys under Japanese labels such as 「空白」). Falls back to the strict
+    /// flick helper (which fails with evidence) only when neither layout can be reached.
+    /// 日本語タブへ移動し、レイアウトを返す（true=フリック、false=QWERTY/ローマ字）。
+    private func ensureJapaneseTab(in app: XCUIApplication) -> Bool {
+        dismissCopakyNotice(in: app)
+        if flickKanaVisible(in: app, timeout: 2) { return true }
+        if japaneseQwertyVisible(in: app) { return false }
+        // Not on a Japanese tab: the language key shows 「あ」 when Japanese is the NEXT language.
+        let toJapanese = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "あ")).firstMatch
+        if toJapanese.waitForExistence(timeout: 2), toJapanese.isHittable {
+            toJapanese.tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+            dismissCopakyNotice(in: app)
+            if flickKanaVisible(in: app, timeout: 2) { return true }
+            if japaneseQwertyVisible(in: app) { return false }
+        }
+        switchToJapaneseFlickTab(in: app)   // strict path: dumps + fails with evidence
+        return true
+    }
+
+    /// QWERTY Japanese tab = a Latin letter key AND a Japanese function label on the same keyboard
+    /// (the Japanese tab keeps 「空白」/「改行」 by design; the Latin tab shows space/spazio).
+    private func japaneseQwertyVisible(in app: XCUIApplication) -> Bool {
+        let k = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "k")).firstMatch
+        let jpLabel = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label IN %@", ["空白", "変換", "確定", "改行"])).firstMatch
+        return k.waitForExistence(timeout: 2) && jpLabel.exists
+    }
+
+    /// Type one kana group either as flick keys or as romaji on the QWERTY Japanese tab. Returns how
+    /// many keys were pressed (for `clearTyped`). Soft: a missing key is noted, not asserted.
+    /// かなグループをフリックまたはローマ字で入力し、押したキー数を返す。
+    private func typeKanaGroup(_ group: [String], flick: Bool, in app: XCUIApplication) -> Int {
+        if flick {
+            return softTapKeys(group, in: app)
+        }
+        let romaji: [String: String] = ["あ": "a", "か": "ka", "さ": "sa", "た": "ta", "な": "na",
+                                        "は": "ha", "ま": "ma", "や": "ya", "ら": "ra", "わ": "wa"]
+        let letters = group.flatMap { (romaji[$0] ?? "").map { String($0) } }
+        return softTapKeys(letters, in: app)
+    }
+
     private func clearTyped(atLeast charCount: Int, in app: XCUIApplication) {
         let delLabels = ["delete", "削除", "Elimina", "⌫"]
         for _ in 0..<(charCount + 3) {
@@ -1740,18 +1848,32 @@ final class CopakyCampaignTests: XCTestCase {
             ["ら", "か"], ["わ", "た"], ["あ", "さ"], ["な", "ま"], ["か", "さ", "た"], ["は", "ま", "や"],
         ]
 
+        // Simulator: Safari is launched on the local fixture (127.0.0.1:8377). Phone: 127.0.0.1 is the
+        // phone itself and `launch()` restores whatever tab the user had open (seen 2026-08-15:
+        // roma.corriere.it) — so the orchestrator pre-navigates Safari to https://copaky.app/kbtest
+        // (memory_phase_c.sh --mode device) and the test only ACTIVATES it, like test33/35 do.
+        // 実機では 127.0.0.1 は端末自身: スクリプトが copaky.app/kbtest を開いておき、テストは activate だけ行う。
+        #if targetEnvironment(simulator)
         _ = focusField("textarea-field")
+        #else
+        _ = activatePreNavigatedField("textarea-field")
+        #endif
         switchToCopaky(in: safari)
-        switchToJapaneseFlickTab(in: safari)
+        // The Japanese tab may be FLICK (Simulator seed, most Japanese users) or QWERTY/romaji (the
+        // test phone: its owner types romaji). Both build the same reading → the same dictionary
+        // lookups; on QWERTY each kana group is typed as its romaji ("か","な" → "kana").
+        // 日本語タブはフリック（シミュレータ）でも QWERTY/ローマ字（実機）でもよい: 読みが同じなら辞書検索も同じ。
+        let jpFlick = ensureJapaneseTab(in: safari)
+        print("MEMC-INFO|japanese-layout|\(jpFlick ? "flick" : "qwerty-romaji")")
 
         for (i, group) in kanaGroups.enumerated() {
             memcMarker("jp-\(i)", "start")
-            tapKeys(group, in: safari)
+            let typed = typeKanaGroup(group, flick: jpFlick, in: safari)
             RunLoop.current.run(until: Date().addingTimeInterval(0.8))   // let candidates compute
             if i == 0 || i == kanaGroups.count - 1 {
                 shot("42-jp-\(i)")
             }
-            clearTyped(atLeast: group.count, in: safari)
+            clearTyped(atLeast: typed, in: safari)
             memcMarker("jp-\(i)", "end")
         }
 
@@ -1782,9 +1904,12 @@ final class CopakyCampaignTests: XCTestCase {
             }
         }
         if clipboardPanelIsOpen(timeout: 1) {
-            switchToJapaneseFlickTab(in: safari)
+            _ = ensureJapaneseTab(in: safari)
         }
-        XCTAssertTrue(flickKanaVisible(in: safari, timeout: 4), "main Copaky keyboard did not return after the clipboard detour")
+        // Layout-agnostic "the keyboard is back": flick kana, QWERTY Japanese, or a Latin letter key.
+        let keyboardBack = flickKanaVisible(in: safari, timeout: 4) || japaneseQwertyVisible(in: safari)
+            || safari.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "a")).firstMatch.waitForExistence(timeout: 2)
+        XCTAssertTrue(keyboardBack, "main Copaky keyboard did not return after the clipboard detour")
         memcMarker(clipboardPhase, "start", at: clipboardStart)
         memcMarker(clipboardPhase, "end")
 
@@ -1871,15 +1996,385 @@ final class CopakyCampaignTests: XCTestCase {
         memcMarker(itPhase, "end")
 
         // Back to Japanese for a final push.
-        switchToJapaneseFlickTab(in: safari)
+        let jpFlickFinal = ensureJapaneseTab(in: safari)
         for (i, group) in kanaGroups.prefix(3).enumerated() {
             memcMarker("jp-final-\(i)", "start")
-            tapKeys(group, in: safari)
+            _ = typeKanaGroup(group, flick: jpFlickFinal, in: safari)
             RunLoop.current.run(until: Date().addingTimeInterval(0.8))
             clearTyped(atLeast: group.count, in: safari)
             memcMarker("jp-final-\(i)", "end")
         }
         memcMarker("end", "end")
+    }
+
+    // MARK: - 43 · Device Q-06: keyboard usable across rotation (landscape L/R, back to portrait)
+
+    /// Q-06 of the device protocol: the keyboard must stay usable when the device rotates. Runs on
+    /// the Simulator too (rotation works there) as well as on a device.
+    /// デバイスプロトコルQ-06: 回転してもキーボードが使用できることを確認する（シミュレータでも検証可）。
+    func test43_device_landscapeRotation() throws {
+        #if targetEnvironment(simulator)
+        _ = focusField("plain-text")
+        #else
+        _ = activatePreNavigatedField("plain-text")
+        #endif
+        switchToCopaky(in: safari)
+        defer { XCUIDevice.shared.orientation = .portrait }
+
+        // A letter key from either layout (QWERTY "q", flick "あ"/"a") or the space key — whichever
+        // tab was left active by an earlier test — must exist and be hittable.
+        let usableKeyLabels = ["a", "あ", "q"] + L.spaceKey
+        @discardableResult
+        func assertKeyboardUsable(_ context: String) -> XCUIElement? {
+            guard let key = firstMatch(in: safari, labels: usableKeyLabels, timeout: 4), key.isHittable else {
+                dump(safari, "43-\(context)-no-key")
+                XCTFail("No letter or space key hittable in \(context)")
+                return nil
+            }
+            return key
+        }
+
+        XCUIDevice.shared.orientation = .landscapeLeft
+        RunLoop.current.run(until: Date().addingTimeInterval(1.5))
+        shot("43-landscape-left")
+        let leftKey = assertKeyboardUsable("landscape-left")
+        // Soft: 3 taps of whatever key was proven hittable above — this is a usability probe, not a
+        // typing correctness check, so a miss here must not fail the rotation assertion already made.
+        if let label = leftKey?.label {
+            softTapKeys(Array(repeating: label, count: 3), in: safari)
+        }
+
+        XCUIDevice.shared.orientation = .landscapeRight
+        RunLoop.current.run(until: Date().addingTimeInterval(1.5))
+        shot("43-landscape-right")
+
+        XCUIDevice.shared.orientation = .portrait
+        RunLoop.current.run(until: Date().addingTimeInterval(1.5))
+        shot("43-portrait")
+        assertKeyboardUsable("portrait")
+    }
+
+    // MARK: - 44 · Device only: system language / appearance switch, parametrized by the runner
+
+    /// Settings ▸ Apps ▸ Copaky, stopping at the app's OWN settings page — the read-only prefix of
+    /// `setPasteFromOtherApps`, reused by test45 to screenshot the "Paste from Other Apps" row
+    /// itself (asset capture) rather than to change its value.
+    /// `setPasteFromOtherApps` と同じ前半のナビゲーション（値は変更しない、行の撮影専用）。
+    /// Settings restores its last page across launches (paid 2026-08-15: a second visit in the same
+    /// test found no «Apps» row because Settings reopened INSIDE Copaky's page). Walk back to the
+    /// root until the Apps row is visible.
+    /// 設定アプリは前回のページを復元する → Apps 行が見えるまで戻る。
+    private func settingsGoRoot() {
+        for _ in 0..<7 {
+            if firstMatch(in: settings, labels: L.settingsAppsRow, timeout: 1) != nil { return }
+            let back = settings.navigationBars.buttons.element(boundBy: 0)
+            if back.exists && back.isHittable {
+                back.tap()
+                RunLoop.current.run(until: Date().addingTimeInterval(0.6))
+            } else {
+                settings.swipeDown()
+                RunLoop.current.run(until: Date().addingTimeInterval(0.4))
+            }
+        }
+    }
+
+    private func openCopakyAppSettingsPage() {
+        settings.launch()
+        RunLoop.current.run(until: Date().addingTimeInterval(1.5))
+        settingsGoRoot()
+        guard tapFirst(in: settings, labels: L.settingsAppsRow, timeout: 4, scrollUpTo: 12) else { return }
+        let copaky = settings.buttons.matching(
+            NSPredicate(format: "identifier == %@ OR label BEGINSWITH %@", "com.pettipol.copaky", "Copaky")).firstMatch
+        var swipes = 0
+        while !copaky.exists && swipes < 20 {
+            settings.swipeUp()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+            swipes += 1
+        }
+        guard copaky.waitForExistence(timeout: 3) else {
+            dump(settings, "45-no-copaky-in-apps")
+            return
+        }
+        copaky.tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+    }
+
+    /// Drives iOS Settings to change the system UI language and/or the light/dark appearance,
+    /// entirely parametrized by the runner's environment — there is no in-test way to know what the
+    /// phone SHOULD end up as. The phone's CURRENT language may itself be it/en/ja, so every Settings
+    /// label needed here is carried in all three variants, mirroring `L`.
+    ///
+    /// The language change ends in a respring: nothing may be asserted past that tap, only recorded
+    /// — the runner can lose the device connection mid-call.
+    /// 言語変更はrespringで終わるため、それ以降は断定せずnoteのみで締めくくる（実行中に接続が切れうる）。
+    func test44_device_setSystemLanguageAndAppearance() throws {
+        let env = ProcessInfo.processInfo.environment
+        let targetLang = env["COPAKY_TARGET_LANG"]
+        let appearance = env["COPAKY_APPEARANCE"]
+        guard targetLang != nil || appearance != nil else {
+            throw XCTSkip("Neither COPAKY_TARGET_LANG nor COPAKY_APPEARANCE is set — nothing for this test to drive")
+        }
+
+        // Appearance FIRST, from the Settings root — soft (a miss here must not block the language
+        // change below, the two are independent runner knobs).
+        if let appearance, appearance == "light" || appearance == "dark" {
+            settings.launch()
+            RunLoop.current.run(until: Date().addingTimeInterval(1.0))
+            if softTapScrolling(L.displayBrightnessRow, in: settings) {
+                let target = appearance == "dark" ? L.appearanceDark : L.appearanceLight
+                if !softTapScrolling(target, in: settings) {
+                    // the swatches are sometimes plain staticTexts rather than buttons/images
+                    if let text = firstMatch(in: settings, labels: target, timeout: 4) {
+                        text.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+                        RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+                    } else {
+                        note("44-appearance-skip", "\(appearance) swatch not found under Display & Brightness")
+                        dump(settings, "44-appearance-tree-\(appearance)")
+                    }
+                }
+                shot("44-appearance-\(appearance)")
+            } else {
+                note("44-appearance-skip", "Display & Brightness row not found")
+                dump(settings, "44-no-display-brightness")
+            }
+        }
+
+        guard let targetLang, ["en", "ja", "it"].contains(targetLang) else {
+            if let targetLang { note("44-lang-skip", "COPAKY_TARGET_LANG must be en/ja/it, got '\(targetLang)'") }
+            return
+        }
+        let nativeName: String
+        switch targetLang {
+        case "en": nativeName = "English"
+        case "ja": nativeName = "日本語"
+        default:   nativeName = "Italiano"
+        }
+
+        settings.launch()
+        RunLoop.current.run(until: Date().addingTimeInterval(1.0))
+        tapFirst(in: settings, labels: L.general, scrollUpTo: 2)
+        tapFirst(in: settings, labels: L.languageAndRegionRow, scrollUpTo: 6)
+        RunLoop.current.run(until: Date().addingTimeInterval(1.0))
+
+        // iOS 26 layout (read from the phone's tree, 2026-08-15): «Lingua e zona» shows a PREFERRED
+        // LANGUAGES list whose cells carry the locale as identifier ('it-IT', 'en-IT'…) — the first
+        // cell is the iPhone language (subtitle «Lingua iPhone») — plus «Aggiungi lingua…»
+        // (identifier ADD_PREFERRED_LANGUAGE). There is no separate «iPhone Language» picker row.
+        // Two ways to make another language primary: drag its cell to the top (a confirmation sheet
+        // «Cambia in …»/«Change to …»/«…に変更» follows), or add it via «Aggiungi lingua…» and answer
+        // «Usa <lingua>» to the prompt. Both end in a respring.
+        // iOS 26 の「言語と地域」は優先言語リスト（識別子はロケール）。先頭が iPhone の言語。ドラッグで先頭へ移すか、
+        // 「言語を追加…」から追加して「〜を使用」を選ぶ。どちらも respring で終わる。
+        let names: [String]   // how the target may be spelled anywhere in this UI (native + it/en/ja names)
+        switch targetLang {
+        case "en": names = ["English", "Inglese", "inglese", "英語"]
+        case "ja": names = ["日本語", "Giapponese", "giapponese", "Japanese"]
+        default:   names = ["Italiano", "italiano", "Italian", "イタリア語"]
+        }
+        let cells = settings.cells
+        let targetCell = cells.matching(NSPredicate(format: "identifier BEGINSWITH %@", targetLang)).firstMatch
+        let primaryCell = cells.matching(NSPredicate(format: "identifier CONTAINS '-'")).firstMatch   // first locale cell = iPhone language
+        if primaryCell.waitForExistence(timeout: 6), primaryCell.identifier.hasPrefix(targetLang) {
+            note("44-language", "already \(targetLang) — \(primaryCell.identifier) is the iPhone language")
+            return
+        }
+        var confirmed = false
+        if targetCell.exists {
+            // Present but not primary: enter edit mode («Modifica»/«Edit»/«編集»), then drag the target's
+            // REORDER HANDLE («Riordina English»/«Reorder English»/«並べ替え English») onto the primary's
+            // handle. A plain long-press drag on the cell only scrolls the page (tried 2026-08-15).
+            // 「編集」に入り、並べ替えハンドルを先頭のハンドルへドラッグする（セル自体のドラッグはスクロールになるだけ）。
+            let editButton = settings.buttons.matching(NSPredicate(format: "label IN %@", ["Modifica", "Edit", "編集"])).firstMatch
+            if editButton.waitForExistence(timeout: 3), editButton.isHittable {
+                editButton.tap()
+                RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+            }
+            // «Riordina English» / «Reorder English» / «Englishを並べ替え» (Japanese puts the verb LAST).
+            func handle(for cell: XCUIElement) -> XCUIElement {
+                cell.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Riordina' OR label BEGINSWITH 'Reorder' OR label CONTAINS '並べ替え'")).firstMatch
+            }
+            shot("44-language-before-drag-\(targetLang)")
+            // Move the target UP one row at a time until it is first: an element-to-element drag of the
+            // reorder handle onto the handle of the row just above is what worked (en, ja); a longer
+            // jump from 3rd place, or a coordinate-based drop, landed short (it, 2026-08-15/16).
+            // 一段ずつ上へ: 隣の行のハンドルへドラッグするのが確実（3段跳びや座標指定は失敗した）。
+            let localeCells = cells.matching(NSPredicate(format: "identifier CONTAINS '-'"))
+            for _ in 0..<4 {
+                var idx = -1
+                for i in 0..<localeCells.count where localeCells.element(boundBy: i).identifier.hasPrefix(targetLang) { idx = i; break }
+                if idx <= 0 { break }
+                let above = localeCells.element(boundBy: idx - 1)
+                let th = handle(for: localeCells.element(boundBy: idx)), ah = handle(for: above)
+                if th.waitForExistence(timeout: 3), ah.exists {
+                    th.press(forDuration: 0.8, thenDragTo: ah)
+                } else {
+                    localeCells.element(boundBy: idx).press(forDuration: 1.2, thenDragTo: above)
+                }
+                RunLoop.current.run(until: Date().addingTimeInterval(1.2))
+                // A confirmation sheet means we reached the top: stop dragging.
+                if firstMatchContains(in: settings, substrings: L.changeToPrefixes, timeout: 1) != nil
+                    || firstMatchContains(in: springboard, substrings: L.changeToPrefixes, timeout: 1) != nil { break }
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(1.5))
+            shot("44-language-after-drag-\(targetLang)")
+            let confirmLabels = L.changeToPrefixes + names.map { "Usa \($0)" } + names.map { "Use \($0)" }
+            var confirm = firstMatchContains(in: settings, substrings: confirmLabels, timeout: 4)
+                ?? firstMatchContains(in: springboard, substrings: confirmLabels, timeout: 2)
+            if confirm == nil {
+                // Some builds only ask once edit mode is left («Fine»/«Done»/«完了»).
+                let done = settings.buttons.matching(NSPredicate(format: "label IN %@", ["Fine", "Done", "完了"])).firstMatch
+                if done.exists, done.isHittable {
+                    done.tap()
+                    RunLoop.current.run(until: Date().addingTimeInterval(1.0))
+                }
+                confirm = firstMatchContains(in: settings, substrings: confirmLabels, timeout: 4)
+                    ?? firstMatchContains(in: springboard, substrings: confirmLabels, timeout: 2)
+            }
+            if let confirm {
+                confirm.tap()
+                confirmed = true
+            }
+        } else {
+            // Not in the list: add it, then answer the "which language do you prefer" prompt.
+            let add = settings.descendants(matching: .any).matching(NSPredicate(format: "identifier == %@", "ADD_PREFERRED_LANGUAGE")).firstMatch
+            guard add.waitForExistence(timeout: 6) else {
+                dump(settings, "44-no-add-language")
+                XCTFail("Neither the '\(targetLang)' cell nor 'Aggiungi lingua…' found on Language & Region")
+                return
+            }
+            add.tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(1.0))
+            // Search field speeds the pick up; fall back to scrolling the list.
+            let search = settings.searchFields.firstMatch
+            if search.waitForExistence(timeout: 3) {
+                search.tap()
+                search.typeText(names[0])
+                RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+            }
+            guard tapContainsScrolling(in: settings, substrings: names, maxSwipes: 20, timeout: 5) else {
+                dump(settings, "44-no-language-in-add-list")
+                XCTFail("'\(names[0])' not found in the Add Language list")
+                return
+            }
+            shot("44-language-picked-\(targetLang)")
+            let useLabels = names.map { "Usa \($0)" } + names.map { "Use \($0)" } + names.map { "\($0)を使用" } + L.changeToPrefixes
+            if let use = firstMatchContains(in: settings, substrings: useLabels, timeout: 6)
+                ?? firstMatchContains(in: springboard, substrings: useLabels, timeout: 2) {
+                use.tap()
+                confirmed = true
+            }
+        }
+        guard confirmed else {
+            dump(settings, "44-no-change-to-confirm")
+            XCTFail("Confirmation to switch the iPhone language to '\(targetLang)' not found")
+            return
+        }
+        // A respring follows immediately — nothing may be asserted past this point.
+        note("44-language-changed", "requested change to \(targetLang) (\(nativeName)); device is resetting (respring)")
+    }
+
+    // MARK: - 45 · Device only: asset capture (paste dialog + Settings "Paste from Other Apps" row)
+
+    /// **Asset capture, not a pass/fail check.** Screenshots the system paste prompt (arming it the
+    /// same way test41's baseline arm does) and the Settings row that governs it. The Simulator has
+    /// no paste-permission subsystem at all (see test41's doc comment), so a missing dialog here is
+    /// EXPECTED, not a failure — the Settings-row screenshot is the part validated on the Simulator.
+    /// アセット撮影用（合否判定ではない）。ダイアログが出ないSimulatorでも失敗にしない。
+    func test45_device_captureFullAccessPasteAssets() throws {
+        // Deny → Ask, not just Ask: iOS remembers a per-source-app decision (after one «Allow» or
+        // «Don't Allow» from Safari the prompt stopped coming, and the marker was delivered silently
+        // — en/dark ×4, 2026-08-16). Flipping the permission through Deny resets that memory.
+        // 一度応答すると次回から聞かれない → Deny を経由して Ask に戻し、記憶をリセットする。
+        try setPasteFromOtherApps(to: L.pasteDeny)
+        try setPasteFromOtherApps(to: L.pasteAsk)
+        _ = try seedMarkerFromQaPage(evidence: "45")
+        switchToCopaky(in: safari)
+        dismissCopakyNotice(in: safari)
+        try openClipboardTab()
+
+        // Tap the OLD capture bar (same predicate/retry shape as test41's baseline arm) — this is
+        // the path that raises the system paste prompt.
+        var tapped = false
+        for _ in 0..<3 {
+            dismissCopakyNotice(in: safari)
+            // Either our capture bar or the system paste capsule (`use_system_paste_control` ON, as
+            // on the test phone): with the permission on Ask BOTH raise the system prompt (test41).
+            // The capsule is matched INSIDE the keyboard area only: «Paste» is a common label (the
+            // en/dark runs tapped a "Paste" that was not the capsule and no prompt came).
+            let keyboardTop = safari.frame.height * 0.55
+            var target: XCUIElement? = firstMatch(in: safari, labels: L.captureBar, timeout: 2)
+            if target == nil {
+                let capsules = safari.descendants(matching: .any).matching(NSPredicate(format: "label IN %@", L.systemPasteControl))
+                for i in 0..<min(capsules.count, 6) {
+                    let c = capsules.element(boundBy: i)
+                    if c.exists, c.frame.minY > keyboardTop, c.isHittable { target = c; break }
+                }
+            }
+            if target == nil { dump(safari, "45-no-capsule-in-keyboard-area") }
+            if let el = target, el.isHittable {
+                el.tap()
+                tapped = true
+                break
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+        }
+        guard tapped else {
+            dump(safari, "45-no-capture-bar")
+            note("45-no-dialog", "capture bar not found/hittable — cannot arm the paste prompt on this run")
+            openCopakyAppSettingsPage()
+            var swipesRow = 0
+            while firstMatch(in: settings, labels: L.pasteFromOtherAppsRow, timeout: 1) == nil
+                    && firstMatchContains(in: settings, substrings: L.pasteFromOtherAppsRowParts, timeout: 1) == nil && swipesRow < 8 {
+                settings.swipeUp()
+                RunLoop.current.run(until: Date().addingTimeInterval(0.4))
+                swipesRow += 1
+            }
+            shot("45-settings-paste-row")
+            return
+        }
+
+        // Wait for the prompt itself (it is SpringBoard's), not a fixed 1.5 s: one run shot the screen
+        // before it came up (en/dark, 2026-08-16). Retry the tap once if it never shows.
+        var promptUp = springboard.alerts.firstMatch.waitForExistence(timeout: 5) || safari.alerts.firstMatch.exists
+        if !promptUp {
+            if let el = firstMatch(in: safari, labels: L.captureBar + L.systemPasteControl, timeout: 3), el.isHittable {
+                el.tap()
+                promptUp = springboard.alerts.firstMatch.waitForExistence(timeout: 5) || safari.alerts.firstMatch.exists
+            }
+        }
+        RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+        shot("45-paste-dialog")   // the system prompt, if any, is IN this shot
+        note("45-prompt-up", promptUp ? "yes" : "no")
+        // The prompt's frame (points) for the asset composer: it belongs to SpringBoard, not Safari.
+        for host in [springboard, safari] {
+            let alert = host.alerts.firstMatch
+            if alert.exists {
+                let f = alert.frame
+                note("45-paste-dialog-frame", "\(host == springboard ? "springboard" : "safari") x=\(f.origin.x) y=\(f.origin.y) w=\(f.size.width) h=\(f.size.height) screen=\(host.frame.size.width)x\(host.frame.size.height)")
+                break
+            }
+        }
+
+        // Do NOT answer the prompt: iOS remembers «Don't Allow» for the (Safari → Copaky) pair and then
+        // stops asking — the next language's capture found no prompt at all (en/dark ×2, 2026-08-16,
+        // right after the en/light run had tapped Don't Allow). Terminating Safari dismisses the alert
+        // without recording a decision, so the next run can arm the prompt again.
+        // 「許可しない」を押すと記憶されて次回は出ない → 決定を残さず Safari を終了して閉じる。
+        note("45-dialog", promptUp ? "system paste prompt appeared; left unanswered (Safari terminated)" : "no system paste prompt appeared")
+        safari.terminate()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+
+        // Settings-row asset: Impostazioni ▸ Apps ▸ Copaky ▸ "Paste from Other Apps" row, left
+        // VISIBLE but not tapped (tapping it replaces the row with its own Ask/Allow/Deny picker).
+        openCopakyAppSettingsPage()
+        var swipes = 0
+        while firstMatch(in: settings, labels: L.pasteFromOtherAppsRow, timeout: 1) == nil
+                && firstMatchContains(in: settings, substrings: L.pasteFromOtherAppsRowParts, timeout: 1) == nil && swipes < 8 {
+            settings.swipeUp()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.4))
+            swipes += 1
+        }
+        shot("45-settings-paste-row")
     }
 
     // MARK: - 50 · Accessibility audit inventory across the Settings screens
