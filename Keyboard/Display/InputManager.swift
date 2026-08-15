@@ -90,7 +90,11 @@ final class InputManager {
             case .katakana:
                 text = text.toKatakana()
             case .halfwidthKatakana:
-                text = text.toKatakana().applyingTransform(.fullwidthToHalfwidth, reverse: false)!
+                // Copaky: the transform is constant and the input is a valid String, so nil is not
+                // expected — but a keyboard extension must not crash on host-app text either way.
+                // 変換は定数で入力は正当な String なので nil は想定外だが、拡張はホストの文字列で落ちてはならない。
+                let katakana = text.toKatakana()
+                text = katakana.applyingTransform(.fullwidthToHalfwidth, reverse: false) ?? katakana
             case .uppercase:
                 text = text.uppercased()
             case .lowercase:
@@ -936,7 +940,9 @@ final class InputManager {
                 outputText.append(original)
             } else if let romaji = CFStringTokenizerCopyCurrentTokenAttribute(tokenizer, kCFStringTokenizerAttributeLatinTranscription) as? NSString {
                 // ローマ字をまず得て、そのあとでカタカナにする
-                let reading: NSMutableString = romaji.mutableCopy() as! NSMutableString  // swiftlint:disable:this force_cast
+                // Copaky: `mutableCopy()` of an NSString always yields NSMutableString; the optional
+                // cast only removes a force-cast on a path fed by host-app text. / 強制キャストを避ける。
+                let reading = NSMutableString(string: romaji as String)
                 CFStringTransform(reading as CFMutableString, nil, kCFStringTransformLatinKatakana, false)
                 outputText.append(reading as String)
             } else {
