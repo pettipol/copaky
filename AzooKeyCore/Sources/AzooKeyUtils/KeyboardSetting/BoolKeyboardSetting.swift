@@ -243,13 +243,19 @@ public extension KeyboardSettingKey where Self == EnableNumberRowHints {
 }
 
 /// イタリア語をキーボードの言語として使う設定 / Italian as a keyboard language.
-/// Off by default: with it on, the language-switch key cycles through Italian as well and the Latin
-/// tab predicts from the Italian dictionary instead of the English one. The layout does not change —
-/// accented letters are already on long-press.
+/// Defaults on only when the system's first preferred language is Italian, so Italian users get
+/// accented-word predictions on first launch; other locales retain the existing opt-in behavior.
+/// システムの第一優先言語がイタリア語の場合だけ既定でオンにし、イタリア語利用者が初回から
+/// アクセント付き単語の予測を得られるようにする。他言語では従来どおりオプトイン。
 public struct EnableItalianKeyboardLanguage: BoolKeyboardSettingKey {
     public static let title: LocalizedStringKey = "イタリア語を使う"
     public static let explanation: LocalizedStringKey = "言語切替キーにイタリア語を加え、ラテン文字タブの予測変換をイタリア語の辞書から行います。キー配列は変わりません。"
-    public static let defaultValue = false
+    public static var defaultValue: Bool {
+        isItalianSystemLanguage(preferredLanguages: Locale.preferredLanguages)
+    }
+    public static func isItalianSystemLanguage(preferredLanguages: [String]) -> Bool {
+        preferredLanguages.first?.hasPrefix("it") == true
+    }
     public static let key: String = "enable_italian_keyboard_language"
 }
 
