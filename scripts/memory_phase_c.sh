@@ -46,7 +46,18 @@ DEVICE_ID="${COPAKY_DEVICE_ID:-2902B1DD-4621-5324-9818-37C757CF15E9}"      # Cor
 # passing the CoreDevice id gives "Device not found" and the sampler dies before the first sample
 # (paid on 2026-08-15, first device run). Two ids for the same phone, on purpose.
 # pymobiledevice3 は CoreDevice ID ではなく lockdown UDID を要求する（同じ端末に2つのIDがある）。
-DEVICE_UDID="${COPAKY_DEVICE_UDID:-REDACTED-DEVICE-UDID}"   # lockdown UDID — for pymobiledevice3
+# No default: a lockdown UDID is a persistent identifier of one specific phone and does not belong in a
+# public repository (Codex counter-review, 2026-08-16). Set COPAKY_DEVICE_UDID, or let the script pick the
+# first device usbmuxd knows about. / 既定値なし：端末固有の UDID は公開リポジトリに置かない。
+DEVICE_UDID="${COPAKY_DEVICE_UDID:-}"   # lockdown UDID — for pymobiledevice3
+if [ "$MODE" = "device" ] && [ -z "$DEVICE_UDID" ]; then
+  # `usbmux list --simple` prints a JSON array of UDID strings (checked 2026-08-16: `[]` with no phone).
+  DEVICE_UDID="$(PATH="$HOME/.local/bin:$PATH" pymobiledevice3 usbmux list --simple 2>/dev/null \
+    | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d[0] if d else "")' 2>/dev/null || true)"
+  if [ -z "$DEVICE_UDID" ]; then
+    echo "ERROR: no lockdown UDID — set COPAKY_DEVICE_UDID (see: pymobiledevice3 usbmux list)" >&2; exit 2
+  fi
+fi
 LOG_DIR="$HOME/copaky_device_logs"
 mkdir -p "$LOG_DIR"
 TS="$(date +%Y%m%d_%H%M%S)"

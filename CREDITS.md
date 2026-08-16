@@ -23,7 +23,8 @@ section of Settings; this file is a consolidated summary.
 | [Swift Algorithms](https://github.com/apple/swift-algorithms) | Utilities | Apache-2.0 |
 | [Swift Collections](https://github.com/apple/swift-collections) | Utilities | Apache-2.0 |
 | Swift Numerics / swift-argument-parser | Utilities | Apache-2.0 |
-| swift-transformers (tokenizers / Jinja) | Tokenization support | see upstream (Apache-2.0) |
+| [swift-tokenizers](https://github.com/ensan-hcl/swift-tokenizers) (fork of swift-transformers) | Tokenization support — linked into the keyboard through the converter | Apache-2.0 |
+| [Jinja](https://github.com/johnmai-dev/Jinja) | Template engine, dependency of swift-tokenizers — linked into the keyboard through the converter | MIT (© 2024 John Mai) |
 | [llama.cpp](https://github.com/ggerganov/llama.cpp) | CPU inference for **Zenzai** neural conversion | MIT |
 
 > **Converter fork.** Copaky does not link the upstream converter directly: `AzooKeyCore/Package.swift`

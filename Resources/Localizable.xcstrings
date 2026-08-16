@@ -10465,6 +10465,38 @@
         }
       }
     },
+    "本アプリケーションには、変換エンジン経由でJinja（MITライセンス、© 2024 John Mai）が含まれています。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This application includes Jinja (MIT License, © 2024 John Mai), pulled in through the conversion engine."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questa applicazione include Jinja (licenza MIT, © 2024 John Mai), incluso tramite il motore di conversione."
+          }
+        }
+      }
+    },
+    "本アプリケーションには、変換エンジン経由でswift-tokenizers（swift-transformersの派生、Apache License 2.0）が含まれています。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This application includes swift-tokenizers (a fork of swift-transformers, Apache License 2.0), pulled in through the conversion engine."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questa applicazione include swift-tokenizers (derivato da swift-transformers, Apache License 2.0), incluso tramite il motore di conversione."
+          }
+        }
+      }
+    },
     "本アプリケーションはMozcの一部のデータを利用しています。" : {
       "localizations" : {
         "en" : {

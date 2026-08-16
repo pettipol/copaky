@@ -40,6 +40,34 @@ struct OpenSourceSoftwaresLicenseView: View {
     SOFTWARE.
     """
 
+    // Linked into the keyboard binary through the converter package (swift-tokenizers is a
+    // dependency of AzooKeyKanaKanjiConverter; Jinja is a dependency of swift-tokenizers). Verified with
+    // `strings` on the shipped extension. MIT wants Jinja's notice with the copy; Apache-2.0 wants
+    // swift-tokenizers' licence reachable. / 変換エンジン経由でキーボードのバイナリに含まれる二つの依存。
+    private let license_jinja = """
+    MIT License
+
+    Copyright (c) 2024 John Mai
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+    """
+
     private let license_mecab = """
     MeCab is copyrighted free software by Taku Kudo <taku@chasen.org> and
     Nippon Telegraph and Telephone Corporation, and is released under
@@ -236,6 +264,20 @@ struct OpenSourceSoftwaresLicenseView: View {
                         )
                     }
                 }
+            }
+            // Copaky: two transitive dependencies of the converter package that ARE in the shipped
+            // keyboard binary and were credited nowhere in-app (Codex counter-review, 2026-08-16).
+            Section {
+                Text(verbatim: "swift-tokenizers").font(.title).padding()
+                Text("本アプリケーションには、変換エンジン経由でswift-tokenizers（swift-transformersの派生、Apache License 2.0）が含まれています。")
+                FallbackLink(verbatim: "Apache License 2.0", destination: "https://github.com/ensan-hcl/swift-tokenizers/blob/main/LICENSE")
+                FallbackLink(verbatim: "swift-tokenizers", destination: "https://github.com/ensan-hcl/swift-tokenizers")
+            }
+            Section {
+                Text(verbatim: "Jinja").font(.title).padding()
+                Text("本アプリケーションには、変換エンジン経由でJinja（MITライセンス、© 2024 John Mai）が含まれています。")
+                Text(license_jinja)
+                FallbackLink(verbatim: "Jinja", destination: "https://github.com/johnmai-dev/Jinja")
             }
             Section {
                 HStack {

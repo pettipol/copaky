@@ -25,7 +25,8 @@ Copaky は **azooKey をベースにした独立プロジェクト**であり、
 | [Swift Algorithms](https://github.com/apple/swift-algorithms) | ユーティリティ | Apache-2.0 |
 | [Swift Collections](https://github.com/apple/swift-collections) | ユーティリティ | Apache-2.0 |
 | Swift Numerics / swift-argument-parser | ユーティリティ | Apache-2.0 |
-| swift-transformers (tokenizers / Jinja) | トークナイズ支援 | 上流を参照（Apache-2.0） |
+| [swift-tokenizers](https://github.com/ensan-hcl/swift-tokenizers)（swift-transformers の派生） | トークナイズ支援 — 変換エンジン経由でキーボードにリンク | Apache-2.0 |
+| [Jinja](https://github.com/johnmai-dev/Jinja) | テンプレートエンジン（swift-tokenizers の依存） — 変換エンジン経由でキーボードにリンク | MIT（© 2024 John Mai） |
 | [llama.cpp](https://github.com/ggerganov/llama.cpp) | **Zenzai** ニューラル変換の CPU 推論 | MIT |
 
 > **変換エンジンのフォークについて。** Copaky は上流の変換エンジンを直接リンクしていません。
