@@ -10513,6 +10513,22 @@
         }
       }
     },
+    "本アプリケーションはazooKey（MITライセンス）を基盤としています。以下はazooKeyとCopakyのライセンス表記です。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This application is built on azooKey (MIT License). Below is the licence notice for azooKey and Copaky."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questa applicazione si basa su azooKey (licenza MIT). Qui sotto la nota di licenza di azooKey e di Copaky."
+          }
+        }
+      }
+    },
     "本アプリケーションはイタリア語の予測入力のため、Leipzig Corpora Collection由来の頻度辞書を使用しています（CC BY・© Universität Leipzig / Sächsische Akademie der Wissenschaften / InfAI）。" : {
       "localizations" : {
         "en" : {

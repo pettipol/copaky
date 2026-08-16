@@ -11,6 +11,35 @@ import KeyboardViews
 import SwiftUI
 
 struct OpenSourceSoftwaresLicenseView: View {
+    // Copaky is a derivative of azooKey (MIT). MIT asks for the copyright and permission notice to
+    // travel with every copy — the shipped app included; the repository's LICENSE alone never reaches
+    // the phone. Text below is the repository's LICENSE, verbatim. / Copaky は azooKey（MIT）の派生物。
+    // MIT の表記義務は配布物（この App）にも及ぶので、リポジトリの LICENSE をそのままここにも掲載する。
+    private let license_azookey = """
+    MIT License
+
+    Copyright (c) 2020-2025 Keita Miwa (ensan).  [upstream azooKey]
+    Copyright (c) 2026 Vittorio Villani (Copaky — fork modifications).
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+    """
+
     private let license_mecab = """
     MeCab is copyrighted free software by Taku Kudo <taku@chasen.org> and
     Nippon Telegraph and Telephone Corporation, and is released under
@@ -95,6 +124,15 @@ struct OpenSourceSoftwaresLicenseView: View {
         Form {
             Section {
                 Text("本アプリケーションは多くのオープンソースソフトウェアを用いて作成されています。この場を借りて感謝申し上げます。")
+            }
+            // Kept as a direct child of the Form (not inside the Group below, which already holds ten
+            // views) so the builder arity stays where it was. / 下の Group は既に 10 要素なので Form 直下に置く。
+            Section {
+                Text(verbatim: "azooKey / Copaky").font(.title).padding()
+                Text("本アプリケーションはazooKey（MITライセンス）を基盤としています。以下はazooKeyとCopakyのライセンス表記です。")
+                Text(license_azookey)
+                FallbackLink("License", destination: "https://github.com/pettipol/copaky/blob/main/LICENSE")
+                FallbackLink(verbatim: "azooKey", destination: "https://github.com/azooKey/azooKey")
             }
             Group {
                 Section {
