@@ -228,18 +228,25 @@ struct SettingTabView: View {
 
                 Section("オープンソースソフトウェア") {
                     Text("CopakyはオープンソースソフトウェアであるazooKeyをベースにしています。azooKeyのソースコードはGitHubで公開されています。")
+                    // Copaky: expose the fork's source while keeping the upstream attribution beside it.
+                    FallbackLink("View Copaky on GitHub", destination: URL(string: "https://github.com/pettipol/copaky")!)
                     FallbackLink("View azooKey on GitHub", destination: URL(string: "https://github.com/azooKey/azooKey")!)
                     NavigationLink("Acknowledgements") {
                         OpenSourceSoftwaresLicenseView()
                     }
                 }
-                .searchKeys("オープンソース", "ライセンス", "謝辞", "OSS", "ソフトウェア")
+                .searchKeys("オープンソース", "ライセンス", "謝辞", "OSS", "ソフトウェア", "GitHub", "Copaky")
 
                 Section("このアプリについて") {
                     NavigationLink("お問い合わせ") {
                         ContactView()
                     }
                     .searchKeys("お問い合わせ", "質問", "連絡", "メール")
+                    // Copaky: summarize the three bundled keyboard languages and their current scope.
+                    NavigationLink("対応言語") {
+                        SupportedLanguagesView()
+                    }
+                    .searchKeys("対応言語", "言語", "日本語", "英語", "イタリア語", "languages")
                     FallbackLink("プライバシーポリシー", destination: URL(string: "https://copaky.app/privacy.html")!)
                         .foregroundStyle(.primary)
                         .searchKeys("プライバシーポリシー", "個人情報", "ライセンス")
