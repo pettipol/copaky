@@ -1911,6 +1911,22 @@
         }
       }
     },
+    "1. キーボードを追加する" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Add the keyboard"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. Aggiungi la tastiera"
+          }
+        }
+      }
+    },
     "1. 設定 → ユーザ辞書 → Copakyユーザ辞書 を開く" : {
       "localizations" : {
         "en" : {
@@ -1944,6 +1960,22 @@
         }
       }
     },
+    "2. フルアクセスを許可する" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2. Allow Full Access"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2. Consenti l'accesso completo"
+          }
+        }
+      }
+    },
     "2. 右上の「追加する」を押す" : {
       "localizations" : {
         "en" : {
@@ -1956,6 +1988,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "2. Tocca «Aggiungi» in alto a destra"
+          }
+        }
+      }
+    },
+    "3. 「ほかのAppからペースト」を「許可」にする" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3. Set “Paste from Other Apps” to Allow"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3. Imposta «Incolla da altre app» su Consenti"
           }
         }
       }
@@ -3085,6 +3133,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Italiano"
+          }
+        }
+      }
+    },
+    "イタリア語の予測変換を使うには、設定 ▸ 「イタリア語を使う」をオンにしてください。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "For Italian predictions, turn on “Use Italian” in Settings."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Per i suggerimenti in italiano, attiva Impostazioni ▸ «Usa l'italiano»."
           }
         }
       }
@@ -4896,6 +4960,22 @@
         }
       }
     },
+    "これで、文字を入力するときにCopakyをキーボードとして選べるようになります。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This makes Copaky available as a keyboard when you type."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Così potrai scegliere Copaky come tastiera quando scrivi."
+          }
+        }
+      }
+    },
     "これはCopakyの問題ではなく、OS側のデータの更新が遅れている可能性があります。" : {
       "localizations" : {
         "en" : {
@@ -5831,6 +5911,22 @@
         }
       }
     },
+    "データはすべてこの端末内にとどまり、キーボードはネットワーク接続を行わず、フルアクセスはいつでもオフにできます。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All data stays on this device; the keyboard makes no network connections, and you can turn Full Access off at any time."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tutti i dati restano su questo dispositivo; la tastiera non effettua connessioni di rete e puoi disattivare l'accesso completo in qualsiasi momento."
+          }
+        }
+      }
+    },
     "テキスト" : {
       "localizations" : {
         "en" : {
@@ -6124,6 +6220,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Segnala un bug o richiedi una nuova funzione"
+          }
+        }
+      }
+    },
+    "はじめに" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Getting started"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Per iniziare"
           }
         }
       }
@@ -6672,6 +6784,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "La tastiera funziona perfettamente anche senza concedere l'accesso completo. Se non usi le funzioni sopra indicate, ti consigliamo vivamente di non attivarlo."
+          }
+        }
+      }
+    },
+    "フルアクセスを許可すると、Copakyの振動フィードバック、ペーストボタン、「クリップボードの履歴」タブを使えるようになります。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Full Access enables Copaky's haptics, paste button, and Clipboard History tab."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Con l'accesso completo diventano disponibili il feedback aptico, il pulsante Incolla e la scheda Cronologia degli appunti di Copaky."
           }
         }
       }
@@ -11112,6 +11240,22 @@
         }
       }
     },
+    "次にできること" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Where to go next"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passi successivi"
+          }
+        }
+      }
+    },
     "欲しい変換がない" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -12615,6 +12759,22 @@
         }
       }
     },
+    "言語キーで日本語・英語・イタリア語を切り替えられ、長押しするとメニューから選べます。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use the language key to switch between Japanese, English, and Italian; long-press it to choose from the menu."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usa il tasto della lingua per passare tra giapponese, inglese e italiano; tienilo premuto per scegliere dal menu."
+          }
+        }
+      }
+    },
     "記号(ローマ字入力)" : {
       "localizations" : {
         "en" : {
@@ -12691,6 +12851,54 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Attiva l'opzione Impostazioni ▸ «Usa l'italiano», quindi scegli IT con il tasto lingua QWERTY. È attiva per impostazione predefinita quando l'italiano è la prima lingua preferita del dispositivo."
+          }
+        }
+      }
+    },
+    "設定アプリで「Copaky」▸「ほかのAppからペースト」▸「許可」の順に進みます。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In the Settings app, go to Copaky ▸ Paste from Other Apps ▸ Allow."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nell'app Impostazioni, vai su Copaky ▸ Incolla da altre app ▸ Consenti."
+          }
+        }
+      }
+    },
+    "設定アプリで「一般」▸「キーボード」▸「キーボード」▸「Copaky」▸「フルアクセスを許可」をオンにします。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In the Settings app, go to General ▸ Keyboard ▸ Keyboards ▸ Copaky and turn on Allow Full Access."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nell'app Impostazioni, vai su Generali ▸ Tastiera ▸ Tastiere ▸ Copaky e attiva Consenti accesso completo."
+          }
+        }
+      }
+    },
+    "設定アプリで「一般」▸「キーボード」▸「キーボード」▸「新しいキーボードを追加」▸「Copaky」の順に進みます。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In the Settings app, go to General ▸ Keyboard ▸ Keyboards ▸ Add New Keyboard ▸ Copaky."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nell'app Impostazioni, vai su Generali ▸ Tastiera ▸ Tastiere ▸ Aggiungi nuova tastiera ▸ Copaky."
           }
         }
       }
@@ -12787,6 +12995,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Non è possibile attivare questa impostazione"
+          }
+        }
+      }
+    },
+    "許可しないと、「クリップボードの履歴」タブがクリップボードを読み取るたびに、iOSのペースト確認ダイアログが表示されます。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Without this permission, iOS shows a paste confirmation dialog each time the Clipboard History tab reads the clipboard."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Senza questa autorizzazione, iOS mostra una finestra di dialogo per confermare l'incolla ogni volta che la scheda Cronologia degli appunti legge gli appunti."
           }
         }
       }

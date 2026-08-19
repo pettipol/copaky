@@ -249,6 +249,11 @@ struct SettingTabView: View {
                         ContactView()
                     }
                     .searchKeys("お問い合わせ", "質問", "連絡", "メール")
+                    // Copaky: expose onboarding from Settings search. / 設定検索から案内へ移動。
+                    NavigationLink("はじめに") {
+                        GettingStartedTipsView()
+                    }
+                    .searchKeys("はじめに", "使い方", "フルアクセス", "ペースト", "getting started")
                     // Copaky: summarize the three bundled keyboard languages and their current scope.
                     NavigationLink("対応言語") {
                         SupportedLanguagesView()

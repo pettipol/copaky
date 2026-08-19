@@ -15,6 +15,8 @@ struct TipsTabView: View {
         NavigationStack {
             Form {
                 Section("キーボードを使えるようにする") {
+                    // Copaky: keep Getting started first and always visible. / 「はじめに」を先頭に常時表示。
+                    NavigationLink("はじめに", destination: GettingStartedTipsView())
                     if !appStates.isKeyboardActivated {
                         Text("キーボードを有効化する")
                             .onTapGesture {
