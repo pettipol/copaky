@@ -549,12 +549,6 @@ final class InputManager {
         }
 
         let typed = self.composingText.prefixToCursorPosition().convertTarget
-        // Copaky: fail-closed — only words the device's Italian spell checker rejects may be fixed;
-        // valid plain words the bundled lexicon merely lacks ("meta", "Sara") are left alone.
-        // Copaky: 端末の辞書が誤りとする語だけを対象にする（fail-closed）。
-        guard ItalianAutoAccentPolicy.systemFlagsAsMisspelledItalian(typed) else {
-            return nil
-        }
         let context = proxy.documentContextBeforeInput.map { context in
             context.hasSuffix(typed) ? String(context.dropLast(typed.count)) : context
         }
@@ -564,7 +558,17 @@ final class InputManager {
         ) else {
             return nil
         }
-        return ItalianAccentAutocorrect.accentFix(forTypedWord: typed)
+        guard let fix = ItalianAccentAutocorrect.accentFix(forTypedWord: typed) else {
+            return nil
+        }
+        // Copaky: double fail-closed oracle — the device's Italian checker must reject the plain
+        // word AND itself suggest the accented form we are about to insert; otherwise leave the
+        // text exactly as typed ("Sara", "meta", any name the dictionary simply lacks).
+        // Copaky: 端末の校正が誤りと判定し、かつ同じ補正形を提案する場合のみ置換する。
+        guard ItalianAutoAccentPolicy.systemConfirmsAccentFix(forTyped: typed, fix: fix) else {
+            return nil
+        }
+        return fix
     }
 
     /// テキストの進行方向に削除する

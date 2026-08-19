@@ -19,18 +19,12 @@ public enum ItalianAutoAccentPolicy {
         }
     }
 
-    // Copaky: content types where an "accent fix" would corrupt data the host expects verbatim —
-    // the keyboardType gate alone misses hosts that set only textContentType (counter-review 2026-08-19).
-    // Copaky: keyboardType だけでは漏れる URL/メール等の textContentType も除外する。
+    // Copaky: FAIL-CLOSED — any structured textContentType (URL, email, codes, dates, card fields,
+    // names, flight numbers, …) means the host expects the text verbatim, so auto-accent stays off;
+    // free prose fields leave the trait nil. A denylist proved fail-open (re-review 2026-08-19).
+    // Copaky: textContentType が設定された欄はすべて除外（fail-closed）。自由文の欄は nil。
     public static func allowsTextContentType(_ contentType: UITextContentType?) -> Bool {
-        guard let contentType else {
-            return true
-        }
-        let blocked: [UITextContentType] = [
-            .URL, .emailAddress, .telephoneNumber, .username, .password, .newPassword, .oneTimeCode,
-            .creditCardNumber, .postalCode, .nickname,
-        ]
-        return !blocked.contains(contentType)
+        contentType == nil
     }
 
     // Copaky: fail-closed oracle — the fix is applied only when the SYSTEM Italian spell checker
@@ -52,6 +46,22 @@ public enum ItalianAutoAccentPolicy {
             language: "it_IT"
         )
         return range.location != NSNotFound
+    }
+
+    // Copaky: second half of the fail-closed oracle — the fix is applied only when the system
+    // checker not only rejects the plain word but itself SUGGESTS the accented form we would
+    // insert. A valid name merely missing from the device dictionary never gets guesses equal to
+    // our candidate, which closes the residual path of the 2026-08-19 re-review.
+    // Copaky: 端末の校正候補にこちらの補正形が含まれる場合のみ適用（fail-closed の後段）。
+    @MainActor public static func systemConfirmsAccentFix(forTyped typed: String, fix: String) -> Bool {
+        guard systemFlagsAsMisspelledItalian(typed) else {
+            return false
+        }
+        let checker = UITextChecker()
+        let range = NSRange(location: 0, length: (typed as NSString).length)
+        let guesses = checker.guesses(forWordRange: range, in: typed, language: "it_IT") ?? []
+        let locale = Locale(identifier: "it_IT")
+        return guesses.contains { $0.compare(fix, options: [.caseInsensitive], range: nil, locale: locale) == .orderedSame }
     }
 
     public static func isSentenceStart(documentContextBeforeInput context: String?) -> Bool {

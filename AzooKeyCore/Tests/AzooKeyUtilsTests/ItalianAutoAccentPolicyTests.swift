@@ -41,14 +41,12 @@ final class ItalianAutoAccentPolicyTests: XCTestCase {
         }
     }
 
-    // Copaky: hosts that declare only textContentType must still be excluded (counter-review 2026-08-19).
+    // Copaky: fail-closed — ANY declared textContentType disables auto-accent (re-review 2026-08-19).
     func testTextContentTypeGate() {
         XCTAssertTrue(ItalianAutoAccentPolicy.allowsTextContentType(nil))
-        XCTAssertTrue(ItalianAutoAccentPolicy.allowsTextContentType(.name))
-        XCTAssertFalse(ItalianAutoAccentPolicy.allowsTextContentType(.URL))
-        XCTAssertFalse(ItalianAutoAccentPolicy.allowsTextContentType(.emailAddress))
-        XCTAssertFalse(ItalianAutoAccentPolicy.allowsTextContentType(.password))
-        XCTAssertFalse(ItalianAutoAccentPolicy.allowsTextContentType(.oneTimeCode))
+        for contentType: UITextContentType in [.name, .URL, .emailAddress, .password, .oneTimeCode, .creditCardNumber] {
+            XCTAssertFalse(ItalianAutoAccentPolicy.allowsTextContentType(contentType), "\(contentType) must be blocked")
+        }
     }
 
     // Copaky: the fail-closed oracle — valid plain words the bundled lexicon lacks must NOT be flagged,
@@ -66,6 +64,21 @@ final class ItalianAutoAccentPolicyTests: XCTestCase {
         for word in ["Sara", "meta", "faro", "pero", "si", "da", "ciao", "perché"] {
             XCTAssertFalse(ItalianAutoAccentPolicy.systemFlagsAsMisspelledItalian(word), "\(word) must not be flagged")
         }
+    }
+
+    // Copaky: the second oracle stage — the system's own guesses must contain the exact fix.
+    @MainActor func testSystemConfirmsAccentFix() throws {
+        try XCTSkipUnless(
+            UITextChecker.availableLanguages.contains(where: { $0.hasPrefix("it") }),
+            "no Italian spell-check dictionary on this runtime"
+        )
+        XCTAssertTrue(ItalianAutoAccentPolicy.systemConfirmsAccentFix(forTyped: "perche", fix: "perché"))
+        XCTAssertTrue(ItalianAutoAccentPolicy.systemConfirmsAccentFix(forTyped: "citta", fix: "città"))
+        // Valid words and names are already accepted by the checker → first stage says no.
+        XCTAssertFalse(ItalianAutoAccentPolicy.systemConfirmsAccentFix(forTyped: "Sara", fix: "Sarà"))
+        XCTAssertFalse(ItalianAutoAccentPolicy.systemConfirmsAccentFix(forTyped: "meta", fix: "metà"))
+        // A flagged word whose guesses do not contain our candidate must not be replaced.
+        XCTAssertFalse(ItalianAutoAccentPolicy.systemConfirmsAccentFix(forTyped: "perche", fix: "città"))
     }
 }
 
