@@ -543,11 +543,18 @@ final class InputManager {
               let proxy = self.mainTextDocumentProxy,
               proxy.autocorrectionType != .no,
               !KeyboardViewController.isSecureField(proxy),
-              ItalianAutoAccentPolicy.allowsKeyboardType(proxy.keyboardType ?? .default) else {
+              ItalianAutoAccentPolicy.allowsKeyboardType(proxy.keyboardType ?? .default),
+              ItalianAutoAccentPolicy.allowsTextContentType(proxy.textContentType) else {
             return nil
         }
 
         let typed = self.composingText.prefixToCursorPosition().convertTarget
+        // Copaky: fail-closed — only words the device's Italian spell checker rejects may be fixed;
+        // valid plain words the bundled lexicon merely lacks ("meta", "Sara") are left alone.
+        // Copaky: 端末の辞書が誤りとする語だけを対象にする（fail-closed）。
+        guard ItalianAutoAccentPolicy.systemFlagsAsMisspelledItalian(typed) else {
+            return nil
+        }
         let context = proxy.documentContextBeforeInput.map { context in
             context.hasSuffix(typed) ? String(context.dropLast(typed.count)) : context
         }

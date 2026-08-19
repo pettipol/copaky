@@ -45,7 +45,7 @@ struct GettingStartedTipsView: View {
             TipsContentParagraph {
                 Text("次にできること")
                     .bold()
-                Text("言語キーで日本語・英語・イタリア語を切り替えられ、長押しするとメニューから選べます。")
+                Text("言語キーで日本語と英語を切り替えられます。「イタリア語を使う」をオンにするとイタリア語も巡回に加わり、長押しでメニューから直接選べます。")
                 Text("イタリア語の予測変換を使うには、設定 ▸ 「イタリア語を使う」をオンにしてください。")
                 NavigationLink("フルアクセスについて") {
                     FullAccessTipsView()

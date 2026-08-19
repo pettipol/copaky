@@ -270,6 +270,12 @@ struct OpenSourceSoftwaresLicenseView: View {
             Section {
                 Text(verbatim: "swift-tokenizers").font(.title).padding()
                 Text("本アプリケーションには、変換エンジン経由でswift-tokenizers（swift-transformersの派生、Apache License 2.0）が含まれています。")
+                // Copaky: the full Apache-2.0 text ships in-app (it also covers Swift Algorithms and
+                // Swift Collections above); the link stays as a convenience only. / 全文をアプリ内に同梱。
+                Text("以下のApache License 2.0の全文は、swift-tokenizersのほか、上記のSwift AlgorithmsとSwift Collectionsにも適用されます。")
+                Text(verbatim: ThirdPartyLicenseTexts.apache2)
+                    .font(.caption2)
+                    .textSelection(.enabled)
                 FallbackLink(verbatim: "Apache License 2.0", destination: "https://github.com/ensan-hcl/swift-tokenizers/blob/main/LICENSE")
                 FallbackLink(verbatim: "swift-tokenizers", destination: "https://github.com/ensan-hcl/swift-tokenizers")
             }

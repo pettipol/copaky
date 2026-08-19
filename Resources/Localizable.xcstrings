@@ -5458,18 +5458,18 @@
         }
       }
     },
-    "タイプミスはまだ自動修正されません。記号タブは日本語QWERTYと共通です。" : {
+    "タイプミスはまだ自動修正されません。数字・記号タブは選択中のラテン文字言語に合わせて表示されます。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Typos are not corrected automatically yet. The symbols tab is shared with Japanese QWERTY."
+            "value" : "Typos are not corrected automatically yet. The numbers and symbols tabs follow the active Latin language."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gli errori di battitura non vengono ancora corretti automaticamente. La scheda dei simboli è condivisa con il QWERTY giapponese."
+            "value" : "Gli errori di battitura non vengono ancora corretti automaticamente. Le schede dei numeri e dei simboli seguono la lingua latina attiva."
           }
         }
       }
@@ -10839,6 +10839,22 @@
         }
       }
     },
+    "以下のApache License 2.0の全文は、swift-tokenizersのほか、上記のSwift AlgorithmsとSwift Collectionsにも適用されます。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The full text of the Apache License 2.0 below applies to swift-tokenizers and also to Swift Algorithms and Swift Collections listed above."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il testo completo della Apache License 2.0 qui sotto vale per swift-tokenizers e anche per Swift Algorithms e Swift Collections elencati sopra."
+          }
+        }
+      }
+    },
     "本アプリケーションには、変換エンジン経由でswift-tokenizers（swift-transformersの派生、Apache License 2.0）が含まれています。" : {
       "localizations" : {
         "en" : {
@@ -12759,18 +12775,18 @@
         }
       }
     },
-    "言語キーで日本語・英語・イタリア語を切り替えられ、長押しするとメニューから選べます。" : {
+    "言語キーで日本語と英語を切り替えられます。「イタリア語を使う」をオンにするとイタリア語も巡回に加わり、長押しでメニューから直接選べます。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Use the language key to switch between Japanese, English, and Italian; long-press it to choose from the menu."
+            "value" : "The language key switches between Japanese and English. With “Use Italian” on, Italian joins the cycle and a long-press opens a menu to pick a language directly."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Usa il tasto della lingua per passare tra giapponese, inglese e italiano; tienilo premuto per scegliere dal menu."
+            "value" : "Il tasto lingua passa da giapponese a inglese. Con «Usa l'italiano» attivo si aggiunge anche l'italiano e con un tocco lungo si apre un menù per scegliere direttamente la lingua."
           }
         }
       }
