@@ -1381,6 +1381,94 @@ final class CopakyCampaignTests: XCTestCase {
         shot("37-done")
     }
 
+    // MARK: - 38 · Latin number tab keeps Latin punctuation and return target
+
+    /// Copaky: the QWERTY number tab must type a literal dot and return to its originating Latin tab.
+    /// Copaky: QWERTY数字タブは半角ピリオドを入力し、元のラテン文字タブへ戻る。
+    func test38_latinNumbersTabReturnsToLatin() throws {
+        let field = activatePreNavigatedField("plain-text")
+        switchToCopaky(in: safari)
+        dismissCopakyNotice(in: safari)
+
+        let latinSpaceLabels = L.spaceKey.filter { $0 != "空白" }
+        func latinQwertyVisible(timeout: TimeInterval) -> Bool {
+            let letter = safari.descendants(matching: .any)
+                .matching(NSPredicate(format: "label IN %@", ["q", "Q"])).firstMatch
+            let space = safari.descendants(matching: .any)
+                .matching(NSPredicate(format: "label IN %@", latinSpaceLabels)).firstMatch
+            return letter.waitForExistence(timeout: timeout) && space.exists
+        }
+
+        switchToEnglishTab(in: safari)
+        if !latinQwertyVisible(timeout: 2) {
+            // Copaky: A persisted language-less tab may expose only its full back label beside Globe.
+            // Copaky: 保持された言語なしタブではGlobe横の完全な戻り先表示を使う。
+            if let back = firstMatch(in: safari, labels: ["ABC", "ITA", "あいう"], timeout: 2), back.isHittable {
+                back.tap()
+                RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+            }
+        }
+        if !latinQwertyVisible(timeout: 2) {
+            // Copaky: Returning to Japanese first requires one normal language-switch tap afterward.
+            // Copaky: いったん日本語へ戻った場合は通常の言語切替をもう一度行う。
+            switchToEnglishTab(in: safari)
+        }
+        guard latinQwertyVisible(timeout: 4) else {
+            dump(safari, "38-no-initial-latin-qwerty")
+            shot("38-no-initial-latin-qwerty")
+            XCTFail("Latin QWERTY not reached; seed keyboard_type_en=roman")
+            return
+        }
+        clearFocusedField(field, placeholder: "plain-text", in: safari)
+
+        // Copaky: SwiftUI may expose this SF Symbol by spoken label or symbol identifier.
+        // Copaky: SF Symbolは読み上げ名または識別子で公開される場合がある。
+        let numberKeyLabels = ["123", "numbers", "Numbers", "numeri", "Numeri", "数字", "textformat.123", "textformat.numbers"]
+        guard let numbersKey = firstMatch(in: safari, labels: numberKeyLabels, timeout: 4) else {
+            dump(safari, "38-numbers-key-not-found")
+            shot("38-numbers-key-not-found")
+            XCTFail("Latin QWERTY numbers key not found")
+            return
+        }
+        numbersKey.tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+
+        tapKeys(["."], in: safari)
+        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+
+        // Copaky: Select the left language key; the second bottom key may also read ABC.
+        // Copaky: 2番目のキーもABCになり得るため、左端の言語キーを選ぶ。
+        let returnCandidates = safari.descendants(matching: .any)
+            .matching(NSPredicate(format: "label IN %@", ["ABC", "ITA", "あいう"]))
+        var backKey: XCUIElement?
+        var leftmostX = CGFloat.greatestFiniteMagnitude
+        for index in 0..<returnCandidates.count {
+            let candidate = returnCandidates.element(boundBy: index)
+            if candidate.exists, candidate.isHittable, candidate.frame.minX < leftmostX {
+                backKey = candidate
+                leftmostX = candidate.frame.minX
+            }
+        }
+        guard let backKey else {
+            dump(safari, "38-latin-back-key-not-found")
+            shot("38-latin-back-key-not-found")
+            XCTFail("Numbers-tab language/back key not found")
+            return
+        }
+        backKey.tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+
+        let value = field.value as? String ?? ""
+        let returnedToLatin = latinQwertyVisible(timeout: 4)
+        if !returnedToLatin {
+            dump(safari, "38-did-not-return-to-latin")
+        }
+        shot("38-latin-return")
+        XCTAssertEqual(value, ".", "Latin numbers tab must input a literal ASCII dot")
+        XCTAssertFalse(value.contains("。") || value.contains("．"), "No Japanese/full-width dot may be input")
+        XCTAssertTrue(returnedToLatin, "Numbers-tab back key returned to Japanese or stayed on numbers")
+    }
+
     // MARK: - 34 · Copaky extension: the system paste control renders inside the input view
 
     /// Apple does not document putting `UIPasteControl` inside a keyboard extension's input view, so

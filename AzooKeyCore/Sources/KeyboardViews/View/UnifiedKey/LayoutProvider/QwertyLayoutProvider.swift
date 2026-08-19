@@ -1,5 +1,6 @@
 import CustardKit
 import Foundation
+import enum KanaKanjiConverterModule.KeyboardLanguage
 
 // Copaky: optional number hints on the QWERTY top row / QWERTY最上段の数字ヒント（長押しで入力）
 private let qwertyTopRowDigits: [String: String] = [
@@ -8,6 +9,8 @@ private let qwertyTopRowDigits: [String: String] = [
 ]
 
 struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
+    typealias Layout = [UnifiedPositionSpecifier: any UnifiedKeyModelProtocol<Extension>]
+
     enum ShiftBehaviorPreference {
         case left
         case leftbottom
@@ -56,7 +59,80 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
         let changeKeyboardKey: any UnifiedKeyModelProtocol<Extension> = QwertyDynamicChangeKeyModel<Extension>()
         return (languageKey, numbersKey, symbolsKey, changeKeyboardKey)
     }
-    @MainActor static var numberKeyboard: [UnifiedPositionSpecifier: any UnifiedKeyModelProtocol<Extension>] {
+
+    // Copaky: Latin symbol tabs use verbatim labels whose tap action inputs the same character.
+    // Copaky: ラテン記号タブは表示文字とタップ入力を必ず一致させる。
+    @MainActor private static func latinInputKey(
+        _ label: String,
+        variations: [String] = [],
+        direction: VariationsViewDirection = .right
+    ) -> any UnifiedKeyModelProtocol<Extension> {
+        let variationModels = variations.map {
+            QwertyVariationsModel.VariationElement(label: .text($0), actions: [.input($0)])
+        }
+        return QwertyGeneralKeyModel(
+            labelType: .text(label),
+            pressActions: { _ in [.input(label)] },
+            longPressActions: { _ in .none },
+            variations: variationModels,
+            direction: direction,
+            showsTapBubble: !variationModels.isEmpty,
+            role: .normal
+        )
+    }
+
+    @MainActor private static func latinDeleteKey() -> any UnifiedKeyModelProtocol<Extension> {
+        QwertyGeneralKeyModel(
+            labelType: .image("delete.left"),
+            pressActions: { _ in [.delete(1)] },
+            longPressActions: { _ in .init(repeat: [.delete(1)]) },
+            variations: [], direction: .right, showsTapBubble: false, role: .special
+        )
+    }
+
+    @MainActor private static func appendLatinPunctuationRow(
+        to dict: inout Layout,
+        leadingKey: any UnifiedKeyModelProtocol<Extension>
+    ) {
+        dict[.init(x: 0, y: 2, width: 1.4)] = leadingKey
+        let punctuation: [(label: String, variations: [String])] = [
+            (".", [".", "…"]),
+            (",", [",", "‚"]),
+            ("?", ["?", "¿"]),
+            ("!", ["!", "¡"]),
+            ("'", ["'", "‘", "’", "‚"]),
+        ]
+        for (index, key) in punctuation.enumerated() {
+            dict[.init(x: 1.5 + Double(index) * 1.4, y: 2, width: 1.4)] = latinInputKey(
+                key.label,
+                variations: key.variations,
+                direction: .center
+            )
+        }
+        dict[.init(x: 8.6, y: 2, width: 1.4)] = latinDeleteKey()
+    }
+
+    @MainActor private static func appendLatinBottomRow(
+        to dict: inout Layout,
+        enterKey: any UnifiedKeyModelProtocol<Extension>
+    ) {
+        let tabs = tabKeys()
+        dict[.init(x: 0, y: 3, width: 1.4)] = tabs.languageKey
+        dict[.init(x: 1.4, y: 3, width: 1.4)] = tabs.changeKeyboardKey
+        dict[.init(x: 2.8, y: 3, width: 4.4)] = spaceKey()
+        dict[.init(x: 7.2, y: 3, width: 2.8)] = enterKey
+    }
+
+    // Copaky: Build language-less number tabs on demand from the preserved typing language.
+    // Copaky: 言語なし数字タブを保持中の入力言語から動的に構築する。
+    @MainActor static func numberKeyboard(language: KeyboardLanguage) -> Layout {
+        if language.usesLatinScript {
+            return latinNumberKeyboard(language: language)
+        }
+        return japaneseNumberKeyboard
+    }
+
+    @MainActor private static var japaneseNumberKeyboard: Layout {
         func uniKey(label: KeyLabelType, press: [ActionType], vars: [QwertyVariationsModel.VariationElement], dir: VariationsViewDirection = .center, showsBubble: Bool = true, role: QwertyGeneralKeyModel<Extension>.UnpressedRole = .normal) -> any UnifiedKeyModelProtocol<Extension> {
             QwertyGeneralKeyModel<Extension>(
                 labelType: label,
@@ -152,6 +228,46 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
         dict[.init(x: 2.8, y: 3, width: 4.4)] = spaceKey()
         dict[.init(x: 7.2, y: 3, width: 2.8)] = UnifiedEnterKeyModel<Extension>(textSize: .small)
 
+        return dict
+    }
+
+    // Copaky: Match the system keyboard's Latin number layout; EN uses $, IT uses €.
+    // Copaky: システム配列に合わせ、英語は$、イタリア語は€を表示する。
+    @MainActor private static func latinNumberKeyboard(language: KeyboardLanguage) -> Layout {
+        var dict: Layout = [:]
+        for (index, label) in ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"].enumerated() {
+            dict[.init(x: Double(index), y: 0)] = latinInputKey(
+                label,
+                direction: index < 8 ? .right : .left
+            )
+        }
+
+        let currency = language == .it_IT ? "€" : "$"
+        let secondRow: [(label: String, variations: [String])] = [
+            ("-", ["-", "–", "—", "•"]),
+            ("/", ["/", "\\"]),
+            (":", []),
+            (";", []),
+            ("(", []),
+            (")", []),
+            (currency, [currency, currency == "€" ? "$" : "€", "£", "¥"]),
+            ("&", []),
+            ("@", []),
+            ("\"", ["\"", "“", "”", "„"]),
+        ]
+        for (index, key) in secondRow.enumerated() {
+            dict[.init(x: Double(index), y: 1)] = latinInputKey(
+                key.label,
+                variations: key.variations,
+                direction: index < 8 ? .right : .left
+            )
+        }
+
+        appendLatinPunctuationRow(to: &dict, leadingKey: tabKeys().symbolsKey)
+        appendLatinBottomRow(
+            to: &dict,
+            enterKey: UnifiedEnterKeyModel<Extension>(textSize: .small)
+        )
         return dict
     }
 
@@ -284,7 +400,8 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
         }
         // Row 1 core letters
         let core = ["a", "s", "d", "f", "g", "h", "j", "k", "l"].enumerated()
-        switch shiftBehaviorPreference() {
+        let shiftBehavior = shiftBehaviorPreference()
+        switch shiftBehavior {
         case .leftbottom:
             // No shift on row1; place core letters and dot key at end
             for (i, c) in core {
@@ -319,19 +436,36 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
             variations: [], direction: .right, showsTapBubble: false, role: .special
         )
         // Row 3: numbers or shift at left, and dynamic change key next
-        switch shiftBehaviorPreference() {
+        switch shiftBehavior {
         case .leftbottom:
             dict[.init(x: 0, y: 3, width: 1.4)] = QwertyShiftKeyModel<Extension>()
         default:
             dict[.init(x: 0, y: 3, width: 1.4)] = tabsAbc.numbersKey
         }
         dict[.init(x: 1.4, y: 3, width: 1.4)] = tabsAbc.changeKeyboardKey
-        dict[.init(x: 2.8, y: 3, width: 4.4)] = spaceKey()
+        switch shiftBehavior {
+        case .leftbottom:
+            dict[.init(x: 2.8, y: 3, width: 4.4)] = spaceKey()
+        case .left, .off:
+            // Copaky: Shift/Aa occupies row 1, so keep punctuation beside Return and narrow Space.
+            // Copaky: Shift/Aa使用時は句点をReturn左に置き、Spaceを狭める。
+            dict[.init(x: 2.8, y: 3, width: 3.4)] = spaceKey()
+            dict[.init(x: 6.2, y: 3)] = dotKey()
+        }
         dict[.init(x: 7.2, y: 3, width: 2.8)] = UnifiedEnterKeyModel<Extension>(textSize: .small)
         return dict
     }
 
-    @MainActor static func symbolsKeyboard() -> [UnifiedPositionSpecifier: any UnifiedKeyModelProtocol<Extension>] {
+    // Copaky: Build language-less symbol tabs on demand from the preserved typing language.
+    // Copaky: 言語なし記号タブを保持中の入力言語から動的に構築する。
+    @MainActor static func symbolsKeyboard(language: KeyboardLanguage) -> Layout {
+        if language.usesLatinScript {
+            return latinSymbolsKeyboard(language: language)
+        }
+        return japaneseSymbolsKeyboard()
+    }
+
+    @MainActor private static func japaneseSymbolsKeyboard() -> Layout {
         func uni(_ x: Double, _ y: Double, _ label: String, vars: [String] = [], dir: VariationsViewDirection = .right) -> (UnifiedPositionSpecifier, any UnifiedKeyModelProtocol<Extension>) {
             let v = vars.map { QwertyVariationsModel.VariationElement(label: .text($0), actions: [.input($0)]) }
             return (.init(x: x, y: y), QwertyGeneralKeyModel(labelType: .text(label), pressActions: { _ in [.input(label)] }, longPressActions: { _ in .none }, variations: v, direction: dir, showsTapBubble: !v.isEmpty, role: .normal))
@@ -371,6 +505,56 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
         dict[.init(x: 1.4, y: 3, width: 1.4)] = tabs.changeKeyboardKey
         dict[.init(x: 2.8, y: 3, width: 4.4)] = spaceKey()
         dict[.init(x: 7.2, y: 3, width: 2.8)] = UnifiedEnterKeyModel<Extension>()
+        return dict
+    }
+
+    // Copaky: The system keyboard's symbol row uses $ for EN and € for IT, then £ and ¥.
+    // Copaky: システム記号配列は英語で$、イタリア語で€、続いて£と¥を置く。
+    @MainActor private static func latinSymbolsKeyboard(language: KeyboardLanguage) -> Layout {
+        var dict: Layout = [:]
+        let firstRow: [(label: String, variations: [String])] = [
+            ("[", []),
+            ("]", []),
+            ("{", []),
+            ("}", []),
+            ("#", []),
+            ("%", []),
+            ("^", []),
+            ("*", []),
+            ("+", ["+", "±"]),
+            ("=", ["=", "≠", "≈"]),
+        ]
+        for (index, key) in firstRow.enumerated() {
+            dict[.init(x: Double(index), y: 0)] = latinInputKey(
+                key.label,
+                variations: key.variations,
+                direction: index < 8 ? .right : .left
+            )
+        }
+
+        let currency = language == .it_IT ? "€" : "$"
+        let secondRow: [(label: String, variations: [String])] = [
+            ("_", []),
+            ("\\", ["\\", "/"]),
+            ("|", []),
+            ("~", []),
+            ("<", ["<", "≤"]),
+            (">", [">", "≥"]),
+            (currency, [currency, currency == "€" ? "$" : "€"]),
+            ("£", []),
+            ("¥", []),
+            ("•", ["•", "·"]),
+        ]
+        for (index, key) in secondRow.enumerated() {
+            dict[.init(x: Double(index), y: 1)] = latinInputKey(
+                key.label,
+                variations: key.variations,
+                direction: index < 8 ? .right : .left
+            )
+        }
+
+        appendLatinPunctuationRow(to: &dict, leadingKey: tabKeys().numbersKey)
+        appendLatinBottomRow(to: &dict, enterKey: UnifiedEnterKeyModel<Extension>())
         return dict
     }
 }

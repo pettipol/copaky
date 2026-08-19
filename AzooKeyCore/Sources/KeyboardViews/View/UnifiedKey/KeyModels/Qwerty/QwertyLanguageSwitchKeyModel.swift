@@ -3,6 +3,29 @@ import KanaKanjiConverterModule
 import KeyboardThemes
 import SwiftUI
 
+// Copaky: Keep language-switch target selection pure so language-less tabs are regression-tested.
+// Copaky: 言語なしタブの戻り先判定を純粋関数としてテスト可能にする。
+enum QwertyLanguageSwitchDecision {
+    static func targetLanguage(
+        currentTabLanguage: KeyboardLanguage?,
+        keyboardLanguage: KeyboardLanguage,
+        cycle: [KeyboardLanguage],
+        needsInputModeSwitchKey: Bool
+    ) -> KeyboardLanguage {
+        if let currentTabLanguage,
+           let index = cycle.firstIndex(of: currentTabLanguage) {
+            return cycle[(index + 1) % cycle.count]
+        }
+        if currentTabLanguage == nil, cycle.contains(keyboardLanguage) {
+            return keyboardLanguage
+        }
+        if needsInputModeSwitchKey, cycle.contains(keyboardLanguage) {
+            return keyboardLanguage
+        }
+        return cycle.first ?? .ja_JP
+    }
+}
+
 struct QwertyLanguageSwitchKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: UnifiedKeyModelProtocol {
     let languages: (KeyboardLanguage, KeyboardLanguage)
 
@@ -27,17 +50,12 @@ struct QwertyLanguageSwitchKeyModel<Extension: ApplicationSpecificKeyboardViewEx
 
     /// The language one tap moves to, given what is active now.
     @MainActor private func nextLanguage(variableStates: VariableStates) -> KeyboardLanguage {
-        let cycle = self.cycle
-        if let current = currentTabLanguage(variableStates: variableStates),
-           let index = cycle.firstIndex(of: current) {
-            return cycle[(index + 1) % cycle.count]
-        }
-        // Not on a tab that carries a language (numbers, symbols, clipboard…): go back to the
-        // language the keyboard was last typing, or to the first of the cycle.
-        if SemiStaticStates.shared.needsInputModeSwitchKey, cycle.contains(variableStates.keyboardLanguage) {
-            return variableStates.keyboardLanguage
-        }
-        return cycle.first ?? .ja_JP
+        QwertyLanguageSwitchDecision.targetLanguage(
+            currentTabLanguage: currentTabLanguage(variableStates: variableStates),
+            keyboardLanguage: variableStates.keyboardLanguage,
+            cycle: cycle,
+            needsInputModeSwitchKey: SemiStaticStates.shared.needsInputModeSwitchKey
+        )
     }
 
     @MainActor private func actions(for target: KeyboardLanguage) -> [ActionType] {
@@ -82,8 +100,9 @@ struct QwertyLanguageSwitchKeyModel<Extension: ApplicationSpecificKeyboardViewEx
             // "current / next": the key shows where you are and where one tap takes you.
             return KeyLabel(.selectable(current.shortSymbol, nextLanguage(variableStates: states).shortSymbol), width: width, textColor: color)
         }
-        if SemiStaticStates.shared.needsInputModeSwitchKey, cycle.contains(states.keyboardLanguage) {
-            return KeyLabel(.text(states.keyboardLanguage.symbol), width: width, textColor: color)
+        let target = nextLanguage(variableStates: states)
+        if cycle.contains(target) {
+            return KeyLabel(.text(target.symbol), width: width, textColor: color)
         }
         return KeyLabel(.text(KeyboardLanguage.ja_JP.symbol), width: width, textColor: color)
     }

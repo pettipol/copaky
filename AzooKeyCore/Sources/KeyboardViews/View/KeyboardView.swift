@@ -184,9 +184,11 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
         case .qwerty_abc:
             renderUnified(modelsDict: QwertyLayoutProvider<Extension>.abcKeyboard(), width: 10, height: 4)
         case .qwerty_numbers:
-            renderUnified(modelsDict: QwertyLayoutProvider<Extension>.numberKeyboard, width: 10, height: 4)
+            // Copaky: Language-less tabs render from the typing language preserved by TabManager.
+            // Copaky: 言語なしタブはTabManagerが保持する入力言語で描画する。
+            renderUnified(modelsDict: QwertyLayoutProvider<Extension>.numberKeyboard(language: variableStates.keyboardLanguage), width: 10, height: 4)
         case .qwerty_symbols:
-            renderUnified(modelsDict: QwertyLayoutProvider<Extension>.symbolsKeyboard(), width: 10, height: 4)
+            renderUnified(modelsDict: QwertyLayoutProvider<Extension>.symbolsKeyboard(language: variableStates.keyboardLanguage), width: 10, height: 4)
         case let .custard(custard):
             CustomKeyboardView<Extension>(custard: custard)
         case let .special(tab):
