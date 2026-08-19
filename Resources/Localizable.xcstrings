@@ -321,6 +321,38 @@
         }
       }
     },
+    "イタリア語タブで「perche」のようにアクセントを付け忘れた語の後にスペースを押すと、辞書にあるアクセント付きの形（perché）に自動で置き換えます。「si」「da」のようにアクセントなしでも正しい語には触れません。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On the Italian tab, pressing space after a word typed without its accent, like “perche”, replaces it with the accented form from the dictionary (“perché”). Words that are correct without an accent, like “si” or “da”, are left alone."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sulla tastiera italiana, premendo spazio dopo una parola scritta senza accento, come «perche», la sostituisce con la forma accentata del dizionario («perché»). Le parole corrette anche senza accento, come «si» o «da», non vengono toccate."
+          }
+        }
+      }
+    },
+    "スペースでアクセントを自動補正（イタリア語）" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auto-accent on space (Italian)"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accento automatico con lo spazio (italiano)"
+          }
+        }
+      }
+    },
     "イタリア語を使う" : {
       "localizations" : {
         "en" : {
@@ -12807,18 +12839,18 @@
         }
       }
     },
-    "語彙は今後の更新で拡充予定です。アクセントなしで入力した場合、アクセント付きの形は自動で確定されないため、候補から選んでください。" : {
+    "語彙は今後の更新で拡充予定です。アクセントなしで入力した語は、スペースで辞書のアクセント付きの形に補正されます（「perche」→「perché」。設定でオフにできます）。他の形は候補から選んでください。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The vocabulary will be expanded in future updates. When you type without accents, accented forms are not committed automatically; choose them from the candidates."
+            "value" : "The vocabulary will be expanded in future updates. A word typed without its accent is fixed to the dictionary's accented form when you press space (“perche” → “perché”; this can be turned off in Settings). Other forms are picked from the candidates."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Il vocabolario verrà ampliato nei prossimi aggiornamenti. Se scrivi senza accenti, le forme accentate non vengono confermate automaticamente: sceglile tra i suggerimenti."
+            "value" : "Il vocabolario verrà ampliato nei prossimi aggiornamenti. Una parola scritta senza accento viene corretta nella forma accentata del dizionario premendo spazio («perche» → «perché»; si può disattivare nelle Impostazioni). Le altre forme si scelgono tra i suggerimenti."
           }
         }
       }

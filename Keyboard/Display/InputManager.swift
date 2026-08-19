@@ -22,6 +22,10 @@ final class InputManager {
     private(set) var composingText = ComposingText()
     // 表示される文字列を管理するクラス
     private(set) var displayedTextManager: DisplayedTextManager
+    // Copaky: retain the host proxy separately so auto-accent can respect its input traits even when
+    // DisplayedTextManager temporarily prefers an in-keyboard text field.
+    // Copaky: キーボード内入力欄への切替中もホスト側の入力属性を確認できるよう保持する。
+    private var mainTextDocumentProxy: (any UITextDocumentProxy)?
     // TODO: displayedTextManagerとliveConversionManagerを何らかの形で統合したい
     // ライブ変換を管理するクラス
     var liveConversionManager: LiveConversionManager
@@ -242,6 +246,9 @@ final class InputManager {
     })
 
     func setTextDocumentProxy(_ proxy: AnyTextDocumentProxy) {
+        if case let .mainProxy(mainProxy) = proxy {
+            self.mainTextDocumentProxy = mainProxy
+        }
         self.displayedTextManager.setTextDocumentProxy(proxy)
     }
 
@@ -416,10 +423,36 @@ final class InputManager {
         _ = self.enter()
     }
 
+    // Copaky: build the same plain commit candidate with an optional visible-text override, used by
+    // auto-accent while preserving its composing count, dictionary metadata, and logging path.
+    // Copaky: アクセント補正でも入力数・辞書情報・学習経路を保つ確定候補を共通生成する。
+    @MainActor private func enterCandidate(textOverride: String?) -> Candidate {
+        let composingText = self.composingText.prefixToCursorPosition()
+        if textOverride == nil, liveConversionEnabled, let _candidate = liveConversionManager.lastUsedCandidate {
+            return _candidate
+        }
+        let committedText = textOverride ?? composingText.convertTarget
+        return Candidate(
+            text: committedText,
+            value: -18,
+            composingCount: .inputCount(composingText.input.count),
+            lastMid: MIDData.一般.mid,
+            data: [
+                DicdataElement(
+                    word: committedText,
+                    ruby: committedText.toKatakana(),
+                    cid: CIDData.固有名詞.cid,
+                    mid: MIDData.一般.mid,
+                    value: -18
+                ),
+            ]
+        )
+    }
+
     /// 「現在入力中として表示されている文字列で確定する」というセマンティクスを持った操作である。
     /// - parameters:
     ///  - shouldModifyDisplayedText: DisplayedTextを操作して良いか否か。`textDidChange`などの場合は操作してはいけない。
-    @MainActor func enter(shouldModifyDisplayedText: Bool = true, requireSetResult: Bool = true) -> [ActionType] {
+    @MainActor func enter(shouldModifyDisplayedText: Bool = true, requireSetResult: Bool = true, textOverride: String? = nil) -> [ActionType] {
         // selectedの場合、単に変換を止める
         if isSelected {
             self.stopComposition()
@@ -428,27 +461,7 @@ final class InputManager {
         if self.composingText.isEmpty {
             return []
         }
-        var candidate: Candidate
-        if liveConversionEnabled, let _candidate = liveConversionManager.lastUsedCandidate {
-            candidate = _candidate
-        } else {
-            let composingText = self.composingText.prefixToCursorPosition()
-            candidate = Candidate(
-                text: composingText.convertTarget,
-                value: -18,
-                composingCount: .inputCount(composingText.input.count),
-                lastMid: MIDData.一般.mid,
-                data: [
-                    DicdataElement(
-                        word: composingText.convertTarget,
-                        ruby: composingText.convertTarget.toKatakana(),
-                        cid: CIDData.固有名詞.cid,
-                        mid: MIDData.一般.mid,
-                        value: -18
-                    ),
-                ]
-            )
-        }
+        var candidate = self.enterCandidate(textOverride: textOverride)
         let actions = self.kanaKanjiConverter.getAppropriateActions(candidate)
         candidate.withActions(actions)
         candidate.parseTemplate()
@@ -490,7 +503,11 @@ final class InputManager {
         if self.shouldDirectInsert(text: text, simpleInsert: simpleInsert) {
             // 必要に応じて確定する
             if !self.isSelected {
-                _ = self.enter()
+                // Copaky: on the Italian tab, a plain space may commit a safe dictionary-backed
+                // accent fix; every failed gate falls through to the unchanged plain commit.
+                // Copaky: イタリア語タブの空白確定時だけ、安全条件を満たすアクセント補正を適用する。
+                let textOverride = text == " " ? self.italianAccentFixForSpace() : nil
+                _ = self.enter(textOverride: textOverride)
             } else {
                 self.stopComposition()
             }
@@ -515,6 +532,32 @@ final class InputManager {
             || text == "\n"
             || text == " " || text == "　" || text == "\t" || text == "\0"
             || self.keyboardLanguage == .none
+    }
+
+    @MainActor private func italianAccentFixForSpace() -> String? {
+        guard self.keyboardLanguage == .it_IT,
+              ItalianAutoAccentOnSpace.value,
+              !self.isSelected,
+              !self.composingText.isEmpty,
+              self.composingText.isAtEndIndex,
+              let proxy = self.mainTextDocumentProxy,
+              proxy.autocorrectionType != .no,
+              !KeyboardViewController.isSecureField(proxy),
+              ItalianAutoAccentPolicy.allowsKeyboardType(proxy.keyboardType ?? .default) else {
+            return nil
+        }
+
+        let typed = self.composingText.prefixToCursorPosition().convertTarget
+        let context = proxy.documentContextBeforeInput.map { context in
+            context.hasSuffix(typed) ? String(context.dropLast(typed.count)) : context
+        }
+        guard ItalianAutoAccentPolicy.allowsCapitalization(
+            of: typed,
+            documentContextBeforeInput: context
+        ) else {
+            return nil
+        }
+        return ItalianAccentAutocorrect.accentFix(forTypedWord: typed)
     }
 
     /// テキストの進行方向に削除する

@@ -45,6 +45,13 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
         self.inputManager.setTextDocumentProxy(.mainProxy(controller.textDocumentProxy))
     }
 
+    // Copaky: keep InputManager's converter language in step when a changed app setting switches an
+    // already-open Latin tab before the next key action runs.
+    // Copaky: 設定変更で表示中のラテン文字言語を切り替えた際、次のキー入力前に変換器も同期する。
+    @MainActor func synchronizeKeyboardLanguage(_ language: KeyboardLanguage) {
+        self.inputManager.setKeyboardLanguage(language)
+    }
+
     @MainActor func setResultViewUpdateCallback(_ variableStates: VariableStates) {
         self.inputManager.setUpdateResult { [weak variableStates, weak self] update in
             if let variableStates {

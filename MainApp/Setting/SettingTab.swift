@@ -62,6 +62,9 @@ struct SettingTabView: View {
                         BoolSettingView(.liveConversion)
                         BoolSettingView(.enableNumberRowHints)
                         BoolSettingView(.enableItalianKeyboardLanguage)
+                        // Copaky: keep auto-accent next to the Italian-language switch it qualifies.
+                        // Copaky: アクセント自動補正を対象となるイタリア語設定の直後に置く。
+                        BoolSettingView(.italianAutoAccentOnSpace)
                         BoolSettingView(.enableClipboardHistoryManagerTab)
                         BoolSettingView(.enableKeySound)
                         if SemiStaticStates.shared.hapticsAvailable {
@@ -181,6 +184,10 @@ struct SettingTabView: View {
                         .searchKeys("数字", "数字キー", "ナンバー", "上段", "number", "numeri", "cifre", "digits")
                     BoolSettingView(.enableItalianKeyboardLanguage)
                         .searchKeys("イタリア語", "italiano", "italian", "lingua", "language", "言語")
+                    // Copaky: the optional space behavior is adjacent and searchable in JA/EN/IT.
+                    // Copaky: 空白での補正設定を隣接表示し、日英伊の語で検索可能にする。
+                    BoolSettingView(.italianAutoAccentOnSpace)
+                        .searchKeys("イタリア語", "アクセント", "自動補正", "スペース", "italiano", "accento", "automatico", "spazio", "italian", "accent", "automatic", "space")
                 }
                 .inheritSearchKeys()
 

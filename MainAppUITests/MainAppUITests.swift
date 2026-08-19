@@ -45,6 +45,9 @@ private enum L {
     static let tabBarButton = ["写", "タブバーを開く", "Open the tab bar"]
     static let numberHintsToggle = ["Show numbers on the top row", "上段に数字を表示", "Mostra i numeri nella riga superiore"]
     static let italianToggle = ["Use Italian", "イタリア語を使う", "Usa l'italiano"]
+    // Copaky: the auto-accent toggle is localized in every shipped UI language.
+    // Copaky: アクセント自動補正の設定名を全対応言語で検索する。
+    static let italianAutoAccentToggle = ["Auto-accent on space (Italian)", "スペースでアクセントを自動補正（イタリア語）", "Accento automatico con lo spazio (italiano)"]
     /// Enter key in its plain "return" state — localized since the key-label fix (Design.getEnterKeyText).
     static let enterKeyReturn = ["改行", "Newline", "A capo"]
     /// Space key on the simple/flick keyboards — localized since the key-label fix.
@@ -373,6 +376,45 @@ final class CopakyCampaignTests: XCTestCase {
             XCTAssertTrue(key.exists, "Key '\(label)' not found on Copaky keyboard")
             key.tap()
         }
+    }
+
+    // Copaky: tap the actual Latin space key; accepting a next-candidate label here could hide an
+    // accidental return to the Japanese conversion tab.
+    // Copaky: 日本語の次候補キーを誤認せず、ラテン文字タブの空白キーだけを押す。
+    private func tapLatinSpace(in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
+        let space = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label IN %@", L.spaceKey)).firstMatch
+        guard space.waitForExistence(timeout: 4), space.isHittable else {
+            dump(app, "latin-space-not-found")
+            shot("latin-space-not-found")
+            XCTFail("Latin space key not found", file: file, line: line)
+            return
+        }
+        space.tap()
+    }
+
+    // Copaky: stateful campaign tests reuse the same Safari field, so exact-value assertions must
+    // clear committed text through Copaky before typing their own fixture.
+    // Copaky: 連続テストで同じ入力欄を使うため、検証前にCopakyの削除キーで内容を空にする。
+    private func clearFocusedField(_ field: XCUIElement, placeholder: String, in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
+        let currentValue = (field.value as? String) ?? ""
+        guard !currentValue.isEmpty, currentValue != placeholder else {
+            return
+        }
+        for _ in currentValue {
+            let delete = app.descendants(matching: .any)
+                .matching(NSPredicate(format: "label IN %@", ["delete", "削除", "Elimina", "⌫"])).firstMatch
+            guard delete.waitForExistence(timeout: 3), delete.isHittable else {
+                dump(app, "clear-field-delete-not-found")
+                shot("clear-field-delete-not-found")
+                XCTFail("Delete key not found while clearing the fixture field", file: file, line: line)
+                return
+            }
+            delete.tap()
+        }
+        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+        let clearedValue = (field.value as? String) ?? ""
+        XCTAssertTrue(clearedValue.isEmpty || clearedValue == placeholder, "Fixture field did not clear: \(clearedValue)", file: file, line: line)
     }
 
     /// Non-asserting variant of `tapKeys` for LOAD exercises (test42): taps what it finds, records
@@ -1279,6 +1321,64 @@ final class CopakyCampaignTests: XCTestCase {
         }
         XCTAssertTrue(latinSpace.exists, "the Latin tab must localize its space cap on an English simulator")
         shot("36-done")
+    }
+
+    // MARK: - 37 · Italian auto-accent on space
+
+    /// With both Italian and auto-accent enabled, space fixes a missing accent while preserving
+    /// legitimate plain words. / イタリア語の空白確定で必要なアクセントだけを補正する。
+    func test37_italianAutoAccentOnSpace() throws {
+        // 1. Enable both settings idempotently in the containing app.
+        mainApp.launch()
+        if let close = firstMatch(in: mainApp, labels: L.closeOnboarding, timeout: 4) {
+            close.tap()
+        }
+        openSettingsTab()
+        XCTAssertTrue(driveSwitch(L.italianToggle, to: true), "Italian toggle did not turn ON")
+        XCTAssertTrue(driveSwitch(L.italianAutoAccentToggle, to: true), "Italian auto-accent toggle did not turn ON")
+
+        // 2. Open the fixture field and reach the Italian variant of the shared Latin tab.
+        let field = activatePreNavigatedField("plain-text")
+        switchToCopaky(in: safari)
+        dismissCopakyNotice(in: safari)
+        switchToEnglishTab(in: safari)
+        clearFocusedField(field, placeholder: "plain-text", in: safari)
+
+        // The key exposes both current and next language, so prove IT with a real candidate instead
+        // of blindly tapping an "IT" child that may already denote the current language.
+        var accented = safari.descendants(matching: .any)
+            .matching(NSPredicate(format: "label == %@", "perché")).firstMatch
+        for _ in 0..<2 {
+            tapKeys(["p", "e", "r", "c", "h", "e"], in: safari)
+            if accented.waitForExistence(timeout: 4) {
+                break
+            }
+            clearFocusedField(field, placeholder: "plain-text", in: safari)
+            let switchKey = safari.descendants(matching: .any)
+                .matching(NSPredicate(format: "label == %@", "IT")).firstMatch
+            guard switchKey.waitForExistence(timeout: 3), switchKey.isHittable else {
+                dump(safari, "37-language-switch-not-found")
+                XCTFail("Could not reach the Italian Latin tab")
+                return
+            }
+            switchKey.tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+            accented = safari.descendants(matching: .any)
+                .matching(NSPredicate(format: "label == %@", "perché")).firstMatch
+        }
+        XCTAssertTrue(accented.exists, "typing 'perche' must prove that the Italian lexicon is active")
+
+        // 3. The missing accent is fixed as the word is committed by a literal space.
+        tapLatinSpace(in: safari)
+        RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+        XCTAssertEqual(field.value as? String, "perché ", "space must auto-accent 'perche'")
+
+        // 4. A more frequent legitimate plain form must remain untouched.
+        tapKeys(["s", "i"], in: safari)
+        tapLatinSpace(in: safari)
+        RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+        XCTAssertEqual(field.value as? String, "perché si ", "space must not change legitimate plain 'si'")
+        shot("37-done")
     }
 
     // MARK: - 34 · Copaky extension: the system paste control renders inside the input view

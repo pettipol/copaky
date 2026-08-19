@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import enum KanaKanjiConverterModule.KeyboardLanguage
 import KeyboardViews
 import SwiftUI
 import SwiftUtils
@@ -256,11 +257,34 @@ public struct EnableItalianKeyboardLanguage: BoolKeyboardSettingKey {
     public static func isItalianSystemLanguage(preferredLanguages: [String]) -> Bool {
         preferredLanguages.first?.hasPrefix("it") == true
     }
+    // Copaky: seed from the setting on first load and only when that setting later changes, so a
+    // manual EN/IT choice survives ordinary keyboard reappearances.
+    // Copaky: 初回と設定変更時だけ言語を与え、通常の再表示では手動の言語選択を保持する。
+    public static func latinLanguageSeed(enabled: Bool, lastSeeded: Bool?) -> KeyboardLanguage? {
+        guard lastSeeded != enabled else {
+            return nil
+        }
+        return enabled ? .it_IT : .en_US
+    }
     public static let key: String = "enable_italian_keyboard_language"
 }
 
 public extension KeyboardSettingKey where Self == EnableItalianKeyboardLanguage {
     static var enableItalianKeyboardLanguage: Self { .init() }
+}
+
+// Copaky: optionally replace a plain Italian word with its dictionary-backed accented form when
+// space commits it. The setting is independent from enabling the Italian keyboard language.
+// Copaky: 空白で確定するとき、辞書に基づくアクセント付き語への補正を個別に切り替える。
+public struct ItalianAutoAccentOnSpace: BoolKeyboardSettingKey {
+    public static let title: LocalizedStringKey = "スペースでアクセントを自動補正（イタリア語）"
+    public static let explanation: LocalizedStringKey = "イタリア語タブで「perche」のようにアクセントを付け忘れた語の後にスペースを押すと、辞書にあるアクセント付きの形（perché）に自動で置き換えます。「si」「da」のようにアクセントなしでも正しい語には触れません。"
+    public static let defaultValue = true
+    public static let key: String = "italian_auto_accent_on_space"
+}
+
+public extension KeyboardSettingKey where Self == ItalianAutoAccentOnSpace {
+    static var italianAutoAccentOnSpace: Self { .init() }
 }
 
 /// クリップボード履歴の取り込みにシステムのペーストボタンを使う設定（試験的） / Experimental: use Apple's
