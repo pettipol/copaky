@@ -30,6 +30,9 @@ fi
 echo "▶ [0/3] String Catalog lint…"
 python3 "$REPO/scripts/lint_string_catalog.py" || fail=1
 
+echo "▶ [0/3] Hard-coded Japanese UI lint (advisory)…"
+python3 "$REPO/scripts/lint_hardcoded_ja.py" || true
+
 # Home-directory path gate on the COMMITTED tree — same check as the pre-commit hook (staged), here
 # run over the blobs of HEAD (what a push actually publishes), not the working tree: an unstaged
 # cleanup must not hide a path that is still inside the commit being pushed. `git grep -I` skips

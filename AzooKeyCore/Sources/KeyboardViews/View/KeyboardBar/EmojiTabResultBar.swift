@@ -23,7 +23,7 @@ struct EmojiTabResultBar<Extension: ApplicationSpecificKeyboardViewExtension>: V
         Design.keyboardBarHeight(interfaceHeight: variableStates.interfaceSize.height, orientation: variableStates.keyboardOrientation) * 0.8
     }
     private var searchBarDesign: InKeyboardSearchBar<Extension>.Configuration {
-        .init(placeholder: "絵文字を検索", theme: theme)
+        .init(placeholder: String(localized: "絵文字を検索", bundle: .main), theme: theme)
     }
     @State private var searchQuery = ""
     @State private var showResults = false

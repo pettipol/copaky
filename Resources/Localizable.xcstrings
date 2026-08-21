@@ -1317,6 +1317,22 @@
         }
       }
     },
+    "「ほかのAppからペースト」の項目は、Copaky が一度ペーストを試みた後にだけ設定アプリに現れます。まず「クリップボードの履歴」タブで項目を 1 つ貼り付け、最初に出る iOS のダイアログで「許可」を選んでください。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The «Paste from Other Apps» entry appears in the Settings app only after Copaky has tried to paste once: first paste one item from the «Clipboard history» tab and choose «Allow» in the first iOS dialog."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La voce «Incolla da altre app» compare nell'app Impostazioni solo dopo che Copaky ha provato a incollare una volta: incolla prima un elemento dal tab «Cronologia appunti» e scegli «Consenti» nella prima finestra di iOS."
+          }
+        }
+      }
+    },
     "「入力中のテキストを保護」の設定をオンにすることで解決する場合があります。" : {
       "localizations" : {
         "en" : {
@@ -2148,6 +2164,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Con Copaky puoi usare la modalità a una mano."
+          }
+        }
+      }
+    },
+    "Copakyで絵文字タブが使えるようになりました。本体アプリを開き、タブバーに絵文字タブを追加しますか？" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The Emoji tab is now available in Copaky. Open the app and add the Emoji tab to the tab bar?"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il tab Emoji è ora disponibile in Copaky. Vuoi aprire l'app e aggiungere il tab Emoji alla barra schede?"
           }
         }
       }
@@ -3072,6 +3104,22 @@
         }
       }
     },
+    "アクティビティ" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activity"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Attività"
+          }
+        }
+      }
+    },
     "あずきのマークを押すと表示されます。" : {
       "localizations" : {
         "en" : {
@@ -3293,6 +3341,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Seleziona il tipo di richiesta. Si aprirà GitHub nel browser."
+          }
+        }
+      }
+    },
+    "お知らせ" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notice"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avviso"
+          }
+        }
+      }
+    },
+    "お願い" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Please note"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Attenzione"
           }
         }
       }
@@ -4751,6 +4831,22 @@
         }
       }
     },
+    "この候補の学習をリセットする" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset learning for this candidate"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Azzera l'apprendimento di questo candidato"
+          }
+        }
+      }
+    },
     "この列を削除" : {
       "localizations" : {
         "en" : {
@@ -5651,6 +5747,22 @@
         }
       }
     },
+    "タブバーに「コピー履歴」を開くためのボタン%@を追加しました。「ペーストの許可」を求めるダイアログが繰り返し出る場合、本体設定の「ほかのAppからペースト」を「許可」に設定してください。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A button %@ to open «Clipboard history» was added to the tab bar. If the «Allow Paste» dialog keeps appearing, open the Settings app ▸ Copaky ▸ «Paste from Other Apps» and choose «Allow»."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nella barra schede è stato aggiunto un pulsante %@ per aprire la «Cronologia appunti». Se la finestra «Consenti incolla» continua a comparire, apri l'app Impostazioni ▸ Copaky ▸ «Incolla da altre app» e scegli «Consenti»."
+          }
+        }
+      }
+    },
     "タブバーにアイコンを使えるようになりました！" : {
       "localizations" : {
         "en" : {
@@ -5955,6 +6067,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Cosa offre"
+          }
+        }
+      }
+    },
+    "デバッグ情報を表示する" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show debug info"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostra informazioni di debug"
           }
         }
       }
@@ -7193,6 +7321,22 @@
         }
       }
     },
+    "よく使う絵文字" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frequently Used"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usati di frequente"
+          }
+        }
+      }
+    },
     "ライトモード" : {
       "localizations" : {
         "en" : {
@@ -7754,6 +7898,22 @@
         }
       }
     },
+    "了解" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
+          }
+        }
+      }
+    },
     "人・動物・会社などの名前である" : {
       "localizations" : {
         "en" : {
@@ -7960,6 +8120,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Salva"
+          }
+        }
+      }
+    },
+    "候補の学習をリセットしました" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Learning for this candidate was reset"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apprendimento del candidato azzerato"
           }
         }
       }
@@ -8351,6 +8527,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Genera link di condivisione"
+          }
+        }
+      }
+    },
+    "内部データの更新のため本体アプリを開いてください。\n更新は数秒で終わります。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Please open the Copaky app to update internal data.\nIt takes a few seconds."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apri l'app Copaky per aggiornare i dati interni.\nBastano pochi secondi."
           }
         }
       }
@@ -8933,6 +9125,22 @@
         }
       }
     },
+    "取り消す" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Undo"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Annulla"
+          }
+        }
+      }
+    },
     "句読点キー" : {
       "localizations" : {
         "en" : {
@@ -9353,6 +9561,22 @@
         }
       }
     },
+    "大きな文字で表示" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show in large text"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostra in grande"
+          }
+        }
+      }
+    },
     "大きな文字で表示する" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -9753,6 +9977,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Valore più a sinistra"
+          }
+        }
+      }
+    },
+    "後で" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Later"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Più tardi"
           }
         }
       }
@@ -10368,6 +10608,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Direzione"
+          }
+        }
+      }
+    },
+    "旅行と場所" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Travel & Places"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Viaggi e luoghi"
+          }
+        }
+      }
+    },
+    "旗" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flags"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bandiere"
           }
         }
       }
@@ -11483,6 +11755,22 @@
         }
       }
     },
+    "物" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Objects"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oggetti"
+          }
+        }
+      }
+    },
     "特別なキー" : {
       "localizations" : {
         "en" : {
@@ -11658,6 +11946,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Al momento Copaky non supporta l'input in stile telefono cellulare (giapponese)."
+          }
+        }
+      }
+    },
+    "生き物と自然" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Animals & Nature"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Animali e natura"
           }
         }
       }
@@ -12141,6 +12445,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mostra i candidati di conversione per emoji e kaomoji"
+          }
+        }
+      }
+    },
+    "絵文字を検索" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search Emoji"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cerca emoji"
           }
         }
       }
@@ -12787,6 +13107,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Il tasto lingua passa da giapponese a inglese. Con «Usa l'italiano» attivo si aggiunge anche l'italiano e con un tocco lungo si apre un menù per scegliere direttamente la lingua."
+          }
+        }
+      }
+    },
+    "記号" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Symbols"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Simboli"
           }
         }
       }
@@ -13773,6 +14109,22 @@
         }
       }
     },
+    "顔と感情" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Smileys & People"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Faccine e persone"
+          }
+        }
+      }
+    },
     "顔文字" : {
       "localizations" : {
         "en" : {
@@ -13785,6 +14137,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kaomoji"
+          }
+        }
+      }
+    },
+    "食事" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Food & Drink"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cibo e bevande"
           }
         }
       }

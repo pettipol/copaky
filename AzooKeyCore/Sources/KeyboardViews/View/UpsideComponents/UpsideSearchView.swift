@@ -28,7 +28,7 @@ struct UpsideSearchView<Extension: ApplicationSpecificKeyboardViewExtension>: Vi
     }
 
     private var searchBarDesign: InKeyboardSearchBar<Extension>.Configuration {
-        .init(placeholder: "絵文字を検索", clearButtonMode: .always, theme: theme)
+        .init(placeholder: String(localized: "絵文字を検索", bundle: .main), clearButtonMode: .always, theme: theme)
     }
 
     var body: some View {

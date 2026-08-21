@@ -32,6 +32,7 @@ struct GettingStartedTipsView: View {
                 Text("3. 「ほかのAppからペースト」を「許可」にする")
                     .bold()
                 Text("設定アプリで「Copaky」▸「ほかのAppからペースト」▸「許可」の順に進みます。")
+                Text("「ほかのAppからペースト」の項目は、Copaky が一度ペーストを試みた後にだけ設定アプリに現れます。まず「クリップボードの履歴」タブで項目を 1 つ貼り付け、最初に出る iOS のダイアログで「許可」を選んでください。")
                 Text("許可しないと、「クリップボードの履歴」タブがクリップボードを読み取るたびに、iOSのペースト確認ダイアログが表示されます。")
                 TipsImage(.pasteRequestDialogue)
                 if let url = URL(string: UIApplication.openSettingsURLString) {

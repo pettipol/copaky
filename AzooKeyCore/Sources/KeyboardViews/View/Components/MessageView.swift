@@ -65,7 +65,7 @@ struct MessageView<ID: MessageIdentifierProtocol>: View {
                         self.manager.done(data.id)
                     }
                 } label: {
-                    Text(text).bold()
+                    Text(LocalizedStringKey(text)).bold()
                 }
                 Spacer()
             }
@@ -91,12 +91,12 @@ struct MessageView<ID: MessageIdentifierProtocol>: View {
                     .frame(width: reader.size.width * 0.8, height: reader.size.height * 0.8)
                     .overlay(alignment: .center) {
                         VStack(spacing: 4) {
-                            Text(data.title)
+                            Text(LocalizedStringKey(data.title))
                                 .font(.title.bold())
                                 .padding(.top)
                                 .foregroundStyle(.black)
                             ScrollView {
-                                Text(data.description)
+                                Text(LocalizedStringKey(data.description))
                                     .padding(.horizontal)
                                     .foregroundStyle(.black)
                                     .lineLimit(nil)
