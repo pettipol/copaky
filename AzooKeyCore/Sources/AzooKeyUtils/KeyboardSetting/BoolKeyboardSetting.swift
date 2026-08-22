@@ -338,7 +338,7 @@ public struct EnableClipboardHistoryManagerTab: BoolKeyboardSettingKey {
             }
             tabBarData.lastUpdateDate = Date()
             try manager.saveTabBarData(tabBarData: tabBarData)
-            return "クリップボードの履歴がオンになりました。123 / #+= / ☆123 キーを長押しすると履歴タブが開きます（候補バーの Copaky ボタンからも開けます）。「ペーストの許可」を求めるダイアログが繰り返し出る場合は、設定アプリ ▸ Copaky ▸「ほかの App からペースト」を「許可」にしてください。"
+            return "クリップボードの履歴がオンになりました。123 / #+= / ☆123 キーを長押しすると履歴タブが開きます。「ペーストの許可」を求めるダイアログが繰り返し出る場合は、設定アプリ ▸ Copaky ▸「ほかの App からペースト」を「許可」にしてください。"
         } catch {
             debug("EnableClipboardHistoryManagerTab onEnabled", error)
             return nil

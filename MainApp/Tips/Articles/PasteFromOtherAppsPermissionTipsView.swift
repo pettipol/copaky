@@ -18,7 +18,7 @@ struct PasteFromOtherAppsPermissionTipsView: View {
             }
             TipsContentParagraph {
                 Text("設定アプリで「ほかのAppからペースト」を「許可」にすることで、ダイアログが出なくなります。")
-                Text("「ほかのAppからペースト」の項目は、Copaky が一度ペーストを試みた後にだけ設定アプリに現れます。まず「クリップボードの履歴」タブで項目を 1 つ貼り付け、最初に出る iOS のダイアログで「許可」を選んでください。")
+                Text("「ほかのAppからペースト」の項目は、Copaky が一度クリップボードを読み取った後にだけ設定アプリに現れます。まず「クリップボードの履歴」タブの「現在のクリップボードを追加」を 1 回タップし、最初に出る iOS のダイアログで「ペーストを許可」を選んでください。")
             }
             TipsContentParagraph {
                 if let url = URL(string: UIApplication.openSettingsURLString) {

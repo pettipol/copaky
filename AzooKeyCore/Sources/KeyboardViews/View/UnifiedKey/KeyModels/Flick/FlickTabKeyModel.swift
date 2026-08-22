@@ -38,15 +38,17 @@ struct FlickTabKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: Un
 
     func pressActions(variableStates _: VariableStates) -> [ActionType] { centerPress }
     func longPressActions(variableStates: VariableStates) -> LongpressActionType {
-        guard usesNumbersSlotLongPressDecision else {
+        // Counter-review fix: with the history OFF the saved long press is returned untouched (a customized
+        // ☆123 keeps its own actions); with it ON the navigation replaces START and drops any saved REPEAT
+        // (a repeating input/delete must never run under a tab change).
+        // レビュー対応：履歴オフでは保存済みの長押しをそのまま返す。オンでは START を置き換え REPEAT は捨てる。
+        guard usesNumbersSlotLongPressDecision, variableStates.clipboardHistoryManager.isEnabled else {
             return centerLongpress
         }
         return .init(
             duration: centerLongpress.duration,
-            start: NumbersSlotLongPressDecision.longPressActionsForNumbersSlot(
-                clipboardHistoryEnabled: variableStates.clipboardHistoryManager.isEnabled
-            ),
-            repeat: centerLongpress.repeat
+            start: NumbersSlotLongPressDecision.longPressActionsForNumbersSlot(clipboardHistoryEnabled: true),
+            repeat: []
         )
     }
     func variationSpace(variableStates _: VariableStates) -> UnifiedVariationSpace { .fourWay(flickMap) }

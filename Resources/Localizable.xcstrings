@@ -1317,18 +1317,18 @@
         }
       }
     },
-    "「ほかのAppからペースト」の項目は、Copaky が一度ペーストを試みた後にだけ設定アプリに現れます。まず「クリップボードの履歴」タブで項目を 1 つ貼り付け、最初に出る iOS のダイアログで「許可」を選んでください。" : {
+    "「ほかのAppからペースト」の項目は、Copaky が一度クリップボードを読み取った後にだけ設定アプリに現れます。まず「クリップボードの履歴」タブの「現在のクリップボードを追加」を 1 回タップし、最初に出る iOS のダイアログで「ペーストを許可」を選んでください。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The «Paste from Other Apps» entry appears in the Settings app only after Copaky has tried to paste once: first paste one item from the «Clipboard history» tab and choose «Allow» in the first iOS dialog."
+            "value" : "The «Paste from Other Apps» entry appears in the Settings app only after Copaky has read the clipboard once: in the «Clipboard history» tab tap «Add current clipboard» once and choose «Allow Paste» in the first iOS dialog."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "La voce «Incolla da altre app» compare nell'app Impostazioni solo dopo che Copaky ha provato a incollare una volta: incolla prima un elemento dal tab «Cronologia appunti» e scegli «Consenti» nella prima finestra di iOS."
+            "value" : "La voce «Incolla da altre app» compare nell'app Impostazioni solo dopo che Copaky ha letto gli appunti una volta: nel tab «Cronologia appunti» tocca una volta «Aggiungi gli appunti correnti» e scegli «Consenti incolla» nella prima finestra di iOS."
           }
         }
       }
@@ -4509,18 +4509,18 @@
         }
       }
     },
-    "クリップボードの履歴がオンになりました。123 / #+= / ☆123 キーを長押しすると履歴タブが開きます（候補バーの Copaky ボタンからも開けます）。「ペーストの許可」を求めるダイアログが繰り返し出る場合は、設定アプリ ▸ Copaky ▸「ほかの App からペースト」を「許可」にしてください。" : {
+    "クリップボードの履歴がオンになりました。123 / #+= / ☆123 キーを長押しすると履歴タブが開きます。「ペーストの許可」を求めるダイアログが繰り返し出る場合は、設定アプリ ▸ Copaky ▸「ほかの App からペースト」を「許可」にしてください。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Clipboard history is on. Long-press the 123 / #+= / ☆123 key to open the history tab (it is also reachable from the Copaky button in the candidate bar). If the «Allow Paste» dialog keeps appearing, open the Settings app ▸ Copaky ▸ «Paste from Other Apps» and choose «Allow»."
+            "value" : "Clipboard history is on. Long-press the 123 / #+= / ☆123 key to open the history tab. If the «Allow Paste» dialog keeps appearing, open the Settings app ▸ Copaky ▸ «Paste from Other Apps» and choose «Allow»."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "La Cronologia appunti è attiva. Tieni premuto il tasto 123 / #+= / ☆123 per aprire il tab della cronologia (lo trovi anche dal pulsante Copaky nella barra dei suggerimenti). Se la finestra «Consenti incolla» continua a comparire, apri l'app Impostazioni ▸ Copaky ▸ «Incolla da altre app» e scegli «Consenti»."
+            "value" : "La Cronologia appunti è attiva. Tieni premuto il tasto 123 / #+= / ☆123 per aprire il tab della cronologia. Se la finestra «Consenti incolla» continua a comparire, apri l'app Impostazioni ▸ Copaky ▸ «Incolla da altre app» e scegli «Consenti»."
           }
         }
       }
@@ -12854,7 +12854,7 @@
         }
       }
     },
-    "英字入力の際に\\n「𝕥𝕪𝕡𝕠𝕘𝕣𝕒𝕡𝕙𝕪」のような装飾字体を候補に表示します。" : {
+    "英字入力の際に\n「𝕥𝕪𝕡𝕠𝕘𝕣𝕒𝕡𝕙𝕪」のような装飾字体を候補に表示します。" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
