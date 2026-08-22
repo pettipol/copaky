@@ -1,41 +1,57 @@
 {
-  "images" : [
+  "images": [
     {
-      "filename" : "pasteRequestDialogue_lj.jpg",
-      "idiom" : "universal"
+      "filename": "pasteRequestDialogue_lj.jpg",
+      "idiom": "universal"
     },
     {
-      "appearances" : [
+      "appearances": [
         {
-          "appearance" : "luminosity",
-          "value" : "dark"
+          "appearance": "luminosity",
+          "value": "dark"
         }
       ],
-      "filename" : "pasteRequestDialogue_dj.jpg",
-      "idiom" : "universal"
+      "filename": "pasteRequestDialogue_dj.jpg",
+      "idiom": "universal"
     },
     {
-      "filename" : "pasteRequestDialogue_le.jpg",
-      "idiom" : "universal",
-      "locale" : "en"
+      "filename": "pasteRequestDialogue_le.jpg",
+      "idiom": "universal",
+      "locale": "en"
     },
     {
-      "appearances" : [
+      "appearances": [
         {
-          "appearance" : "luminosity",
-          "value" : "dark"
+          "appearance": "luminosity",
+          "value": "dark"
         }
       ],
-      "filename" : "pasteRequestDialogue_de.jpg",
-      "idiom" : "universal",
-      "locale" : "en"
+      "filename": "pasteRequestDialogue_de.jpg",
+      "idiom": "universal",
+      "locale": "en"
+    },
+    {
+      "filename": "pasteRequestDialogue_li.jpg",
+      "idiom": "universal",
+      "locale": "it"
+    },
+    {
+      "appearances": [
+        {
+          "appearance": "luminosity",
+          "value": "dark"
+        }
+      ],
+      "filename": "pasteRequestDialogue_di.jpg",
+      "idiom": "universal",
+      "locale": "it"
     }
   ],
-  "info" : {
-    "author" : "xcode",
-    "version" : 1
+  "info": {
+    "author": "xcode",
+    "version": 1
   },
-  "properties" : {
-    "localizable" : true
+  "properties": {
+    "localizable": true
   }
 }

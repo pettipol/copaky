@@ -1,41 +1,57 @@
 {
-  "images" : [
+  "images": [
     {
-      "filename" : "alert_light_jp.jpg",
-      "idiom" : "universal"
+      "filename": "alert_light_jp.jpg",
+      "idiom": "universal"
     },
     {
-      "appearances" : [
+      "appearances": [
         {
-          "appearance" : "luminosity",
-          "value" : "dark"
+          "appearance": "luminosity",
+          "value": "dark"
         }
       ],
-      "filename" : "alert_dark_jp.jpg",
-      "idiom" : "universal"
+      "filename": "alert_dark_jp.jpg",
+      "idiom": "universal"
     },
     {
-      "filename" : "alert_light_en.jpg",
-      "idiom" : "universal",
-      "locale" : "en"
+      "filename": "alert_light_en.jpg",
+      "idiom": "universal",
+      "locale": "en"
     },
     {
-      "appearances" : [
+      "appearances": [
         {
-          "appearance" : "luminosity",
-          "value" : "dark"
+          "appearance": "luminosity",
+          "value": "dark"
         }
       ],
-      "filename" : "alert_dark_en.jpg",
-      "idiom" : "universal",
-      "locale" : "en"
+      "filename": "alert_dark_en.jpg",
+      "idiom": "universal",
+      "locale": "en"
+    },
+    {
+      "filename": "alert_light_it.jpg",
+      "idiom": "universal",
+      "locale": "it"
+    },
+    {
+      "appearances": [
+        {
+          "appearance": "luminosity",
+          "value": "dark"
+        }
+      ],
+      "filename": "alert_dark_it.jpg",
+      "idiom": "universal",
+      "locale": "it"
     }
   ],
-  "info" : {
-    "author" : "xcode",
-    "version" : 1
+  "info": {
+    "author": "xcode",
+    "version": 1
   },
-  "properties" : {
-    "localizable" : true
+  "properties": {
+    "localizable": true
   }
 }
