@@ -45,14 +45,24 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
         let numbersKey: any UnifiedKeyModelProtocol<Extension> = QwertyGeneralKeyModel(
             labelType: .image("textformat.123"),
             pressActions: { _ in [.moveTab(.system(.qwerty_numbers))] },
-            longPressActions: { _ in .init(start: [.setTabBar(.toggle)]) },
+            longPressActions: { states in
+                .init(start: NumbersSlotLongPressDecision.longPressActionsForNumbersSlot(
+                    clipboardHistoryEnabled: states.keyboardLanguage.usesLatinScript
+                        && states.clipboardHistoryManager.isEnabled
+                ))
+            },
             variations: [], direction: .right, showsTapBubble: false, role: .special
         )
         // symbols key
         let symbolsKey: any UnifiedKeyModelProtocol<Extension> = QwertyGeneralKeyModel(
             labelType: .text("#+="),
             pressActions: { _ in [.moveTab(.system(.qwerty_symbols))] },
-            longPressActions: { _ in .init(start: [.setTabBar(.toggle)]) },
+            longPressActions: { states in
+                .init(start: NumbersSlotLongPressDecision.longPressActionsForNumbersSlot(
+                    clipboardHistoryEnabled: states.keyboardLanguage.usesLatinScript
+                        && states.clipboardHistoryManager.isEnabled
+                ))
+            },
             variations: [], direction: .right, showsTapBubble: false, role: .special
         )
         // change keyboard key (dynamic)

@@ -338,7 +338,7 @@ public struct EnableClipboardHistoryManagerTab: BoolKeyboardSettingKey {
             }
             tabBarData.lastUpdateDate = Date()
             try manager.saveTabBarData(tabBarData: tabBarData)
-            return "タブバーに「コピー履歴」を開くためのボタン\(Image(systemName: "doc.badge.clock"))を追加しました。「ペーストの許可」を求めるダイアログが繰り返し出る場合、本体設定の「ほかのAppからペースト」を「許可」に設定してください。"
+            return "クリップボードの履歴がオンになりました。123 / #+= / ☆123 キーを長押しすると履歴タブが開きます（候補バーの Copaky ボタンからも開けます）。「ペーストの許可」を求めるダイアログが繰り返し出る場合は、設定アプリ ▸ Copaky ▸「ほかの App からペースト」を「許可」にしてください。"
         } catch {
             debug("EnableClipboardHistoryManagerTab onEnabled", error)
             return nil
@@ -363,6 +363,19 @@ public extension KeyboardSettingKey where Self == EnableClipboardHistoryManagerT
     static var enableClipboardHistoryManagerTab: Self { .init() }
 }
 
+/// Copaky: keeps the candidate-bar shortcut optional while preserving its existing default.
+/// Copaky: 候補バーのショートカットを任意表示にし、従来のデフォルト値は維持する。
+public struct DisplayTabBarButton: BoolKeyboardSettingKey {
+    public static let title: LocalizedStringKey = "Copaky ボタンを候補バーに表示"
+    public static let explanation: LocalizedStringKey = "オフにすると候補バーの Copaky ボタンを隠します。タブバーは 123 / #+= / ☆123 キーの長押しから開けます（クリップボード履歴がオンのときは長押しで履歴タブが直接開きます）"
+    public static let defaultValue = true
+    public static let key: String = "display_tab_bar_button"
+}
+
+public extension KeyboardSettingKey where Self == DisplayTabBarButton {
+    static var displayTabBarButton: Self { .init() }
+}
+
 /// 削除した設定を記録するためのenum。おもに`key`の情報を残すため、ソースに維持している。
 private enum DeprecatedSetting {
     public struct HalfKanaCandidate: BoolKeyboardSettingKey {
@@ -384,12 +397,5 @@ private enum DeprecatedSetting {
         public static let explanation: LocalizedStringKey = "「u3042→あ」のように、入力されたunicode番号に対応する文字に変換します。接頭辞にはu, u+, U, U+が使えます。"
         public static let defaultValue = true
         public static let key: String = "unicode_candidate"
-    }
-
-    public struct DisplayTabBarButton: BoolKeyboardSettingKey {
-        public static let title: LocalizedStringKey = "タブバーボタン"
-        public static let explanation: LocalizedStringKey = "変換候補欄が空のときにタブバーボタンを表示します"
-        public static let defaultValue = true
-        public static let key: String = "display_tab_bar_button"
     }
 }

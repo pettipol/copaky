@@ -39,7 +39,10 @@ struct QwertyDynamicChangeKeyModel<Extension: ApplicationSpecificKeyboardViewExt
         if QwertyLayoutProvider<Extension>.shiftBehaviorPreference() != .leftbottom || variableStates.boolStates.isShifted || variableStates.boolStates.isCapsLocked {
             .none
         } else {
-            .init(start: [.setTabBar(.toggle)])
+            .init(start: NumbersSlotLongPressDecision.longPressActionsForNumbersSlot(
+                clipboardHistoryEnabled: variableStates.keyboardLanguage.usesLatinScript
+                    && variableStates.clipboardHistoryManager.isEnabled
+            ))
         }
     }
     func variationSpace(variableStates _: VariableStates) -> UnifiedVariationSpace { .none }

@@ -95,7 +95,7 @@ public enum AzooKeyKeyboardViewExtension: ApplicationSpecificKeyboardViewExtensi
     }
 
     public static var displayTabBarButton: Bool {
-        true
+        DisplayTabBarButton.value
     }
 
     public static var hideResetButtonInOneHandedMode: Bool {

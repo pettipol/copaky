@@ -2088,6 +2088,23 @@
         }
       }
     },
+    "Copaky ボタンを候補バーに表示" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show the Copaky button in the candidate bar"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostra il pulsante Copaky nella barra dei suggerimenti"
+          }
+        }
+      }
+    },
     "Copakyが使えます！" : {
       "localizations" : {
         "en" : {
@@ -3297,6 +3314,23 @@
         }
       }
     },
+    "オフにすると候補バーの Copaky ボタンを隠します。タブバーは 123 / #+= / ☆123 キーの長押しから開けます（クリップボード履歴がオンのときは長押しで履歴タブが直接開きます）" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn off to hide the Copaky button in the candidate bar. The tab bar opens with a long press on the 123 / #+= / ☆123 key (when Clipboard history is on, the long press opens the history tab directly)"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disattiva per nascondere il pulsante Copaky nella barra dei suggerimenti. La barra schede si apre con un tocco lungo sul tasto 123 / #+= / ☆123 (se la Cronologia appunti è attiva, il tocco lungo apre direttamente la cronologia)"
+          }
+        }
+      }
+    },
     "オリジナル" : {
       "localizations" : {
         "en" : {
@@ -4471,6 +4505,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Cronologia degli appunti"
+          }
+        }
+      }
+    },
+    "クリップボードの履歴がオンになりました。123 / #+= / ☆123 キーを長押しすると履歴タブが開きます（候補バーの Copaky ボタンからも開けます）。「ペーストの許可」を求めるダイアログが繰り返し出る場合は、設定アプリ ▸ Copaky ▸「ほかの App からペースト」を「許可」にしてください。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clipboard history is on. Long-press the 123 / #+= / ☆123 key to open the history tab (it is also reachable from the Copaky button in the candidate bar). If the «Allow Paste» dialog keeps appearing, open the Settings app ▸ Copaky ▸ «Paste from Other Apps» and choose «Allow»."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La Cronologia appunti è attiva. Tieni premuto il tasto 123 / #+= / ☆123 per aprire il tab della cronologia (lo trovi anche dal pulsante Copaky nella barra dei suggerimenti). Se la finestra «Consenti incolla» continua a comparire, apri l'app Impostazioni ▸ Copaky ▸ «Incolla da altre app» e scegli «Consenti»."
+          }
+        }
+      }
+    },
+    "クリップボードの履歴は 123 / #+= / ☆123 キーの長押しで開きます。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Clipboard history with a long press on the 123 / #+= / ☆123 key."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apri la Cronologia appunti con un tocco lungo sul tasto 123 / #+= / ☆123."
           }
         }
       }
@@ -5743,22 +5809,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "È stato aggiunto il pulsante \"Cronologia\" alla barra dei tab."
-          }
-        }
-      }
-    },
-    "タブバーに「コピー履歴」を開くためのボタン%@を追加しました。「ペーストの許可」を求めるダイアログが繰り返し出る場合、本体設定の「ほかのAppからペースト」を「許可」に設定してください。" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A button %@ to open «Clipboard history» was added to the tab bar. If the «Allow Paste» dialog keeps appearing, open the Settings app ▸ Copaky ▸ «Paste from Other Apps» and choose «Allow»."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nella barra schede è stato aggiunto un pulsante %@ per aprire la «Cronologia appunti». Se la finestra «Consenti incolla» continua a comparire, apri l'app Impostazioni ▸ Copaky ▸ «Incolla da altre app» e scegli «Consenti»."
           }
         }
       }

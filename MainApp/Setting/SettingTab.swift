@@ -66,6 +66,7 @@ struct SettingTabView: View {
                         // Copaky: アクセント自動補正を対象となるイタリア語設定の直後に置く。
                         BoolSettingView(.italianAutoAccentOnSpace)
                         BoolSettingView(.enableClipboardHistoryManagerTab)
+                        BoolSettingView(.displayTabBarButton)
                         BoolSettingView(.enableKeySound)
                         if SemiStaticStates.shared.hapticsAvailable {
                             BoolSettingView(.enableKeyHaptics)
@@ -127,6 +128,8 @@ struct SettingTabView: View {
                         .searchKeys("カーソルバー", "バー", "cursore", "barra", "cursor", "bar")
                     BoolSettingView(.enableClipboardHistoryManagerTab)
                         .searchKeys("コピー履歴", "クリップボード履歴", "履歴", "appunti", "clipboard", "cronologia")
+                    BoolSettingView(.displayTabBarButton)
+                        .searchKeys("Copakyボタン", "候補バー", "barra", "suggerimenti", "candidate", "button")
                     // NOT wrapped in a hasFullAccess check: that flag is read once at app launch and
                     // never refreshed, so a user who grants Full Access in iOS Settings and comes back
                     // would find the row GONE — and, worse, someone who revokes it later would lose the

@@ -219,7 +219,7 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
             .accessibilityLabel(Text("削除キー"))
     }
     private func backTabKey(_ design: TabDependentDesign) -> some View {
-        SimpleKeyView<Extension>(model: SimpleKeyModel<Extension>(keyLabelType: .localizedText("戻る"), unpressedKeyColorType: .special, pressActions: [.moveTab(.system(.last_tab))], longPressActions: .none), tabDesign: design)
+        SimpleKeyView<Extension>(model: SimpleKeyModel<Extension>(keyLabelType: .localizedText("戻る"), unpressedKeyColorType: .special, pressActions: [.moveTab(.system(.last_tab))], longPressActions: .init(start: [.setTabBar(.toggle)])), tabDesign: design)
             .accessibilityLabel(Text("戻る"))
     }
 

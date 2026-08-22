@@ -9,6 +9,16 @@ All notable changes to **Copaky** (an independent project based on azooKey). For
 ## [Unreleased] — pre-release (v0.1)
 
 ### Added
+- **Clipboard history in one gesture** (A-11): a long press on the existing `123` / `#+=` key (Latin tabs) or
+  `☆123` (Japanese flick) opens the Clipboard-history tab directly when «Save clipboard history» is on;
+  otherwise it keeps toggling the tab bar. The decision is evaluated at press time (`NumbersSlotLongPressDecision`,
+  unit-tested), the layout is unchanged; the back key of the history tab returns to the previous tab and its long
+  press opens the tab bar. The candidate-bar Copaky button can now be hidden (Settings ▸ «Show the Copaky button
+  in the candidate bar», on by default).
+- **Guide images per language** (A-09): the «Getting started» / Tips pictures of the iOS Settings screens now
+  have English and Italian variants (light and dark), captured on the iPhone 17 Pro Max and composed with the
+  same highlight + hand as the Japanese originals (`scripts/compose_guide_assets.py` in the workspace); the
+  paste-permission pictures use the English capture for Italian until a device capture exists.
 - **Offline clipboard manager**: privacy-first redesign with a DETECT (metadata-only, no "pasted from…"
   banner) / CAPTURE (read on explicit user intent) split, a secure-field guard (password fields are never
   captured), a per-item size cap (~50 KB), and a 7-day auto-prune. Pasteboard source and clock are injectable
@@ -90,6 +100,13 @@ All notable changes to **Copaky** (an independent project based on azooKey). For
 - **Dead custard share-link code**: inert since the offline-true change, now deleted.
 
 ### Fixed
+- **Japanese leaking into the English/Italian keyboard UI** (A-10): 23 user-facing strings had never been
+  extracted into the String Catalog — the confirmation after switching on «Save clipboard history», the
+  in-keyboard notice banners (title/description/buttons, now localized at the view), the long-press menu of
+  the candidate bar and its toast, the emoji-tab category names and search placeholder. A new advisory lint
+  (`scripts/lint_hardcoded_ja.py`, wired into `ci-local`) lists CJK literals that are not catalog keys.
+- The Getting-started and paste-permission guides now say that the «Paste from Other Apps» entry appears in
+  the Settings app only after Copaky has tried to paste once (A-02b).
 - **Fail-soft App Group**: 7 force-unwrapped `containerURL(…)!` accesses now degrade gracefully instead of
   crashing if the container is unavailable.
 - Honest UI: removed fake "shared/submitted" success states left by the offline stubbing.

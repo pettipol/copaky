@@ -18,12 +18,14 @@ struct FlickTabKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: Un
     private let flickMap: [FlickDirection: UnifiedVariation]
     private let showsBubbleFlag: Bool
     private let colorRole: ColorRole
+    private let usesNumbersSlotLongPressDecision: Bool
 
     init(labelType: KeyLabelType,
          pressActions: [ActionType],
          longPressActions: LongpressActionType,
          flick: [FlickDirection: UnifiedVariation],
          showsTapBubble: Bool,
+         usesNumbersSlotLongPressDecision: Bool = false,
          colorRole: ColorRole = .special) {
         self.labelType = labelType
         self.centerPress = pressActions
@@ -31,10 +33,22 @@ struct FlickTabKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: Un
         self.flickMap = flick
         self.showsBubbleFlag = showsTapBubble
         self.colorRole = colorRole
+        self.usesNumbersSlotLongPressDecision = usesNumbersSlotLongPressDecision
     }
 
     func pressActions(variableStates _: VariableStates) -> [ActionType] { centerPress }
-    func longPressActions(variableStates _: VariableStates) -> LongpressActionType { centerLongpress }
+    func longPressActions(variableStates: VariableStates) -> LongpressActionType {
+        guard usesNumbersSlotLongPressDecision else {
+            return centerLongpress
+        }
+        return .init(
+            duration: centerLongpress.duration,
+            start: NumbersSlotLongPressDecision.longPressActionsForNumbersSlot(
+                clipboardHistoryEnabled: variableStates.clipboardHistoryManager.isEnabled
+            ),
+            repeat: centerLongpress.repeat
+        )
+    }
     func variationSpace(variableStates _: VariableStates) -> UnifiedVariationSpace { .fourWay(flickMap) }
     @MainActor func showsTapBubble(variableStates _: VariableStates) -> Bool { showsBubbleFlag }
 

@@ -43,7 +43,10 @@ fileprivate extension CustardInterfaceLayoutScrollValue {
 
 public extension CustardInterface {
     @MainActor func unifiedKeyModels<Extension: ApplicationSpecificKeyboardViewExtension>(extension _: Extension.Type) -> [(position: UnifiedPositionSpecifier, model: any UnifiedKeyModelProtocol<Extension>)] {
-        func flickTabKeyModel(_ data: KeyFlickSetting.SettingData) -> any UnifiedKeyModelProtocol<Extension> {
+        func flickTabKeyModel(
+            _ data: KeyFlickSetting.SettingData,
+            usesNumbersSlotLongPressDecision: Bool = false
+        ) -> any UnifiedKeyModelProtocol<Extension> {
             FlickTabKeyModel<Extension>(
                 labelType: data.labelType,
                 pressActions: data.actions,
@@ -52,6 +55,7 @@ public extension CustardInterface {
                     UnifiedVariation(label: $0.labelType, pressActions: $0.pressActions, longPressActions: $0.longPressActions)
                 },
                 showsTapBubble: false,
+                usesNumbersSlotLongPressDecision: usesNumbersSlotLongPressDecision,
                 colorRole: .special
             )
         }
@@ -101,7 +105,10 @@ public extension CustardInterface {
                 case .flickAbcTab:
                     flickTabKeyModel(Extension.SettingProvider.abcTabFlickCustomKey.compiled())
                 case .flickStar123Tab:
-                    flickTabKeyModel(Extension.SettingProvider.symbolsTabFlickCustomKey.compiled())
+                    flickTabKeyModel(
+                        Extension.SettingProvider.symbolsTabFlickCustomKey.compiled(),
+                        usesNumbersSlotLongPressDecision: true
+                    )
                 }
                 models.append((pos, model))
             case let .custom(val):

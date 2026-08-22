@@ -9,6 +9,16 @@
 import CustardKit
 import Foundation
 
+// Copaky: one-gesture clipboard access from the existing 123 / #+= / ☆123 slot.
+// Copaky: 既存の 123 / #+= / ☆123 スロットから1ジェスチャーで履歴を開く。
+enum NumbersSlotLongPressDecision {
+    static func longPressActionsForNumbersSlot(clipboardHistoryEnabled: Bool) -> [ActionType] {
+        clipboardHistoryEnabled
+            ? [.moveTab(.system(.clipboard_history_tab))]
+            : [.setTabBar(.toggle)]
+    }
+}
+
 extension CodableActionData {
     var actionType: ActionType {
         switch self {

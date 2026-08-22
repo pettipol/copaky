@@ -61,6 +61,8 @@ public enum CustomizableFlickKey: String, Codable, Sendable {
         case .symbolsTab:
             return KeyFlickSetting(
                 identifier: self,
+                // Runtime replaces only this center START action with the live A-11 decision.
+                // 実行時は中央キーのSTARTアクションだけをA-11のライブ判定に置き換える。
                 center: FlickCustomKey(label: "☆123", actions: [.moveTab(.system(.flick_numbersymbols))], longpressActions: .init(start: [.toggleTabBar])),
                 left: FlickCustomKey(label: "", actions: []),
                 top: FlickCustomKey(label: "", actions: []),

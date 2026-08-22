@@ -31,8 +31,11 @@ private enum SL {
     static let clipboardToggle = ["Keep clipboard histories", "クリップボードの履歴を保存"]
     static let clipboardTab = ["コピー履歴", "clipboard_history_tab", "doc.badge.clock"]
     static let captureBar = ["コピーした内容を追加", "現在のクリップボードを追加", "Add copied text", "Add current clipboard"]
-    /// Flick key whose LONG-PRESS toggles the tab bar (FlickCustomKeySetting: ☆123 → .toggleTabBar).
-    static let tabBarToggleKey = ["☆123", "123"]
+    /// Existing slot whose LONG-PRESS opens Clipboard history when enabled, otherwise the tab bar.
+    static let tabBarToggleKey = [
+        "☆123", "123", "#+=", "numbers", "Numbers", "numeri", "Numeri", "数字",
+        "textformat.123", "textformat.numbers",
+    ]
     static let copakyPresets = ["Copaky Light", "Copaky Dark", "Copaky Red"]
     static let mainAppNoticeAction = ["更新", "追加", "OK", "アップデート", "Update"]
 }
@@ -233,7 +236,7 @@ final class CopakyScreenshotTests: XCTestCase {
         }
     }
 
-    /// Open the clipboard history tab from Copaky's tab bar (long-press ☆123 → tab bar → pinned item).
+    /// Open Clipboard history through A-11's direct long-press, or through the tab-bar fallback.
     /// Returns true if the clipboard tab (capture bar) is reached.
     @discardableResult
     private func openClipboardTab(in app: XCUIApplication) -> Bool {
@@ -255,6 +258,7 @@ final class CopakyScreenshotTests: XCTestCase {
             toggleKey.press(forDuration: 1.0)
             settle(0.8)
             dismissCopakyNotice(in: app)
+            if firstMatch(in: app, labels: SL.captureBar, timeout: 2) != nil { return true }
             if tapClipboardItem() {
                 settle(0.8)
                 if firstMatch(in: app, labels: SL.captureBar, timeout: 3) != nil { return true }

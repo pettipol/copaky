@@ -84,7 +84,8 @@ public struct ClipboardHistoryManager {
     /// Versione corrente dello schema di clipboard_history.json. / Current schema version of clipboard_history.json.
     static let currentSchemaVersion = 1
 
-    @MainActor private var enabled: Bool {
+    /// Reads the live setting through the injected configuration; key models use this at gesture time.
+    @MainActor var isEnabled: Bool {
         config.enabled
     }
 
@@ -120,7 +121,7 @@ public struct ClipboardHistoryManager {
             return
         }
         // 有効化されていなければ上書きしない
-        guard self.enabled else {
+        guard self.isEnabled else {
             return
         }
         do {
@@ -140,7 +141,7 @@ public struct ClipboardHistoryManager {
     /// ed esegue la pulizia temporale. La cattura del valore avviene solo in `captureCurrentClipboard`,
     /// su intento esplicito dell'utente.
     @MainActor public mutating func detectClipboardChange(now: Date = Date()) {
-        guard self.enabled else {
+        guard self.isEnabled else {
             self.hasPendingClipboard = false
             return
         }
@@ -154,7 +155,7 @@ public struct ClipboardHistoryManager {
     /// Da invocare SOLO in risposta a un'azione esplicita dell'utente (intento). Saltata nei campi
     /// sicuri (`isSecureEntry`) e per stringhe oltre `maxItemCharacterCount`.
     @MainActor public mutating func captureCurrentClipboard(isSecureEntry: Bool, now: Date = Date()) {
-        guard self.enabled, !isSecureEntry else {
+        guard self.isEnabled, !isSecureEntry else {
             return
         }
         let currentCount = self.clipboardSource.changeCount
@@ -182,7 +183,7 @@ public struct ClipboardHistoryManager {
     /// Copaky — システムのペーストボタン経由で渡されたテキストの取り込み。
     /// UIPasteboard を読まないためバナーが出ない。ガードと上限は通常の取り込みと同一。
     @MainActor public mutating func captureProvidedText(_ string: String, isSecureEntry: Bool, now: Date = Date()) {
-        guard self.enabled, !isSecureEntry else {
+        guard self.isEnabled, !isSecureEntry else {
             return
         }
         guard string.count <= Self.maxItemCharacterCount, string.utf8.count <= Self.maxItemByteCount else {

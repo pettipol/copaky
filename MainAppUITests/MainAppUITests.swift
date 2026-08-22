@@ -36,13 +36,18 @@ private enum L {
     static let settingsTab = ["設定", "Settings", "Impostazioni"]
     static let clipboardToggle = ["Keep clipboard histories", "クリップボードの履歴を保存", "Salva la cronologia degli appunti"]
     static let captureBar = ["コピーした内容を追加", "現在のクリップボードを追加", "Add copied text", "Add current clipboard", "Aggiungi il testo copiato", "Aggiungi gli appunti correnti"]
-    static let clipboardTab = ["コピー履歴", "clipboard_history_tab", "doc.badge.clock"]
-    /// Flick key whose LONG-PRESS toggles the tab bar (FlickCustomKeySetting: ☆123 → .toggleTabBar).
-    static let tabBarToggleKey = ["☆123", "123"]
-    /// The bar button carrying our own mark (CopakyMark). Present on EVERY tab, unlike ☆123 which
-    /// only exists on the flick layouts. The glyph is what XCUI actually exposes; the accessibility
-    /// label is kept alongside it for when VoiceOver labelling wins.
-    static let tabBarButton = ["写", "タブバーを開く", "Open the tab bar"]
+    static let clipboardTab = [
+        "コピー履歴", "クリップボードの履歴", "Clipboard histories", "Cronologia degli appunti",
+        "clipboard_history_tab", "doc.badge.clock",
+    ]
+    /// Existing slot whose LONG-PRESS opens Clipboard history when enabled, otherwise the tab bar.
+    static let tabBarToggleKey = [
+        "☆123", "123", "#+=", "numbers", "Numbers", "numeri", "Numeri", "数字",
+        "textformat.123", "textformat.numbers",
+    ]
+    /// Optional candidate-bar button carrying our own mark (CopakyMark). When shown it works on every
+    /// tab, unlike ☆123 which only exists on flick layouts. Keep the glyph and accessibility labels.
+    static let tabBarButton = ["写", "タブバーを開く", "Open tab bar", "Open the tab bar", "Apri la barra dei tab"]
     static let numberHintsToggle = ["Show numbers on the top row", "上段に数字を表示", "Mostra i numeri nella riga superiore"]
     static let italianToggle = ["Use Italian", "イタリア語を使う", "Usa l'italiano"]
     // Copaky: the auto-accent toggle is localized in every shipped UI language.
@@ -698,9 +703,8 @@ final class CopakyCampaignTests: XCTestCase {
         firstMatch(in: safari, labels: L.captureBar + L.systemPasteControl, timeout: timeout) != nil
     }
 
-    /// Open the コピー履歴 (clipboard history) tab from Copaky's tab bar.
-    /// Navigation: long-press the ☆123 flick key → `.toggleTabBar` shows the tab bar → tap the pinned
-    /// clipboard item (SF Symbol doc.badge.clock, added by the setting's onEnabled).
+    /// Open the コピー履歴 (clipboard history) tab through either A-11's direct long-press or the bar.
+    /// The clipboard item remains pinned in the tab bar for the optional Copaky-button route.
     private func openClipboardTab() throws {
         dismissCopakyNotice(in: safari)
         if clipboardPanelIsOpen() { return }
@@ -715,11 +719,9 @@ final class CopakyCampaignTests: XCTestCase {
         }
         if tapClipboardItem(), clipboardPanelIsOpen() { return }
 
-        // Open the tab bar with the 写 bar button — a plain TAP on our own mark, and the only route
-        // that exists on the QWERTY tabs. Verified on the phone (2026-08-12): the ☆123 long-press
-        // below is a FLICK-tab key, so on a Latin layout the old path found nothing and the caller
-        // skipped with "clipboard tab is not on the bar" while Copaky was running perfectly.
-        // QWERTYタブには☆123が無いため、バーのボタン（写）をタップして開く。
+        // Open the tab bar with the optional 写 button — a plain tap on our own mark.
+        // The direct long-press fallback below also works when this button is hidden.
+        // 任意表示のバー用ボタンを先に試し、非表示なら下の長押し経路を使う。
         let barButton = safari.descendants(matching: .any)
             .matching(NSPredicate(format: "label IN %@", L.tabBarButton)).firstMatch
         if barButton.waitForExistence(timeout: 4) {
@@ -733,14 +735,15 @@ final class CopakyCampaignTests: XCTestCase {
             }
         }
 
-        // Open the tab bar via the ☆123 key long-press, then tap the clipboard item.
+        // A-11 opens Clipboard history directly when enabled; otherwise this still toggles the bar.
         let keyPred = NSPredicate(format: "label IN %@", L.tabBarToggleKey)
         let toggleKey = safari.descendants(matching: .any).matching(keyPred).firstMatch
         if toggleKey.waitForExistence(timeout: 4) {
             toggleKey.press(forDuration: 1.0)
             RunLoop.current.run(until: Date().addingTimeInterval(0.8))
             dismissCopakyNotice(in: safari)
-            shot("clipboard-tabbar-open")
+            shot("clipboard-direct-or-tabbar-open")
+            if clipboardPanelIsOpen() { return }
             if tapClipboardItem() {
                 RunLoop.current.run(until: Date().addingTimeInterval(0.8))
                 if clipboardPanelIsOpen() { return }
@@ -1467,6 +1470,101 @@ final class CopakyCampaignTests: XCTestCase {
         XCTAssertEqual(value, ".", "Latin numbers tab must input a literal ASCII dot")
         XCTAssertFalse(value.contains("。") || value.contains("．"), "No Japanese/full-width dot may be input")
         XCTAssertTrue(returnedToLatin, "Numbers-tab back key returned to Japanese or stayed on numbers")
+    }
+
+    // MARK: - 39 · One-gesture Clipboard history from the Latin 123 slot
+
+    /// Copaky: with Clipboard history enabled, one long press on the Latin 123 key opens its tab.
+    /// Simulator seed: `keyboard_type_en=roman`, `enable_clipboard_history_manager_tab=true`, and
+    /// `display_tab_bar_button=true` (the optional button is used only to prove the prerequisite);
+    /// the clipboard tab also needs Full Access and the signed App Group container. An unavailable
+    /// Simulator is skipped with the same prerequisite wording used by test14.
+    /// Copaky: クリップボード履歴ON時、ラテン123キーの長押し1回で履歴タブを開く。
+    func test39_longPressNumbersKeyOpensClipboardHistory() throws {
+        _ = activatePreNavigatedField("plain-text")
+        switchToCopaky(in: safari)
+        dismissCopakyNotice(in: safari)
+
+        let latinSpaceLabels = L.spaceKey.filter { $0 != "空白" }
+        func latinQwertyVisible(timeout: TimeInterval) -> Bool {
+            let letter = safari.descendants(matching: .any)
+                .matching(NSPredicate(format: "label IN %@", ["q", "Q"])).firstMatch
+            let space = safari.descendants(matching: .any)
+                .matching(NSPredicate(format: "label IN %@", latinSpaceLabels)).firstMatch
+            return letter.waitForExistence(timeout: timeout) && space.exists
+        }
+
+        switchToEnglishTab(in: safari)
+        if !latinQwertyVisible(timeout: 2),
+           let back = firstMatch(in: safari, labels: ["ABC", "ITA", "あいう"], timeout: 2),
+           back.isHittable {
+            back.tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+        }
+        if !latinQwertyVisible(timeout: 2) {
+            switchToEnglishTab(in: safari)
+        }
+        guard latinQwertyVisible(timeout: 4) else {
+            dump(safari, "39-no-initial-latin-qwerty")
+            shot("39-no-initial-latin-qwerty")
+            XCTFail("Latin QWERTY not reached; seed keyboard_type_en=roman")
+            return
+        }
+
+        // Prove that Clipboard history is actually available before testing the gesture. This keeps
+        // the unsigned-Simulator prerequisite skip, but a signed Simulator with the seeded App Group
+        // can no longer turn an A-11 regression into a skip. Leaving the bar visible is intentional:
+        // a stale `.setTabBar(.toggle)` action would close it, while the new action opens the panel.
+        func clipboardTabItem() -> XCUIElement? {
+            let symbolPred = NSPredicate(format: "identifier CONTAINS 'doc.badge.clock' OR label CONTAINS 'doc.badge.clock'")
+            let symbol = safari.descendants(matching: .any).matching(symbolPred).firstMatch
+            if symbol.exists, symbol.isHittable { return symbol }
+            return firstMatch(in: safari, labels: L.clipboardTab, timeout: 1)
+        }
+        if clipboardTabItem() == nil,
+           let barButton = firstMatch(in: safari, labels: L.tabBarButton, timeout: 3),
+           barButton.isHittable {
+            barButton.tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+        }
+        guard clipboardTabItem() != nil else {
+            dump(safari, "39-clipboard-prerequisite-unavailable")
+            shot("39-clipboard-prerequisite-unavailable")
+            #if targetEnvironment(simulator)
+            throw XCTSkip("Clipboard tab needs the App Group container (signed build); unsigned sim has no shared container. Logic covered by ClipboardHistoryManagerTests; e2e pending signed build/device.")
+            #else
+            XCTFail("Clipboard history prerequisite unavailable on the signed build; verify Full Access and the App Group")
+            return
+            #endif
+        }
+
+        let numberKeyLabels = ["123", "numbers", "Numbers", "numeri", "Numeri", "数字", "textformat.123", "textformat.numbers"]
+        guard let numbersKey = firstMatch(in: safari, labels: numberKeyLabels, timeout: 4),
+              numbersKey.isHittable else {
+            dump(safari, "39-numbers-key-not-found")
+            shot("39-numbers-key-not-found")
+            XCTFail("Latin QWERTY numbers key not found")
+            return
+        }
+
+        numbersKey.press(forDuration: 1.0)
+        RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+
+        let marker = firstMatch(
+            in: safari,
+            labels: L.backKey + ["ピン留め", "Pinned", "Fissati"],
+            timeout: 4
+        )
+        let opened = marker != nil && clipboardPanelIsOpen(timeout: 2)
+        if !opened {
+            dump(safari, "39-clipboard-not-open")
+            shot("39-clipboard-not-open")
+            XCTFail("Long-pressing the Latin 123 key did not open Clipboard history")
+            return
+        }
+
+        XCTAssertTrue(opened, "Long-pressing the Latin 123 key must open Clipboard history directly")
+        shot("39-clipboard-open")
     }
 
     // MARK: - 34 · Copaky extension: the system paste control renders inside the input view
