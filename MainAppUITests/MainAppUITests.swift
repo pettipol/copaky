@@ -75,7 +75,7 @@ private enum L {
     static let pasteFromOtherAppsRowParts = ["Incolla da altre", "Paste from Other", "からペースト"]   // CONTAINS fallback
     /// The three states of that row; the protocol needs ASK.
     static let pasteAsk = ["Chiedi", "Ask", "確認"]
-    static let pasteDeny = ["Nega", "Deny", "拒否"]
+    static let pasteDeny = ["Rifiuta", "Nega", "Deny", "拒否"]
     /// Buttons that let a system paste prompt proceed, across OS languages and phrasings.
     static let allowPasteButtons = ["Consenti di incollare", "Allow Paste", "ペーストを許可", "Consenti", "Allow", "許可", "Incolla", "Paste", "ペースト"]
     /// Tips tab (TabItem "使い方") — the app's default landing screen.

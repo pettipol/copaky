@@ -25,8 +25,8 @@
 set -uo pipefail
 
 LANG_ARG="${1:-}"
-if [[ "$LANG_ARG" != "en" && "$LANG_ARG" != "ja" ]]; then
-  echo "Usage: $0 en|ja" >&2
+if [[ "$LANG_ARG" != "en" && "$LANG_ARG" != "ja" && "$LANG_ARG" != "it" ]]; then
+  echo "Usage: $0 en|ja|it" >&2
   exit 2
 fi
 
@@ -53,6 +53,10 @@ if [[ "$LANG_ARG" == "ja" ]]; then
   DEMO_URL="https://copaky.app/demo.ja"
   APPLE_LANGS='ja'
   APPLE_LOCALE='ja_JP'
+elif [[ "$LANG_ARG" == "it" ]]; then
+  DEMO_URL="https://copaky.app/demo.it"
+  APPLE_LANGS='it'
+  APPLE_LOCALE='it_IT'
 else
   DEMO_URL="https://copaky.app/demo"
   APPLE_LANGS='en'
