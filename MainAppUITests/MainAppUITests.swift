@@ -342,7 +342,7 @@ final class CopakyCampaignTests: XCTestCase {
         XCTAssertTrue(web.waitForExistence(timeout: 10), "Safari webview did not load")
         // dismiss Safari first-run coach-marks that cover the page
         for closeLabel in ["Chiudi", "Close", "OK", "Continua", "Continue"] {
-            let x = safari.buttons[closeLabel]
+            let x = safari.buttons.matching(NSPredicate(format: "label == %@", closeLabel)).firstMatch
             if x.exists && x.isHittable {
                 x.tap()
                 RunLoop.current.run(until: Date().addingTimeInterval(0.5))
@@ -952,18 +952,81 @@ final class CopakyCampaignTests: XCTestCase {
         }
     }
 
+    /// True only when Copaky's Latin QWERTY letters and Latin space key are both on screen.
+    /// Copaky: ラテン文字とラテン空白キーの両方が表示されている時だけ true。
+    private func latinQwertyVisible(in app: XCUIApplication, timeout: TimeInterval) -> Bool {
+        let latinSpaceLabels = L.spaceKey.filter { $0 != "空白" }
+        let letter = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label IN %@", ["q", "Q"])).firstMatch
+        let space = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label IN %@", latinSpaceLabels)).firstMatch
+        return letter.waitForExistence(timeout: timeout) && space.exists
+    }
+
+    /// Reach the Latin letters tab even when the extension restored a language-less or Japanese tab.
+    /// Copaky: 言語なしタブや日本語タブが復元されても、ラテン文字タブまで明示的に戻す。
+    private func switchToLatinQwertyTab(in app: XCUIApplication) -> Bool {
+        if latinQwertyVisible(in: app, timeout: 0.5) { return true }
+        switchToEnglishTab(in: app)
+        if !latinQwertyVisible(in: app, timeout: 2) {
+            // Copaky: A persisted language-less tab may expose only its full back label beside Globe.
+            // Copaky: 保持された言語なしタブではGlobe横の完全な戻り先表示を使う。
+            if let back = firstMatch(in: app, labels: ["ABC", "ITA", "あいう"], timeout: 2), back.isHittable {
+                back.tap()
+                RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+            }
+        }
+        if !latinQwertyVisible(in: app, timeout: 2) {
+            // Copaky: Returning to Japanese first requires one normal language-switch tap afterward.
+            // Copaky: いったん日本語へ戻った場合は通常の言語切替をもう一度行う。
+            switchToEnglishTab(in: app)
+        }
+        return latinQwertyVisible(in: app, timeout: 4)
+    }
+
     /// Copaky extension (QwertyLayoutProvider.abcKeyboard): long-pressing "e" on the EN QWERTY layout
     /// reveals Western-European accent variations ("è", "é", "ê", "ë"); dragging onto "è" and releasing
     /// must input it.
     func test30_accentVariationsOnLongPress() throws {
+        // test31 enables digit hints and that setting survives reruns; force the default ordering so
+        // "è", not "3", is the first variation of "e". / 再実行でも「è」を先頭候補に固定する。
+        mainApp.launch()
+        if let close = firstMatch(in: mainApp, labels: L.closeOnboarding, timeout: 4) {
+            close.tap()
+        }
+        openSettingsTab()
+        guard driveSwitch(L.numberHintsToggle, to: false) else {
+            dump(mainApp, "30-number-hints-not-off")
+            XCTFail("Number hints could not be turned OFF before the accent-variation probe")
+            return
+        }
+
         let field = focusField("plain-text")
         switchToCopaky(in: safari)
         switchToEnglishTab(in: safari)
         shot("30-english-tab")
-        let eKey = safari.descendants(matching: .any)["e"]
-        XCTAssertTrue(eKey.waitForExistence(timeout: 4), "Key 'e' not found on Copaky EN keyboard")
-        let variant = safari.descendants(matching: .any)["è"]
-        eKey.press(forDuration: 0.6, thenDragTo: variant)
+        let eKey = safari.descendants(matching: .any)
+            .matching(NSPredicate(format: "label == %@", "e")).firstMatch
+        guard eKey.waitForExistence(timeout: 4), eKey.isHittable else {
+            dump(safari, "30-e-key-not-found")
+            shot("30-e-key-not-found")
+            XCTFail("Key 'e' not found on Copaky EN keyboard")
+            return
+        }
+
+        // XCUI has no split touch-down/move/up API. Freeze the key's screen position before the
+        // magnifier duplicates its label, then perform one continuous gesture: press "e" first,
+        // hold until the popup is live, and move vertically through its first ("è") variation.
+        // Copaky: e の位置を先に固定し、長押し中に表示された先頭候補「è」へ一筆で移動する。
+        let keyFrame = eKey.frame
+        let appFrame = safari.frame
+        let appOrigin = safari.coordinate(withNormalizedOffset: .zero)
+        let start = appOrigin.withOffset(CGVector(
+            dx: keyFrame.midX - appFrame.minX,
+            dy: keyFrame.midY - appFrame.minY
+        ))
+        let firstVariant = start.withOffset(CGVector(dx: 0, dy: -keyFrame.height))
+        start.press(forDuration: 0.8, thenDragTo: firstVariant)
         RunLoop.current.run(until: Date().addingTimeInterval(0.5))
         shot("30-after-longpress")
         let value = field.value as? String ?? ""
@@ -977,7 +1040,7 @@ final class CopakyCampaignTests: XCTestCase {
         let web = safari.webViews.firstMatch
         XCTAssertTrue(web.waitForExistence(timeout: 10), "Safari webview did not load (page must be pre-opened via simctl openurl)")
         for closeLabel in ["Chiudi", "Close", "OK", "Continua", "Continue"] {
-            let x = safari.buttons[closeLabel]
+            let x = safari.buttons.matching(NSPredicate(format: "label == %@", closeLabel)).firstMatch
             if x.exists && x.isHittable {
                 x.tap()
                 RunLoop.current.run(until: Date().addingTimeInterval(0.5))
@@ -1229,7 +1292,12 @@ final class CopakyCampaignTests: XCTestCase {
         // the IME (field read ペrチェ…, paid 2026-08-14 — the JP tab converts romaji, it does not
         // fail loudly). Then one more cycle reaches Italian (order JP→EN→IT): the switch key
         // exposes the NEXT language as its own "IT" sub-element (the anchor test33 verifies).
-        switchToEnglishTab(in: safari)
+        guard switchToLatinQwertyTab(in: safari) else {
+            dump(safari, "35-no-initial-latin-qwerty")
+            shot("35-no-initial-latin-qwerty")
+            XCTFail("Latin QWERTY not reached before selecting Italian; seed keyboard_type_en=roman")
+            return
+        }
         dismissCopakyNotice(in: safari)
         let itNext = safari.descendants(matching: .any)
             .matching(NSPredicate(format: "label == %@", "IT")).firstMatch
@@ -1241,6 +1309,14 @@ final class CopakyCampaignTests: XCTestCase {
             .matching(NSPredicate(format: "label == %@", "perché")).firstMatch
         var attempts = 0
         while attempts < 3 {
+            // A failed probe may cycle IT → JP; re-establish Latin immediately before every typing run.
+            // 候補が出ない時は IT → JP を通るため、各入力の直前にラテン文字タブを再確認する。
+            guard switchToLatinQwertyTab(in: safari) else {
+                dump(safari, "35-no-latin-qwerty-attempt-\(attempts)")
+                shot("35-no-latin-qwerty-attempt-\(attempts)")
+                XCTFail("Latin QWERTY not reached before typing Italian probe attempt \(attempts + 1)")
+                return
+            }
             tapKeys(["p", "e", "r", "c", "h", "e"], in: safari)
             if accented.waitForExistence(timeout: 3) {
                 break
@@ -1393,30 +1469,7 @@ final class CopakyCampaignTests: XCTestCase {
         switchToCopaky(in: safari)
         dismissCopakyNotice(in: safari)
 
-        let latinSpaceLabels = L.spaceKey.filter { $0 != "空白" }
-        func latinQwertyVisible(timeout: TimeInterval) -> Bool {
-            let letter = safari.descendants(matching: .any)
-                .matching(NSPredicate(format: "label IN %@", ["q", "Q"])).firstMatch
-            let space = safari.descendants(matching: .any)
-                .matching(NSPredicate(format: "label IN %@", latinSpaceLabels)).firstMatch
-            return letter.waitForExistence(timeout: timeout) && space.exists
-        }
-
-        switchToEnglishTab(in: safari)
-        if !latinQwertyVisible(timeout: 2) {
-            // Copaky: A persisted language-less tab may expose only its full back label beside Globe.
-            // Copaky: 保持された言語なしタブではGlobe横の完全な戻り先表示を使う。
-            if let back = firstMatch(in: safari, labels: ["ABC", "ITA", "あいう"], timeout: 2), back.isHittable {
-                back.tap()
-                RunLoop.current.run(until: Date().addingTimeInterval(0.8))
-            }
-        }
-        if !latinQwertyVisible(timeout: 2) {
-            // Copaky: Returning to Japanese first requires one normal language-switch tap afterward.
-            // Copaky: いったん日本語へ戻った場合は通常の言語切替をもう一度行う。
-            switchToEnglishTab(in: safari)
-        }
-        guard latinQwertyVisible(timeout: 4) else {
+        guard switchToLatinQwertyTab(in: safari) else {
             dump(safari, "38-no-initial-latin-qwerty")
             shot("38-no-initial-latin-qwerty")
             XCTFail("Latin QWERTY not reached; seed keyboard_type_en=roman")
@@ -1462,7 +1515,7 @@ final class CopakyCampaignTests: XCTestCase {
         RunLoop.current.run(until: Date().addingTimeInterval(0.8))
 
         let value = field.value as? String ?? ""
-        let returnedToLatin = latinQwertyVisible(timeout: 4)
+        let returnedToLatin = latinQwertyVisible(in: safari, timeout: 4)
         if !returnedToLatin {
             dump(safari, "38-did-not-return-to-latin")
         }
@@ -1623,7 +1676,9 @@ final class CopakyCampaignTests: XCTestCase {
         while current().value as? String != wanted && taps < 4 {
             current().coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
             // enabling the clipboard history raises a confirmation alert; dismiss whatever appears
-            if mainApp.alerts.buttons["OK"].waitForExistence(timeout: 1.5) { mainApp.alerts.buttons["OK"].tap() }
+            let alertOK = mainApp.alerts.buttons
+                .matching(NSPredicate(format: "label == %@", "OK")).firstMatch
+            if alertOK.waitForExistence(timeout: 1.5) { alertOK.tap() }
             RunLoop.current.run(until: Date().addingTimeInterval(0.8))
             taps += 1
         }
