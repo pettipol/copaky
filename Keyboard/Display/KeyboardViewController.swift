@@ -80,6 +80,22 @@ final class KeyboardViewController: UIInputViewController {
     private var cancellables = Set<AnyCancellable>()
     private var lastKnownContainerSize: CGSize = .zero
 
+    @MainActor private static func collapsedCandidateBarHeight(interfaceHeight: CGFloat) -> CGFloat {
+        let states = variableStates
+        guard interfaceHeight > 0,
+              !states.shouldShowCandidateBar(
+                  for: states.tabManager.existentialTab(),
+                  copakyButtonVisible: DisplayTabBarButton.value,
+                  hideEmptyLatinBarEnabled: HideEmptyCandidateBarOnLatin.value
+              ) else {
+            return 0
+        }
+        return Design.keyboardBarReservedHeight(
+            interfaceHeight: interfaceHeight,
+            orientation: states.keyboardOrientation
+        )
+    }
+
     // Copaky: pull the App Group setting at each appearance because the extension has no observer for
     // changes made in the containing app while this process remains alive.
     // Copaky: App側の設定変更を監視できないため、表示のたびにApp Group設定を読み直す。
@@ -192,12 +208,29 @@ final class KeyboardViewController: UIInputViewController {
                 let bodyHeight = (state == .resizing) ? maxH : interfaceSize.height
 
                 // 3. 全体の高さを「本体の高さ + upsideComponentの高さ」として計算する
-                let totalHeight = bodyHeight + upsideComponentHeight + Design.keyboardScreenBottomPadding
+                let visibleBodyHeight = max(0, bodyHeight - Self.collapsedCandidateBarHeight(interfaceHeight: bodyHeight))
+                let totalHeight = visibleBodyHeight + upsideComponentHeight + Design.keyboardScreenBottomPadding
 
                 // 4. 計算した全体の高さを制約に設定する
                 self.setKeyboardHeight(to: totalHeight)
             }
             .store(in: &cancellables)
+
+        // Candidate content, active tab and Undo can all flip E-12 without changing interfaceSize.
+        // Re-advertise the extension height whenever one of those inputs changes.
+        Publishers.MergeMany([
+            KeyboardViewController.variableStates.$resultModel.map { _ in () }.eraseToAnyPublisher(),
+            KeyboardViewController.variableStates.$tabManager.map { _ in () }.eraseToAnyPublisher(),
+            KeyboardViewController.variableStates.$keyboardLanguage.map { _ in () }.eraseToAnyPublisher(),
+            KeyboardViewController.variableStates.$barState.map { _ in () }.eraseToAnyPublisher(),
+            KeyboardViewController.variableStates.$undoAction.map { _ in () }.eraseToAnyPublisher(),
+            KeyboardViewController.variableStates.$textChangedCount.map { _ in () }.eraseToAnyPublisher(),
+        ])
+        .receive(on: DispatchQueue.main)
+        .sink { [weak self] _ in
+            self?.updateScreenHeight()
+        }
+        .store(in: &cancellables)
     }
 
     private func setupKeyboardView() {
@@ -270,6 +303,8 @@ final class KeyboardViewController: UIInputViewController {
         }
         // キーボードのセットアップはこの段階で行う
         self.setupKeyboardView()
+        // Refresh App Group-backed E-12/A-11 settings even when the extension process was retained.
+        self.updateScreenHeight()
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -469,7 +504,8 @@ final class KeyboardViewController: UIInputViewController {
         } else {
             bodyHeight = variableStates.interfaceSize.height
         }
-        let totalHeight = bodyHeight + componentHeight + Design.keyboardScreenBottomPadding
+        let visibleBodyHeight = max(0, bodyHeight - Self.collapsedCandidateBarHeight(interfaceHeight: bodyHeight))
+        let totalHeight = visibleBodyHeight + componentHeight + Design.keyboardScreenBottomPadding
         KeyboardViewController.variableStates.maximumHeight = max(variableStates.maximumHeight, bodyHeight)
         debug(#function, "keyboardHeight prepared as", totalHeight)
         setKeyboardHeight(to: totalHeight)

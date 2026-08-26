@@ -60,7 +60,7 @@ public struct TabDependentDesign {
 
     // resultViewの幅を全体から引いたもの。キーを配置して良い部分の高さ。
     @MainActor var keysHeight: CGFloat {
-        interfaceHeight - (Design.keyboardBarHeight(interfaceHeight: interfaceHeight, orientation: orientation) + 12)
+        Design.keyboardKeysHeight(interfaceHeight: interfaceHeight, orientation: orientation)
     }
 
     /// This property is equivarent to `CGSize(width: keyViewWidth, height: keyViewHeight)`. if you want to use only either of two, call `keyViewWidth` or `keyViewHeight` directly.
@@ -184,22 +184,39 @@ public enum Design {
     @MainActor static public func upsideComponentHeight(_ component: UpsideComponent, orientation: KeyboardOrientation) -> CGFloat {
         Design.keyboardHeight(screenWidth: SemiStaticStates.shared.screenWidth, orientation: orientation, upsideComponent: component) - Design.keyboardHeight(screenWidth: SemiStaticStates.shared.screenWidth, orientation: orientation, upsideComponent: nil)
     }
-    /// バー部分の高さは`interfaceHeight`に基づいて決定する
-    @MainActor static func keyboardBarHeight(interfaceHeight: CGFloat, orientation: KeyboardOrientation) -> CGFloat {
+    @MainActor private static func keyboardBarHeightRatio(orientation: KeyboardOrientation) -> CGFloat {
         switch layoutMode(orientation: orientation) {
         case .phoneVertical:
-            return (interfaceHeight - 12) * 37 / 204
-        // return screenWidth / 8
+            37 / 204
         case .padVertical:
-            return (interfaceHeight - 12) * 31 / 180
-        // return screenWidth / 12
+            31 / 180
         case .phoneHorizontal:
-            return (interfaceHeight - 12) * 28 / 153
-        // return screenWidth / 18
+            28 / 153
         case .padHorizontal:
-            return (interfaceHeight - 12) * 9 / 55
-        // return screenWidth / 22
+            9 / 55
         }
+    }
+
+    /// バー部分の高さは`interfaceHeight`に基づいて決定する
+    @MainActor static func keyboardBarHeight(interfaceHeight: CGFloat, orientation: KeyboardOrientation) -> CGFloat {
+        (interfaceHeight - 12) * keyboardBarHeightRatio(orientation: orientation)
+    }
+
+    /// Total vertical space occupied by the candidate row: bar plus its existing 6 pt padding on
+    /// both edges. Exposed so the extension constraint and SwiftUI layout use one exact value.
+    @MainActor public static func keyboardBarReservedHeight(interfaceHeight: CGFloat, orientation: KeyboardOrientation) -> CGFloat {
+        keyboardBarHeight(interfaceHeight: interfaceHeight, orientation: orientation) + 12
+    }
+
+    /// Height left for keys when the candidate row is omitted. The inverse keeps resize-mode
+    /// persistence expressed in the existing full-interface coordinate system.
+    @MainActor static func keyboardKeysHeight(interfaceHeight: CGFloat, orientation: KeyboardOrientation) -> CGFloat {
+        max(0, interfaceHeight - keyboardBarReservedHeight(interfaceHeight: interfaceHeight, orientation: orientation))
+    }
+
+    @MainActor static func keyboardInterfaceHeight(keysHeight: CGFloat, orientation: KeyboardOrientation) -> CGFloat {
+        let ratio = keyboardBarHeightRatio(orientation: orientation)
+        return max(12, keysHeight / (1 - ratio) + 12)
     }
 
     @MainActor static func largeTextViewFontSize(_ text: String, upsideComponent: UpsideComponent?, orientation: KeyboardOrientation) -> CGFloat {

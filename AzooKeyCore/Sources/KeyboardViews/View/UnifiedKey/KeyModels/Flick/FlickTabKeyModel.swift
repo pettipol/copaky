@@ -61,6 +61,16 @@ struct FlickTabKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: Un
         KeyLabel(labelType, width: width)
     }
 
+    @MainActor func labelCornerHintSystemImage(variableStates: VariableStates) -> String? {
+        guard usesNumbersSlotLongPressDecision,
+              ClipboardHistoryKeyHintDecision.shouldShow(
+                  clipboardHistoryEnabled: variableStates.clipboardHistoryManager.isEnabled
+              ) else {
+            return nil
+        }
+        return "doc.badge.clock"
+    }
+
     @MainActor
     func backgroundStyleWhenUnpressed<ThemeExtension>(states: VariableStates, theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         if let isTabMoveSelected = isMoveTabTargetSelected(states: states), isTabMoveSelected {

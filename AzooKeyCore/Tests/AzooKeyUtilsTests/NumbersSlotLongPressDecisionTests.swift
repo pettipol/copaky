@@ -21,4 +21,9 @@ final class NumbersSlotLongPressDecisionTests: XCTestCase {
             [.setTabBar(.toggle)]
         )
     }
+
+    func testClipboardHistoryHintVisibilityMatchesHistorySetting() {
+        XCTAssertTrue(ClipboardHistoryKeyHintDecision.shouldShow(clipboardHistoryEnabled: true))
+        XCTAssertFalse(ClipboardHistoryKeyHintDecision.shouldShow(clipboardHistoryEnabled: false))
+    }
 }

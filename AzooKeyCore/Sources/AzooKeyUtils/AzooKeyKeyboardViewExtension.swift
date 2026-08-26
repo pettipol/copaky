@@ -98,6 +98,10 @@ public enum AzooKeyKeyboardViewExtension: ApplicationSpecificKeyboardViewExtensi
         DisplayTabBarButton.value
     }
 
+    public static var hideEmptyCandidateBarOnLatin: Bool {
+        HideEmptyCandidateBarOnLatin.value
+    }
+
     public static var hideResetButtonInOneHandedMode: Bool {
         HideResetButtonInOneHandedMode.value
     }

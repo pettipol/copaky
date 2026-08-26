@@ -5,6 +5,23 @@ import SwiftUI
 import enum KanaKanjiConverterModule.KeyboardLanguage
 
 struct QwertyDynamicChangeKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: UnifiedKeyModelProtocol {
+    @MainActor private func usesNumbersSlotLongPress(variableStates: VariableStates) -> Bool {
+        let shiftRole = QwertyLayoutProvider<Extension>.shiftBehaviorPreference() != .leftbottom
+            || variableStates.boolStates.isShifted
+            || variableStates.boolStates.isCapsLocked
+        let tab = variableStates.tabManager.existentialTab()
+        let isLatinTab: Bool = switch tab {
+        case .qwerty_abc, .qwerty_numbers, .qwerty_symbols: true
+        default: false
+        }
+        let onAbcTab: Bool = switch tab {
+        case .qwerty_abc: true
+        default: false
+        }
+        let isGlobeRole = SemiStaticStates.shared.needsInputModeSwitchKey && (!onAbcTab || shiftRole)
+        return isLatinTab && !isGlobeRole
+    }
+
     func pressActions(variableStates states: VariableStates) -> [ActionType] {
         if SemiStaticStates.shared.needsInputModeSwitchKey {
             switch states.tabManager.existentialTab() {
@@ -37,23 +54,13 @@ struct QwertyDynamicChangeKeyModel<Extension: ApplicationSpecificKeyboardViewExt
 
     func longPressActions(variableStates: VariableStates) -> LongpressActionType {
         let shiftRole = QwertyLayoutProvider<Extension>.shiftBehaviorPreference() != .leftbottom || variableStates.boolStates.isShifted || variableStates.boolStates.isCapsLocked
-        let tab = variableStates.tabManager.existentialTab()
-        let isLatinTab: Bool = switch tab {
-        case .qwerty_abc, .qwerty_numbers, .qwerty_symbols: true
-        default: false
-        }
-        let onAbcTab: Bool = switch tab {
-        case .qwerty_abc: true
-        default: false
-        }
         // Copaky [A-11]: on the Latin tabs this slot (123 / #+= / ABC-back, in every Shift mode) opens
         // Clipboard history on long press when the history is on — unless the key currently IS the
         // system globe (needsInputModeSwitchKey), which has no Copaky long press. Counter-review fix:
         // the default «#+=» role (UseShiftKey off) was left without any long press.
         // Copaky [A-11]: ラテン文字タブではこのスロット（123 / #+= / ABC 戻る、全 Shift 状態）が長押しで
         // 履歴を開く。システムのグローブ役のときだけ対象外。
-        let isGlobeRole = SemiStaticStates.shared.needsInputModeSwitchKey && (!onAbcTab || shiftRole)
-        if isLatinTab && !isGlobeRole {
+        if usesNumbersSlotLongPress(variableStates: variableStates) {
             return .init(start: NumbersSlotLongPressDecision.longPressActionsForNumbersSlot(
                 clipboardHistoryEnabled: variableStates.keyboardLanguage.usesLatinScript
                     && variableStates.clipboardHistoryManager.isEnabled
@@ -91,6 +98,17 @@ struct QwertyDynamicChangeKeyModel<Extension: ApplicationSpecificKeyboardViewExt
                 KeyLabel(.image("arrowtriangle.left.and.line.vertical.and.arrowtriangle.right"), width: width, textColor: color)
             }
         }
+    }
+
+    @MainActor func labelCornerHintSystemImage(variableStates: VariableStates) -> String? {
+        guard usesNumbersSlotLongPress(variableStates: variableStates),
+              ClipboardHistoryKeyHintDecision.shouldShow(
+                  clipboardHistoryEnabled: variableStates.keyboardLanguage.usesLatinScript
+                      && variableStates.clipboardHistoryManager.isEnabled
+              ) else {
+            return nil
+        }
+        return "doc.badge.clock"
     }
     func backgroundStyleWhenUnpressed<ThemeExtension>(states _: VariableStates, theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         (theme.specialKeyFillColor.color, theme.specialKeyFillColor.blendMode)

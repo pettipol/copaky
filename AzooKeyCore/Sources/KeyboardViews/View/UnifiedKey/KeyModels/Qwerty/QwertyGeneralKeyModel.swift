@@ -17,6 +17,7 @@ struct QwertyGeneralKeyModel<Extension: ApplicationSpecificKeyboardViewExtension
     private let variations: [QwertyVariationsModel.VariationElement]
     private let direction: VariationsViewDirection
     private let role: UnpressedRole
+    private let showsClipboardHistoryHint: Bool
     // 文字キー等で英語時シフト・Capsで大文字化するか（カスタムキー等では無効にしたい）
     private let shouldUppercaseForEnglish: Bool
 
@@ -27,7 +28,8 @@ struct QwertyGeneralKeyModel<Extension: ApplicationSpecificKeyboardViewExtension
          direction: VariationsViewDirection,
          showsTapBubble: Bool,
          role: UnpressedRole,
-         shouldUppercaseForEnglish: Bool = true
+         shouldUppercaseForEnglish: Bool = true,
+         showsClipboardHistoryHint: Bool = false
     ) {
         self.labelType = labelType
         self.press = pressActions
@@ -37,6 +39,7 @@ struct QwertyGeneralKeyModel<Extension: ApplicationSpecificKeyboardViewExtension
         self.showsBubbleFlag = showsTapBubble
         self.role = role
         self.shouldUppercaseForEnglish = shouldUppercaseForEnglish
+        self.showsClipboardHistoryHint = showsClipboardHistoryHint
     }
 
     // 静的アクション版（LinearCustomの置き換え用）
@@ -47,7 +50,8 @@ struct QwertyGeneralKeyModel<Extension: ApplicationSpecificKeyboardViewExtension
          direction: VariationsViewDirection = .center,
          showsTapBubble: Bool,
          role: UnpressedRole,
-         shouldUppercaseForEnglish: Bool = true
+         shouldUppercaseForEnglish: Bool = true,
+         showsClipboardHistoryHint: Bool = false
     ) {
         self.init(
             labelType: labelType,
@@ -57,7 +61,8 @@ struct QwertyGeneralKeyModel<Extension: ApplicationSpecificKeyboardViewExtension
             direction: direction,
             showsTapBubble: showsTapBubble,
             role: role,
-            shouldUppercaseForEnglish: shouldUppercaseForEnglish
+            shouldUppercaseForEnglish: shouldUppercaseForEnglish,
+            showsClipboardHistoryHint: showsClipboardHistoryHint
         )
     }
 
@@ -95,6 +100,17 @@ struct QwertyGeneralKeyModel<Extension: ApplicationSpecificKeyboardViewExtension
             }
         }
         return KeyLabel(labelType, width: width, textColor: color)
+    }
+
+    @MainActor func labelCornerHintSystemImage(variableStates: VariableStates) -> String? {
+        guard showsClipboardHistoryHint,
+              ClipboardHistoryKeyHintDecision.shouldShow(
+                  clipboardHistoryEnabled: variableStates.keyboardLanguage.usesLatinScript
+                      && variableStates.clipboardHistoryManager.isEnabled
+              ) else {
+            return nil
+        }
+        return "doc.badge.clock"
     }
 
     func backgroundStyleWhenUnpressed<ThemeExtension>(states _: VariableStates, theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {

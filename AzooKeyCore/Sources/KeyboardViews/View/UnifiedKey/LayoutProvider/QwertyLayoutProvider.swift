@@ -51,7 +51,8 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
                         && states.clipboardHistoryManager.isEnabled
                 ))
             },
-            variations: [], direction: .right, showsTapBubble: false, role: .special
+            variations: [], direction: .right, showsTapBubble: false, role: .special,
+            showsClipboardHistoryHint: true
         )
         // symbols key
         let symbolsKey: any UnifiedKeyModelProtocol<Extension> = QwertyGeneralKeyModel(
@@ -63,7 +64,8 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
                         && states.clipboardHistoryManager.isEnabled
                 ))
             },
-            variations: [], direction: .right, showsTapBubble: false, role: .special
+            variations: [], direction: .right, showsTapBubble: false, role: .special,
+            showsClipboardHistoryHint: true
         )
         // change keyboard key (dynamic)
         let changeKeyboardKey: any UnifiedKeyModelProtocol<Extension> = QwertyDynamicChangeKeyModel<Extension>()

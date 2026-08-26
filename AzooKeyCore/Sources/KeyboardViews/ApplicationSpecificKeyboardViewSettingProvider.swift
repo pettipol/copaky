@@ -43,6 +43,8 @@ import Foundation
 
     /// タブバーボタンを表示する
     static var displayTabBarButton: Bool { get }
+    /// ラテン文字QWERTYで空の候補バーを隠す
+    static var hideEmptyCandidateBarOnLatin: Bool { get }
     /// 反射スタイルのカーソルバーを利用する
     static var useReflectStyleCursorBar: Bool { get }
     /// カーソルバーを自動表示する（実験的機能）

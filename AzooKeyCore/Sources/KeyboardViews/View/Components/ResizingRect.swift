@@ -25,9 +25,10 @@ struct ResizingRect<Extension: ApplicationSpecificKeyboardViewExtension>: View {
     @Binding private var position: CGPoint
 
     private let initialSize: CGSize
+    private let candidateBarCollapsed: Bool
     private let minimumWidth: CGFloat = 120
 
-    init(size: Binding<CGSize>, position: Binding<CGPoint>, initialSize: CGSize) {
+    init(size: Binding<CGSize>, position: Binding<CGPoint>, initialSize: CGSize, candidateBarCollapsed: Bool = false) {
         self._size = size
         self._position = position
         self._initialPosition = .init(initialValue: position.wrappedValue)
@@ -42,12 +43,31 @@ struct ResizingRect<Extension: ApplicationSpecificKeyboardViewExtension>: View {
         )
         self._bottom_right_edge = .init(initialValue: (br, br))
         self.initialSize = initialSize
+        self.candidateBarCollapsed = candidateBarCollapsed
+    }
+
+    private func visibleHeight(for interfaceHeight: CGFloat) -> CGFloat {
+        if candidateBarCollapsed {
+            Design.keyboardKeysHeight(interfaceHeight: interfaceHeight, orientation: variableStates.keyboardOrientation)
+        } else {
+            interfaceHeight
+        }
+    }
+
+    private var persistedSize: CGSize {
+        guard candidateBarCollapsed else {
+            return size
+        }
+        return CGSize(
+            width: size.width,
+            height: Design.keyboardInterfaceHeight(keysHeight: size.height, orientation: variableStates.keyboardOrientation)
+        )
     }
 
     func updateUserDefaults() {
         // UserDefaultsのデータを更新する
         variableStates.keyboardInternalSettingManager.update(\.oneHandedModeSetting) {value in
-            value.set(orientation: variableStates.keyboardOrientation, size: size, position: position)
+            value.set(orientation: variableStates.keyboardOrientation, size: persistedSize, position: position)
         }
     }
 
@@ -104,8 +124,12 @@ struct ResizingRect<Extension: ApplicationSpecificKeyboardViewExtension>: View {
                 // 縮小禁止（下端ハンドルの場合）
                 let isShrinkOnBottom = !isTopHandle && newHeight < size.height
                 // 最小・最大を超えたらキャンセル
-                let isTooShort = newHeight < Design.keyboardHeight(screenWidth: SemiStaticStates.shared.screenWidth, orientation: variableStates.keyboardOrientation) / 2
-                let isTooTall  = newHeight > variableStates.maximumHeight
+                let minimumHeight = visibleHeight(
+                    for: Design.keyboardHeight(screenWidth: SemiStaticStates.shared.screenWidth, orientation: variableStates.keyboardOrientation) / 2
+                )
+                let maximumHeight = visibleHeight(for: variableStates.maximumHeight)
+                let isTooShort = newHeight < minimumHeight
+                let isTooTall  = newHeight > maximumHeight
 
                 if isTooShort || isTooTall || isShrinkOnBottom {
                     // 範囲外なら元に戻す
@@ -228,14 +252,16 @@ struct ResizingRect<Extension: ApplicationSpecificKeyboardViewExtension>: View {
 @MainActor
 struct ResizingBindingFrame<Extension: ApplicationSpecificKeyboardViewExtension>: ViewModifier {
     private let initialSize: CGSize
+    private let candidateBarCollapsed: Bool
     @Binding private var position: CGPoint
     @Binding private var size: CGSize
     @EnvironmentObject private var variableStates: VariableStates
     private var hideResetButtonInOneHandedMode: Bool {
         Extension.SettingProvider.hideResetButtonInOneHandedMode
     }
-    init(size: Binding<CGSize>, position: Binding<CGPoint>, initialSize: CGSize) {
+    init(size: Binding<CGSize>, position: Binding<CGPoint>, initialSize: CGSize, candidateBarCollapsed: Bool) {
         self.initialSize = initialSize
+        self.candidateBarCollapsed = candidateBarCollapsed
         self._size = size
         self._position = position
     }
@@ -243,6 +269,34 @@ struct ResizingBindingFrame<Extension: ApplicationSpecificKeyboardViewExtension>
     private var isAtDefaultWidth: Bool {
         // 浮動小数点数の計算誤差を考慮し、0.1ポイント未満の差は「同じ」と見なします
         self.size.width.isApproximatelyEqual(to: self.initialSize.width, absoluteTolerance: 0.1)
+    }
+
+    private func visibleHeight(for interfaceHeight: CGFloat) -> CGFloat {
+        if candidateBarCollapsed {
+            Design.keyboardKeysHeight(interfaceHeight: interfaceHeight, orientation: variableStates.keyboardOrientation)
+        } else {
+            interfaceHeight
+        }
+    }
+
+    private var visibleSize: Binding<CGSize> {
+        Binding(
+            get: {
+                CGSize(width: size.width, height: visibleHeight(for: size.height))
+            },
+            set: { newValue in
+                let interfaceHeight = if candidateBarCollapsed {
+                    Design.keyboardInterfaceHeight(keysHeight: newValue.height, orientation: variableStates.keyboardOrientation)
+                } else {
+                    newValue.height
+                }
+                size = CGSize(width: newValue.width, height: interfaceHeight)
+            }
+        )
+    }
+
+    private var visibleInitialSize: CGSize {
+        CGSize(width: initialSize.width, height: visibleHeight(for: initialSize.height))
     }
 
     @ViewBuilder
@@ -299,7 +353,7 @@ struct ResizingBindingFrame<Extension: ApplicationSpecificKeyboardViewExtension>
         case .onehanded:
             // 親Viewに対して、そのサイズを教えてくれるGeometryReaderを重ねる
             content
-                .frame(width: size.width, height: size.height)
+                .frame(width: size.width, height: visibleHeight(for: size.height))
                 .offset(x: position.x, y: 0)
                 .overlay {
                     if !hideResetButtonInOneHandedMode && !isAtDefaultWidth {
@@ -330,27 +384,33 @@ struct ResizingBindingFrame<Extension: ApplicationSpecificKeyboardViewExtension>
         case .fullwidth:
             content
         case .resizing:
-            let maximumHeight = variableStates.maximumHeight
-            let height = variableStates.interfaceSize.height
+            let maximumHeight = visibleHeight(for: variableStates.maximumHeight)
+            let height = visibleSize.wrappedValue.height
             let offSet = (maximumHeight - height) / 2
             ZStack {
                 content
                 Rectangle()
                     .fill(Color.black.opacity(0.2))
-                    .frame(width: size.width, height: size.height)
+                    .frame(width: visibleSize.wrappedValue.width, height: height)
             }
             .disabled(true)
             .overlay {
-                ResizingRect<Extension>(size: $size, position: $position, initialSize: initialSize)
+                ResizingRect<Extension>(
+                    size: visibleSize,
+                    position: $position,
+                    initialSize: visibleInitialSize,
+                    candidateBarCollapsed: candidateBarCollapsed
+                )
+                .id(candidateBarCollapsed)
             }
-            .frame(width: size.width, height: size.height)
+            .frame(width: visibleSize.wrappedValue.width, height: height)
             .offset(x: position.x, y: offSet)
         }
     }
 }
 
 extension View {
-    @MainActor func resizingFrame<Extension: ApplicationSpecificKeyboardViewExtension>(size: Binding<CGSize>, position: Binding<CGPoint>, initialSize: CGSize, extension: Extension.Type) -> some View {
-        self.modifier(ResizingBindingFrame<Extension>(size: size, position: position, initialSize: initialSize))
+    @MainActor func resizingFrame<Extension: ApplicationSpecificKeyboardViewExtension>(size: Binding<CGSize>, position: Binding<CGPoint>, initialSize: CGSize, candidateBarCollapsed: Bool = false, extension: Extension.Type) -> some View {
+        self.modifier(ResizingBindingFrame<Extension>(size: size, position: position, initialSize: initialSize, candidateBarCollapsed: candidateBarCollapsed))
     }
 }

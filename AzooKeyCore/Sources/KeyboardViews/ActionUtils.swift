@@ -19,6 +19,34 @@ enum NumbersSlotLongPressDecision {
     }
 }
 
+// Copaky [E-12]: pure policy for collapsing only an actually empty Latin QWERTY bar.
+// Copaky [E-12]: 空のラテン文字QWERTY候補バーだけを折りたたむ純粋な判定。
+enum CandidateBarVisibilityDecision {
+    static func isVisible(
+        isLatinQwertyTab: Bool,
+        hasCandidates: Bool,
+        hasPredictions: Bool,
+        hasNoticeOrAlternateBarContent: Bool,
+        copakyButtonVisible: Bool,
+        hideEmptyLatinBarEnabled: Bool
+    ) -> Bool {
+        !isLatinQwertyTab
+            || !hideEmptyLatinBarEnabled
+            || hasCandidates
+            || hasPredictions
+            || hasNoticeOrAlternateBarContent
+            || copakyButtonVisible
+    }
+}
+
+// Copaky [A-12]: the visual affordance follows the same live opt-in as the gesture.
+// Copaky [A-12]: ジェスチャーと同じライブ設定に従う視覚ヒント。
+enum ClipboardHistoryKeyHintDecision {
+    static func shouldShow(clipboardHistoryEnabled: Bool) -> Bool {
+        clipboardHistoryEnabled
+    }
+}
+
 extension CodableActionData {
     var actionType: ActionType {
         switch self {

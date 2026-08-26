@@ -208,6 +208,31 @@ public final class VariableStates: ObservableObject {
         return self.resultModel.resultData[index].candidate
     }
 
+    /// Copaky [E-12]: resolve all candidate-row content in one place so SwiftUI and the keyboard
+    /// controller advertise exactly the same height. Number/symbol tabs count as Latin only while
+    /// they retain an English/Italian typing language; the same tabs reached from Japanese stay tall.
+    @MainActor public func shouldShowCandidateBar(
+        for tab: KeyboardTab.ExistentialTab,
+        copakyButtonVisible: Bool,
+        hideEmptyLatinBarEnabled: Bool
+    ) -> Bool {
+        let isLatinQwertyTab = switch tab {
+        case .qwerty_abc, .qwerty_numbers, .qwerty_symbols:
+            self.keyboardLanguage.usesLatinScript
+        default:
+            false
+        }
+        let hasCurrentUndo = self.undoAction?.textChangedCount == self.textChangedCount
+        return CandidateBarVisibilityDecision.isVisible(
+            isLatinQwertyTab: isLatinQwertyTab,
+            hasCandidates: self.resultModel.displayState == .results,
+            hasPredictions: self.resultModel.displayState == .predictions,
+            hasNoticeOrAlternateBarContent: hasCurrentUndo || self.barState != .none,
+            copakyButtonVisible: copakyButtonVisible,
+            hideEmptyLatinBarEnabled: hideEmptyLatinBarEnabled
+        )
+    }
+
     @MainActor public func setResizingMode(_ state: ResizingState) {
         let baseHeight = Design.keyboardHeight(
             screenWidth: SemiStaticStates.shared.screenWidth,

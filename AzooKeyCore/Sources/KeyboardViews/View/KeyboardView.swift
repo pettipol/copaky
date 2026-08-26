@@ -51,8 +51,34 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
         return Design.upsideComponentHeight(component, orientation: variableStates.keyboardOrientation)
     }
 
+    private var activeTab: KeyboardTab.ExistentialTab {
+        defaultTab ?? variableStates.tabManager.existentialTab()
+    }
+
+    private var showsCandidateBar: Bool {
+        variableStates.shouldShowCandidateBar(
+            for: activeTab,
+            copakyButtonVisible: Extension.SettingProvider.displayTabBarButton,
+            hideEmptyLatinBarEnabled: Extension.SettingProvider.hideEmptyCandidateBarOnLatin
+        )
+    }
+
+    private var collapsedCandidateBarHeight: CGFloat {
+        guard !showsCandidateBar else {
+            return 0
+        }
+        return Design.keyboardBarReservedHeight(
+            interfaceHeight: resolvedInterfaceHeight,
+            orientation: variableStates.keyboardOrientation
+        )
+    }
+
+    private var visibleInterfaceHeight: CGFloat {
+        max(0, resolvedInterfaceHeight - collapsedCandidateBarHeight)
+    }
+
     private var totalBackgroundHeight: CGFloat {
-        resolvedInterfaceHeight + Design.keyboardScreenBottomPadding + componentOverlayHeight
+        visibleInterfaceHeight + Design.keyboardScreenBottomPadding + componentOverlayHeight
     }
 
     @ViewBuilder
@@ -69,7 +95,7 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
             }
             .frame(
                 width: SemiStaticStates.shared.screenWidth,
-                height: resolvedInterfaceHeight + Design.keyboardScreenBottomPadding
+                height: visibleInterfaceHeight + Design.keyboardScreenBottomPadding
             )
     }
 
@@ -115,12 +141,14 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
                     if isResultViewExpanded {
                         ExpandedResultView<Extension>(isResultViewExpanded: $isResultViewExpanded)
                     } else {
-                        KeyboardBarView<Extension>(isResultViewExpanded: $isResultViewExpanded)
-                            .frame(height: Design.keyboardBarHeight(interfaceHeight: variableStates.interfaceSize.height, orientation: variableStates.keyboardOrientation))
-                            // バーのタッチ判定領域はpaddingより前まで
-                            .contentShape(Rectangle())
-                            .padding(.vertical, 6)
-                        keyboardView(tab: defaultTab ?? variableStates.tabManager.existentialTab())
+                        if showsCandidateBar {
+                            KeyboardBarView<Extension>(isResultViewExpanded: $isResultViewExpanded)
+                                .frame(height: Design.keyboardBarHeight(interfaceHeight: variableStates.interfaceSize.height, orientation: variableStates.keyboardOrientation))
+                                // バーのタッチ判定領域はpaddingより前まで
+                                .contentShape(Rectangle())
+                                .padding(.vertical, 6)
+                        }
+                        keyboardView(tab: activeTab)
                             .zIndex(1)
                     }
                 }
@@ -128,6 +156,7 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
                     size: $variableStates.interfaceSize,
                     position: $variableStates.interfacePosition,
                     initialSize: CGSize(width: SemiStaticStates.shared.screenWidth, height: Design.keyboardHeight(screenWidth: SemiStaticStates.shared.screenWidth, orientation: variableStates.keyboardOrientation)),
+                    candidateBarCollapsed: !showsCandidateBar,
                     extension: Extension.self
                 )
                 .padding(.bottom, Design.keyboardScreenBottomPadding)

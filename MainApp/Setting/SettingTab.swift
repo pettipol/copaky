@@ -67,6 +67,7 @@ struct SettingTabView: View {
                         BoolSettingView(.italianAutoAccentOnSpace)
                         BoolSettingView(.enableClipboardHistoryManagerTab)
                         BoolSettingView(.displayTabBarButton)
+                        BoolSettingView(.hideEmptyCandidateBarOnLatin)
                         BoolSettingView(.enableKeySound)
                         if SemiStaticStates.shared.hapticsAvailable {
                             BoolSettingView(.enableKeyHaptics)
@@ -130,6 +131,8 @@ struct SettingTabView: View {
                         .searchKeys("コピー履歴", "クリップボード履歴", "履歴", "appunti", "clipboard", "cronologia")
                     BoolSettingView(.displayTabBarButton)
                         .searchKeys("Copakyボタン", "候補バー", "barra", "suggerimenti", "candidate", "button")
+                    BoolSettingView(.hideEmptyCandidateBarOnLatin)
+                        .searchKeys("候補バー", "空", "ラテン", "barra", "vuota", "suggerimenti", "empty", "Latin")
                     // NOT wrapped in a hasFullAccess check: that flag is read once at app launch and
                     // never refreshed, so a user who grants Full Access in iOS Settings and comes back
                     // would find the row GONE — and, worse, someone who revokes it later would lose the

@@ -363,17 +363,30 @@ public extension KeyboardSettingKey where Self == EnableClipboardHistoryManagerT
     static var enableClipboardHistoryManagerTab: Self { .init() }
 }
 
-/// Copaky: keeps the candidate-bar shortcut optional while preserving its existing default.
-/// Copaky: 候補バーのショートカットを任意表示にし、従来のデフォルト値は維持する。
+/// Copaky: optional candidate-bar shortcut, off by default.
+/// Copaky: 候補バーのショートカットは任意表示で、既定ではオフ。
 public struct DisplayTabBarButton: BoolKeyboardSettingKey {
     public static let title: LocalizedStringKey = "Copaky ボタンを候補バーに表示"
-    public static let explanation: LocalizedStringKey = "オフにすると候補バーの Copaky ボタンを隠します。タブバーは 123 / #+= / ☆123 キーの長押しから開けます（クリップボード履歴がオンのときは長押しで履歴タブが直接開きます）"
-    public static let defaultValue = true
+    public static let explanation: LocalizedStringKey = "オンにすると候補バーに Copaky ボタンを表示します。タブバーは 123 / #+= / ☆123 キーの長押しから開けます（クリップボード履歴がオンのときは長押しで履歴タブが直接開きます）"
+    public static let defaultValue = false
     public static let key: String = "display_tab_bar_button"
 }
 
 public extension KeyboardSettingKey where Self == DisplayTabBarButton {
     static var displayTabBarButton: Self { .init() }
+}
+
+/// Copaky: collapse an empty candidate bar only on the English/Italian QWERTY family.
+/// Copaky: 英語・イタリア語のQWERTYに限り、空の候補バーを折りたたむ。
+public struct HideEmptyCandidateBarOnLatin: BoolKeyboardSettingKey {
+    public static let title: LocalizedStringKey = "候補がないとき候補バーを隠す（ラテン文字キーボード）"
+    public static let explanation: LocalizedStringKey = "英語・イタリア語のQWERTYで、候補・予測・お知らせがなく、Copaky ボタンも非表示のときに候補バーを隠して、キーボードを低くします。日本語キーボードには影響しません。"
+    public static let defaultValue = false
+    public static let key: String = "hide_empty_candidate_bar_on_latin"
+}
+
+public extension KeyboardSettingKey where Self == HideEmptyCandidateBarOnLatin {
+    static var hideEmptyCandidateBarOnLatin: Self { .init() }
 }
 
 /// 削除した設定を記録するためのenum。おもに`key`の情報を残すため、ソースに維持している。

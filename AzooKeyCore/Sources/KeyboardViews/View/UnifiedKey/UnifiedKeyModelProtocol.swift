@@ -28,6 +28,7 @@ public protocol UnifiedKeyModelProtocol<Extension> {
 
     // Label
     @MainActor func label<ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable>(width: CGFloat, theme: ThemeData<ThemeExtension>, states: VariableStates, color: Color?) -> KeyLabel<Extension>
+    @MainActor func labelCornerHintSystemImage(variableStates: VariableStates) -> String?
 
     // Background styles
     @MainActor func backgroundStyleWhenPressed<ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable>(theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue
@@ -47,6 +48,7 @@ public extension UnifiedKeyModelProtocol {
     @MainActor func isFlickAble(to direction: FlickDirection, variableStates _: VariableStates) -> Bool { false }
     @MainActor func flickSensitivity(to direction: FlickDirection) -> CGFloat { 25 / Extension.SettingProvider.flickSensitivity }
     @MainActor func showsTapBubble(variableStates _: VariableStates) -> Bool { false }
+    @MainActor func labelCornerHintSystemImage(variableStates _: VariableStates) -> String? { nil }
     @MainActor func backgroundStyleWhenPressed<ThemeExtension>(theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         (theme.pushedKeyFillColor.color, theme.pushedKeyFillColor.blendMode)
     }

@@ -52,7 +52,7 @@ struct CustomizeTabView: View {
                         .listRowSeparator(.hidden, edges: .bottom)
                         Text("カスタムタブを使うにはタブバーを利用します。")
                         DisclosureGroup("使い方") {
-                            Text("あずきのマークを押すと表示されます。")
+                            Text("候補バーに Copaky ボタンを表示している場合は、そのボタンからも開けます。")
                             Text("フリック入力では左上の「☆123」・ローマ字入力では左下の「123」「#+=」キーを長押ししても表示されます。")
                         }
                         NavigationLink("タブバーを編集") {

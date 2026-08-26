@@ -602,6 +602,24 @@ public struct UnifiedGenericKeyView<Extension: ApplicationSpecificKeyboardViewEx
         )
         .gesture(flickGesture.simultaneously(with: qwertyGesture))
         .overlay { self.model.label(width: size.width, theme: theme, states: variableStates, color: nil) }
+        .overlay(alignment: .topTrailing) {
+            if let systemImage = self.model.labelCornerHintSystemImage(variableStates: variableStates) {
+                Image(systemName: systemImage)
+                    .font(Design.fonts.keyLabelFont(
+                        // Size the glyph like the one-character number-row hints, not like its
+                        // multi-character SF Symbol identifier.
+                        text: "0",
+                        width: size.width,
+                        fontSize: .xxsmall,
+                        userDecidedSize: Extension.SettingProvider.keyViewFontSize,
+                        theme: theme
+                    ))
+                    .foregroundStyle(theme.textColor.color.opacity(0.6))
+                    .padding(4)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
         .overlay(alignment: .center) {
             if let flickSuggestType, !self.flickMap().isEmpty {
                 UnifiedFlickSuggestView<Extension>(model: model, tabDesign: tabDesign, size: size, suggestType: flickSuggestType)

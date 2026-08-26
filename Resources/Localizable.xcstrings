@@ -3137,22 +3137,6 @@
         }
       }
     },
-    "あずきのマークを押すと表示されます。" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tab bar will appear when you press Copaky's icon on the keyboard."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "La barra dei tab appare quando premi l'icona di Copaky sulla tastiera."
-          }
-        }
-      }
-    },
     "あなたがよく使う仕事の挨拶やゲームの定型文、お気に入りの顔文字など、好きなものを並べたカスタムタブを作ることができます。" : {
       "localizations" : {
         "en" : {
@@ -3314,19 +3298,19 @@
         }
       }
     },
-    "オフにすると候補バーの Copaky ボタンを隠します。タブバーは 123 / #+= / ☆123 キーの長押しから開けます（クリップボード履歴がオンのときは長押しで履歴タブが直接開きます）" : {
+    "オンにすると候補バーに Copaky ボタンを表示します。タブバーは 123 / #+= / ☆123 キーの長押しから開けます（クリップボード履歴がオンのときは長押しで履歴タブが直接開きます）" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Turn off to hide the Copaky button in the candidate bar. The tab bar opens with a long press on the 123 / #+= / ☆123 key (when Clipboard history is on, the long press opens the history tab directly)"
+            "value" : "Turn on to show the Copaky button in the candidate bar. The tab bar opens with a long press on the 123 / #+= / ☆123 key (when Clipboard history is on, the long press opens the history tab directly)"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Disattiva per nascondere il pulsante Copaky nella barra dei suggerimenti. La barra schede si apre con un tocco lungo sul tasto 123 / #+= / ☆123 (se la Cronologia appunti è attiva, il tocco lungo apre direttamente la cronologia)"
+            "value" : "Attiva per mostrare il pulsante Copaky nella barra dei suggerimenti. La barra schede si apre con un tocco lungo sul tasto 123 / #+= / ☆123 (se la Cronologia appunti è attiva, il tocco lungo apre direttamente la cronologia)"
           }
         }
       }
@@ -8174,6 +8158,39 @@
         }
       }
     },
+    "候補バーに Copaky ボタンを表示している場合は、そのボタンからも開けます。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If the Copaky button is shown in the suggestion bar, you can also open it from that button."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se il pulsante Copaky è visibile nella barra dei suggerimenti, puoi aprirla anche da quel pulsante."
+          }
+        }
+      }
+    },
+    "候補がないとき候補バーを隠す（ラテン文字キーボード）" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hide the suggestion bar when it is empty (Latin keyboards)"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nascondi la barra dei suggerimenti quando è vuota (tastiere latine)"
+          }
+        }
+      }
+    },
     "候補の学習をリセットしました" : {
       "localizations" : {
         "en" : {
@@ -12867,6 +12884,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Durante l'input in inglese mostra tra i candidati caratteri decorati come «𝕥𝕪𝕡𝕠𝕘𝕣𝕒𝕡𝕙𝕪»."
+          }
+        }
+      }
+    },
+    "英語・イタリア語のQWERTYで、候補・予測・お知らせがなく、Copaky ボタンも非表示のときに候補バーを隠して、キーボードを低くします。日本語キーボードには影響しません。" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On English and Italian QWERTY keyboards, hides the suggestion bar when there are no candidates, predictions, or notices and the Copaky button is hidden, making the keyboard shorter. Japanese keyboards are not affected."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sulle tastiere QWERTY inglese e italiana, nasconde la barra dei suggerimenti quando non ci sono candidati, previsioni o avvisi e il pulsante Copaky è nascosto, rendendo la tastiera più bassa. Le tastiere giapponesi non sono interessate."
           }
         }
       }
