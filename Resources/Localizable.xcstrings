@@ -833,6 +833,22 @@
         }
       }
     },
+    "クリップボードが大きすぎるため追加できませんでした" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The clipboard is too large to add"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gli appunti sono troppo grandi per essere aggiunti"
+          }
+        }
+      }
+    },
     "履歴" : {
       "localizations" : {
         "en" : {

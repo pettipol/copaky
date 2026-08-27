@@ -117,9 +117,15 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
         if #available(iOS 16.0, *), Extension.SettingProvider.useSystemPasteControl, !variableStates.isSecureEntry {
             SystemPasteControl(
                 onPaste: { text in
-                    variableStates.capturePastedText(text)
+                    let result = variableStates.capturePastedText(text)
+                    if case .rejectedOversized = result {
+                        return
+                    }
                     self.target.reload(manager: variableStates.clipboardHistoryManager)
                     KeyboardFeedback<Extension>.click()
+                },
+                onRejectOversized: {
+                    variableStates.reportSourceRejectedOversizedClipboardCapture()
                 }
             )
             .frame(height: 34)
@@ -133,7 +139,10 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
     @ViewBuilder
     private var legacyCaptureBar: some View {
         Button {
-            variableStates.captureClipboard()
+            let result = variableStates.captureClipboard()
+            if case .rejectedOversized = result {
+                return
+            }
             self.target.reload(manager: variableStates.clipboardHistoryManager)
             KeyboardFeedback<Extension>.click()
         } label: {

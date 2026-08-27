@@ -9,6 +9,7 @@
 import class UIKit.UIPasteboard
 import Foundation
 import SwiftUtils
+import UniformTypeIdentifiers
 
 struct ClipboardHistoryItem: Equatable, Comparable, Hashable, Codable, Identifiable {
     var content: Content
@@ -46,21 +47,83 @@ struct ClipboardHistoryItem: Equatable, Comparable, Hashable, Codable, Identifia
 /// e (b) rendere i test deterministici: la `UIPasteboard.general` reale, in un contesto di test
 /// headless su Simulatore iOS 16+, può bloccarsi sul servizio `com.apple.pasteboard.pasted` in attesa
 /// del permesso di incolla. I test iniettano una sorgente fittizia.
+public enum ClipboardTextReadResult: Sendable {
+    case text(String)
+    case unavailable
+    case rejectedOversized
+}
+
 public protocol ClipboardSource {
     @MainActor var changeCount: Int { get }
     @MainActor var hasStrings: Bool { get }
     @MainActor var string: String? { get }
+    @MainActor func readText(maxUTF8ByteCount: Int) -> ClipboardTextReadResult
+}
+
+public extension ClipboardSource {
+    /// Default/test path: read the value once. The manager keeps final authority over both caps.
+    /// 既定・テスト経路：値を一度だけ読む。最終的な上限判定は manager が行う。
+    @MainActor func readText(maxUTF8ByteCount _: Int) -> ClipboardTextReadResult {
+        guard let string = self.string else {
+            return .unavailable
+        }
+        return .text(string)
+    }
 }
 
 /// Implementazione di produzione: legge la `UIPasteboard.general` reale.
 public struct SystemClipboardSource: ClipboardSource {
+    private static let utf8ByteOrderMark: [UInt8] = [0xEF, 0xBB, 0xBF]
+
     public init() {}
     @MainActor public var changeCount: Int { UIPasteboard.general.changeCount }
     @MainActor public var hasStrings: Bool { UIPasteboard.general.hasStrings }
     @MainActor public var string: String? { UIPasteboard.general.string }
+
+    @MainActor public func readText(maxUTF8ByteCount: Int) -> ClipboardTextReadResult {
+        let pasteboard = UIPasteboard.general
+        let utf8Type = UTType.utf8PlainText.identifier
+        if pasteboard.types.contains(utf8Type) {
+            // UIPasteboard has no size-only query. Read the raw representation ONCE, reject by its
+            // O(1) byte count, and only then decode a String (which would be a second allocation).
+            // size-only API はないため raw Data を一度だけ読み、count 後にだけ String 化する。
+            guard let data = pasteboard.data(forPasteboardType: utf8Type) else {
+                return .unavailable
+            }
+            guard !Self.exceedsDecodedUTF8ByteLimit(data, maxByteCount: maxUTF8ByteCount) else {
+                return .rejectedOversized
+            }
+            guard let string = String(data: data, encoding: .utf8) else {
+                return .unavailable
+            }
+            return .text(string)
+        }
+
+        // Preserve support for other text representations. This is still exactly one value read;
+        // the bounded UTF-8 walk happens before grapheme counting or any history mutation.
+        // UTF-8 以外の表現も維持する。値の読み取りは一度だけで、その後 bounded guard を行う。
+        guard let string = self.string else {
+            return .unavailable
+        }
+        return .text(string)
+    }
+
+    /// `String(data:encoding:.utf8)` consumes one leading UTF-8 BOM. Mirror that O(1) adjustment so
+    /// a decoded payload exactly at the cap remains accepted without allocating the String first.
+    /// UTF-8 BOM は String 化で除かれるため、割り当て前の判定でも先頭の3 byte を除外する。
+    static func exceedsDecodedUTF8ByteLimit(_ data: Data, maxByteCount: Int) -> Bool {
+        let bomByteCount = data.starts(with: Self.utf8ByteOrderMark) ? Self.utf8ByteOrderMark.count : 0
+        return data.count - bomByteCount > maxByteCount
+    }
 }
 
 public struct ClipboardHistoryManager {
+
+    public enum CaptureResult: Equatable, Sendable {
+        case captured
+        case rejected
+        case rejectedOversized
+    }
 
     var items: [ClipboardHistoryItem] = []
     var config: any ClipboardHistoryManagerConfiguration
@@ -151,28 +214,50 @@ public struct ClipboardHistoryManager {
         self.pruneExpired(now: now)
     }
 
-    /// CAPTURE — UNICO punto in cui si legge il valore degli appunti (`UIPasteboard.general.string`).
+    /// CAPTURE — UNICO punto in cui si legge il valore degli appunti (raw UTF-8 quando disponibile,
+    /// fallback `UIPasteboard.general.string` per le altre rappresentazioni).
     /// Da invocare SOLO in risposta a un'azione esplicita dell'utente (intento). Saltata nei campi
-    /// sicuri (`isSecureEntry`) e per stringhe oltre `maxItemCharacterCount`.
-    @MainActor public mutating func captureCurrentClipboard(isSecureEntry: Bool, now: Date = Date()) {
+    /// sicuri (`isSecureEntry`) e per stringhe oltre i cap di caratteri o byte.
+    @discardableResult
+    @MainActor public mutating func captureCurrentClipboard(isSecureEntry: Bool, now: Date = Date()) -> CaptureResult {
         guard self.isEnabled, !isSecureEntry else {
-            return
+            return .rejected
         }
         let currentCount = self.clipboardSource.changeCount
-        guard self.clipboardSource.hasStrings, let string = self.clipboardSource.string else {
+        guard self.clipboardSource.hasStrings else {
             self.previousChangedCount = currentCount
             self.hasPendingClipboard = false
-            return
+            return .rejected
         }
-        // Cap dimensione del singolo elemento (caratteri E byte): non memorizzare blob enormi né
-        // "bomb" ZWJ/combining nel container condiviso.
-        guard string.count <= Self.maxItemCharacterCount, string.utf8.count <= Self.maxItemByteCount else {
-            self.previousChangedCount = currentCount
-            self.hasPendingClipboard = false
-            return
+
+        // La sorgente legge una volta sola. Quella di sistema usa raw Data quando è UTF-8 e controlla
+        // `count` prima di creare String; i fallback fanno una scansione bounded. Sul rifiuto nessun
+        // payload esce dall'autorelease pool e non parte altro lavoro.
+        // source は一度だけ読み、UTF-8 は String 化前に Data.count、fallback は bounded scan。
+        // 拒否 payload は autorelease pool の外へ出さず、後続処理を行わない。
+        let readResult: ClipboardTextReadResult = autoreleasepool {
+            let result = self.clipboardSource.readText(maxUTF8ByteCount: Self.maxItemByteCount)
+            guard case .text(let string) = result else {
+                return result
+            }
+            // The manager remains the invariant owner even for custom/public ClipboardSource
+            // implementations: never trust an override to have enforced the requested byte cap.
+            guard !Self.exceedsItemByteLimit(string), !Self.exceedsItemCharacterLimit(string) else {
+                return .rejectedOversized
+            }
+            return .text(string)
         }
         self.previousChangedCount = currentCount
-        self.insert(text: string, now: now)
+        self.hasPendingClipboard = false
+        switch readResult {
+        case .text(let string):
+            self.insert(text: string, now: now)
+            return .captured
+        case .unavailable:
+            return .rejected
+        case .rejectedOversized:
+            return .rejectedOversized
+        }
     }
 
     /// Copaky — capture of text HANDED to us by the system (`UIPasteControl`). It never reads the
@@ -182,17 +267,42 @@ public struct ClipboardHistoryManager {
     /// difference is where the string comes from.
     /// Copaky — システムのペーストボタン経由で渡されたテキストの取り込み。
     /// UIPasteboard を読まないためバナーが出ない。ガードと上限は通常の取り込みと同一。
-    @MainActor public mutating func captureProvidedText(_ string: String, isSecureEntry: Bool, now: Date = Date()) {
+    @discardableResult
+    @MainActor public mutating func captureProvidedText(_ string: String, isSecureEntry: Bool, now: Date = Date()) -> CaptureResult {
         guard self.isEnabled, !isSecureEntry else {
-            return
+            return .rejected
         }
-        guard string.count <= Self.maxItemCharacterCount, string.utf8.count <= Self.maxItemByteCount else {
+        // Il testo è già stato consegnato dal sistema: nessuna copia, byte-first e lavoro limitato.
+        // システムから受け取った String はコピーせず、byte-first で上限までだけ走査する。
+        guard !Self.exceedsItemByteLimit(string), !Self.exceedsItemCharacterLimit(string) else {
+            self.previousChangedCount = self.clipboardSource.changeCount
             self.hasPendingClipboard = false
-            return
+            return .rejectedOversized
         }
         // The system handed us this text, so whatever is on the pasteboard is now accounted for.
         self.previousChangedCount = self.clipboardSource.changeCount
         self.insert(text: string, now: now)
+        return .captured
+    }
+
+    /// Bounded byte preflight: unlike `utf8.count`, it never walks beyond cap+1 bytes.
+    /// `utf8.count` と異なり、上限+1 byte より先は走査しない。
+    private static func exceedsItemByteLimit(_ string: String) -> Bool {
+        !string.utf8.dropFirst(Self.maxItemByteCount).isEmpty
+    }
+
+    /// Bounded grapheme preflight, evaluated only after the byte cap passes.
+    /// byte 上限を通過した場合だけ、書記素を上限+1 まで確認する。
+    private static func exceedsItemCharacterLimit(_ string: String) -> Bool {
+        !string.dropFirst(Self.maxItemCharacterCount).isEmpty
+    }
+
+    /// Account for an oversized value rejected by a source before it could hand us a String
+    /// (`UIPasteControl` raw-Data path). Metadata only: never reads or saves the clipboard value.
+    /// String 化前に source が拒否した値を処理済みにする。metadata のみで、値の読み取り・保存はしない。
+    @MainActor mutating func markCurrentClipboardRejectedOversized() {
+        self.previousChangedCount = self.clipboardSource.changeCount
+        self.hasPendingClipboard = false
     }
 
     /// Shared tail of both capture paths: dedupe, keep pins, order, prune, cap the list.

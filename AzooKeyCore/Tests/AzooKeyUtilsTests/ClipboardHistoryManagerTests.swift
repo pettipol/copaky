@@ -17,10 +17,31 @@ struct FakeClipboardSource: ClipboardSource {
     var string: String?
 }
 
+/// Spy a riferimento: verifica che il valore della pasteboard venga letto una volta sola.
+/// 参照型 spy：pasteboard の値を一度だけ読むことを検証する。
+@MainActor
+private final class CountingClipboardSource: ClipboardSource {
+    let changeCount: Int
+    let hasStrings: Bool
+    private let storedString: String?
+    private(set) var stringReadCount = 0
+
+    init(changeCount: Int = 1, hasStrings: Bool = true, string: String?) {
+        self.changeCount = changeCount
+        self.hasStrings = hasStrings
+        self.storedString = string
+    }
+
+    var string: String? {
+        self.stringReadCount += 1
+        return self.storedString
+    }
+}
+
 final class ClipboardHistoryManagerTests: XCTestCase {
 
     @MainActor
-    private func makeManager(maxCount: Int = 100, clipboard: FakeClipboardSource = FakeClipboardSource(hasStrings: false, string: nil)) -> ClipboardHistoryManager {
+    private func makeManager(maxCount: Int = 100, clipboard: any ClipboardSource = FakeClipboardSource(hasStrings: false, string: nil)) -> ClipboardHistoryManager {
         var manager = ClipboardHistoryManager(config: MockClipboardHistoryManagerConfiguration(maxCount: maxCount), clipboardSource: clipboard)
         manager.items = []
         return manager
@@ -74,7 +95,8 @@ final class ClipboardHistoryManagerTests: XCTestCase {
     @MainActor
     func testCaptureIsSkippedInSecureField() {
         var manager = makeManager(clipboard: FakeClipboardSource(changeCount: 1, hasStrings: true, string: "secret"))
-        manager.captureCurrentClipboard(isSecureEntry: true)
+        let result = manager.captureCurrentClipboard(isSecureEntry: true)
+        XCTAssertEqual(result, .rejected)
         XCTAssertTrue(manager.items.isEmpty, "Nei campi sicuri non deve avvenire alcuna cattura")
     }
 
@@ -103,8 +125,9 @@ final class ClipboardHistoryManagerTests: XCTestCase {
         let unique = "capture-\(UUID().uuidString)"
         var manager = makeManager(clipboard: FakeClipboardSource(changeCount: 1, hasStrings: true, string: unique))
 
-        manager.captureCurrentClipboard(isSecureEntry: false)
+        let result = manager.captureCurrentClipboard(isSecureEntry: false)
 
+        XCTAssertEqual(result, .captured)
         XCTAssertTrue(texts(manager).contains(unique), "La cattura esplicita deve memorizzare il contenuto corrente")
         XCTAssertFalse(manager.hasPendingClipboard, "Dopo la cattura non deve restare contenuto pendente")
     }
@@ -114,9 +137,21 @@ final class ClipboardHistoryManagerTests: XCTestCase {
         let huge = String(repeating: "a", count: ClipboardHistoryManager.maxItemCharacterCount + 1)
         var manager = makeManager(clipboard: FakeClipboardSource(changeCount: 1, hasStrings: true, string: huge))
 
-        manager.captureCurrentClipboard(isSecureEntry: false)
+        let result = manager.captureCurrentClipboard(isSecureEntry: false)
 
+        XCTAssertEqual(result, .rejectedOversized)
         XCTAssertTrue(manager.items.isEmpty, "Gli elementi oltre il cap dimensione non devono essere memorizzati")
+    }
+
+    @MainActor
+    func testCaptureAcceptsExactCharacterCap() {
+        let exact = String(repeating: "a", count: ClipboardHistoryManager.maxItemCharacterCount)
+        var manager = makeManager(clipboard: FakeClipboardSource(string: exact))
+
+        let result = manager.captureCurrentClipboard(isSecureEntry: false)
+
+        XCTAssertEqual(result, .captured)
+        XCTAssertEqual(texts(manager), [exact], "Il confine esatto di 50k caratteri deve restare accettato")
     }
 
     @MainActor
@@ -128,8 +163,105 @@ final class ClipboardHistoryManagerTests: XCTestCase {
                                  "Il cap a CARATTERI non deve scattare: dev'essere il cap a BYTE a fermare")
         XCTAssertGreaterThan(bomb.utf8.count, ClipboardHistoryManager.maxItemByteCount)
         var manager = makeManager(clipboard: FakeClipboardSource(changeCount: 1, hasStrings: true, string: bomb))
-        manager.captureCurrentClipboard(isSecureEntry: false)
+        let result = manager.captureCurrentClipboard(isSecureEntry: false)
+        XCTAssertEqual(result, .rejectedOversized)
         XCTAssertTrue(manager.items.isEmpty, "Entro il cap caratteri ma oltre il cap byte → l'elemento va rifiutato")
+    }
+
+    @MainActor
+    func testCaptureHonorsExactByteCapBoundaryWithinCharacterCap() {
+        let family = "👨‍👩‍👧‍👦"
+        let familyCount = ClipboardHistoryManager.maxItemByteCount / family.utf8.count
+        let remainder = ClipboardHistoryManager.maxItemByteCount % family.utf8.count
+        let exact = String(repeating: family, count: familyCount) + String(repeating: "a", count: remainder)
+        XCTAssertEqual(exact.utf8.count, ClipboardHistoryManager.maxItemByteCount)
+        XCTAssertLessThanOrEqual(exact.count, ClipboardHistoryManager.maxItemCharacterCount)
+        var manager = makeManager(clipboard: FakeClipboardSource(string: exact))
+
+        let result = manager.captureCurrentClipboard(isSecureEntry: false)
+
+        XCTAssertEqual(result, .captured)
+        XCTAssertEqual(texts(manager), [exact], "Il confine esatto di 256 KiB deve restare accettato")
+
+        let plusOne = exact + "a"
+        XCTAssertEqual(plusOne.utf8.count, ClipboardHistoryManager.maxItemByteCount + 1)
+        XCTAssertLessThanOrEqual(plusOne.count, ClipboardHistoryManager.maxItemCharacterCount)
+        var rejectingManager = makeManager(clipboard: FakeClipboardSource(string: plusOne))
+        let rejected = rejectingManager.captureCurrentClipboard(isSecureEntry: false)
+        XCTAssertEqual(rejected, .rejectedOversized)
+        XCTAssertTrue(rejectingManager.items.isEmpty, "256 KiB + 1 byte deve essere rifiutato")
+    }
+
+    func testRawUTF8PreflightIgnoresLeadingBOMAtByteCapBoundary() {
+        let bom = Data([0xEF, 0xBB, 0xBF])
+        let exact = bom + Data(repeating: 0x61, count: ClipboardHistoryManager.maxItemByteCount)
+        let plusOne = exact + Data([0x61])
+
+        XCTAssertFalse(
+            SystemClipboardSource.exceedsDecodedUTF8ByteLimit(exact, maxByteCount: ClipboardHistoryManager.maxItemByteCount),
+            "Il BOM rimosso dalla decodifica non deve far rifiutare un testo di esatti 256 KiB"
+        )
+        XCTAssertTrue(
+            SystemClipboardSource.exceedsDecodedUTF8ByteLimit(plusOne, maxByteCount: ClipboardHistoryManager.maxItemByteCount),
+            "BOM + testo decodificato di 256 KiB + 1 byte deve essere rifiutato"
+        )
+    }
+
+    @MainActor
+    func testCaptureRejectsDeviceByteCapPayloadOnceWithoutMutatingHistory() {
+        // Stessa fixture di test13: oltre sia 256 KiB sia 50k caratteri. La guardia byte-first deve
+        // rifiutarla senza consegnarla a insert/save e senza una seconda lettura della pasteboard.
+        // test13 と同じ fixture。byte-first で拒否し、insert/save と二度目の読み取りを行わない。
+        let payload = String(repeating: "あ", count: 120_000)
+        XCTAssertGreaterThan(payload.utf8.count, ClipboardHistoryManager.maxItemByteCount)
+        XCTAssertGreaterThan(payload.count, ClipboardHistoryManager.maxItemCharacterCount)
+
+        let clipboard = CountingClipboardSource(changeCount: 17, string: payload)
+        var manager = makeManager(clipboard: clipboard)
+        let now = Date()
+        manager.detectClipboardChange(now: now)
+        XCTAssertTrue(manager.hasPendingClipboard)
+        let sentinel = ClipboardHistoryItem(
+            content: .text("expired-sentinel"),
+            createdData: now.addingTimeInterval(-8 * 24 * 60 * 60)
+        )
+        manager.items = [sentinel]
+
+        let result = manager.captureCurrentClipboard(isSecureEntry: false, now: now)
+
+        XCTAssertEqual(result, .rejectedOversized)
+        XCTAssertEqual(clipboard.stringReadCount, 1, "Il valore degli appunti deve essere letto una volta sola")
+        XCTAssertEqual(manager.items, [sentinel], "Il rifiuto non deve mutare o potare la cronologia")
+        XCTAssertFalse(manager.hasPendingClipboard, "Il contenuto rifiutato deve risultare gestito, non riproposto")
+    }
+
+    @MainActor
+    func testCaptureProvidedTextRejectsBytewiseHugeItemWithoutMutatingHistory() {
+        let family = "👨‍👩‍👧‍👦"
+        let bomb = String(repeating: family, count: 11_000)
+        var manager = makeManager()
+        let sentinel = ClipboardHistoryItem(content: .text("sentinel"), createdData: .now)
+        manager.items = [sentinel]
+
+        let result = manager.captureProvidedText(bomb, isSecureEntry: false)
+
+        XCTAssertEqual(result, .rejectedOversized)
+        XCTAssertEqual(manager.items, [sentinel], "Anche il testo consegnato dal sistema deve essere rifiutato senza mutazioni")
+        XCTAssertFalse(manager.hasPendingClipboard)
+    }
+
+    @MainActor
+    func testSourceSideOversizedRejectionClearsPendingWithoutReadingValue() {
+        let clipboard = CountingClipboardSource(changeCount: 23, string: "must-not-be-read")
+        var manager = makeManager(clipboard: clipboard)
+        manager.detectClipboardChange()
+        XCTAssertTrue(manager.hasPendingClipboard)
+
+        manager.markCurrentClipboardRejectedOversized()
+
+        XCTAssertFalse(manager.hasPendingClipboard)
+        XCTAssertEqual(clipboard.stringReadCount, 0, "Un rifiuto raw-Data già deciso non deve rileggere il valore")
+        XCTAssertTrue(manager.items.isEmpty)
     }
 
     // MARK: - persistence (envelope versionato, decode tollerante) / persistence (versioned envelope, tolerant decode)

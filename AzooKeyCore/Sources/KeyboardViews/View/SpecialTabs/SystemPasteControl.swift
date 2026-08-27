@@ -46,10 +46,13 @@ private let pasteLog = Logger(subsystem: "com.pettipol.copaky", category: "paste
 struct SystemPasteControl: UIViewRepresentable {
     /// Called with the pasted plain text, on the main actor.
     let onPaste: (String) -> Void
+    /// Called when the provider is rejected before decoding/delivery because it exceeds the byte cap.
+    let onRejectOversized: () -> Void
 
     func makeUIView(context: Context) -> UIView {
         let receiver = PasteReceiverView()
         receiver.onPaste = onPaste
+        receiver.onRejectOversized = onRejectOversized
         // Only plain text: the clipboard history stores strings, and asking for more would let the
         // control offer pastes we cannot store.
         receiver.pasteConfiguration = UIPasteConfiguration(acceptableTypeIdentifiers: [UTType.plainText.identifier])
@@ -78,6 +81,7 @@ struct SystemPasteControl: UIViewRepresentable {
 
     func updateUIView(_ uiView: UIView, context: Context) {
         (uiView as? PasteReceiverView)?.onPaste = onPaste
+        (uiView as? PasteReceiverView)?.onRejectOversized = onRejectOversized
     }
 
     /// The responder that actually receives the paste. `UIPasteControl` delivers item providers to
@@ -85,6 +89,13 @@ struct SystemPasteControl: UIViewRepresentable {
     /// ペーストを受け取るレスポンダ。ペーストボードではなくアイテムプロバイダが渡される。
     private final class PasteReceiverView: UIView {
         var onPaste: ((String) -> Void)?
+        var onRejectOversized: (() -> Void)?
+
+        private enum PlainTextLoadResult: Sendable {
+            case text(String)
+            case unavailable
+            case rejectedOversized
+        }
 
         override func canPaste(_ itemProviders: [NSItemProvider]) -> Bool {
             let textual = itemProviders.filter(Self.carriesText)
@@ -103,28 +114,18 @@ struct SystemPasteControl: UIViewRepresentable {
             // crosses back is a String (Sendable).
             // 読み込みは別スレッドで返るため、Sendable な String だけを戻す。
             Task { [weak self] in
-                let text = await Self.loadPlainText(from: provider)
-                if let text {
-                    // Reject oversized content on the BYTE count, before any grapheme-cluster walk:
-                    // the history would refuse it anyway (256 KiB cap), and counting characters of a
-                    // multi-megabyte string is exactly the kind of work that gets a keyboard
-                    // extension jetsam-killed. / 文字数を数える前にバイト長で弾く（jetsam対策）。
-                    guard text.utf8.count <= Self.maxAcceptedBytes else {
-                        pasteLog.error("consegna rifiutata: \(text.utf8.count, privacy: .public) byte oltre il limite")
-                        return
-                    }
-                    pasteLog.info("consegnato: \(text.count, privacy: .public) caratteri")
+                switch await Self.loadPlainText(from: provider) {
+                case .text(let text):
+                    pasteLog.info("testo consegnato al manager per la validazione")
                     self?.onPaste?(text)
-                } else {
+                case .rejectedOversized:
+                    pasteLog.error("consegna rifiutata: testo oltre il limite byte")
+                    self?.onRejectOversized?()
+                case .unavailable:
                     pasteLog.error("nessun testo consegnato al termine del caricamento")
                 }
             }
         }
-
-        /// Mirrors `ClipboardHistoryManager`'s byte cap: anything larger would be rejected there,
-        /// so it must be rejected HERE before any expensive work touches it.
-        /// ClipboardHistoryManager と同じ 256KiB 上限。
-        private static let maxAcceptedBytes = 256 * 1024
 
         private static func carriesText(_ provider: NSItemProvider) -> Bool {
             provider.canLoadObject(ofClass: String.self)
@@ -140,7 +141,7 @@ struct SystemPasteControl: UIViewRepresentable {
         /// So: bridge through Swift's `String` first, and if that refuses, take the raw bytes for
         /// public.plain-text and decode them ourselves.
         /// NSString へのキャストは実機で失敗するため、String ブリッジ→生データの二段構えにする。
-        private static func loadPlainText(from provider: NSItemProvider) async -> String? {
+        private static func loadPlainText(from provider: NSItemProvider) async -> PlainTextLoadResult {
             if provider.canLoadObject(ofClass: String.self) {
                 let viaObject: String? = await withCheckedContinuation { continuation in
                     _ = provider.loadObject(ofClass: String.self) { object, error in
@@ -151,7 +152,9 @@ struct SystemPasteControl: UIViewRepresentable {
                         continuation.resume(returning: object)
                     }
                 }
-                if let viaObject { return viaObject }
+                // The manager performs the one bounded byte/character validation for String values.
+                // String 値の bounded guard は manager で一度だけ行う。
+                if let viaObject { return .text(viaObject) }
             }
             return await withCheckedContinuation { continuation in
                 provider.loadDataRepresentation(forTypeIdentifier: UTType.plainText.identifier) { data, error in
@@ -159,17 +162,21 @@ struct SystemPasteControl: UIViewRepresentable {
                         pasteLog.error("loadDataRepresentation fallito: \(error.localizedDescription, privacy: .public)")
                     }
                     guard let data else {
-                        continuation.resume(returning: nil)
+                        continuation.resume(returning: .unavailable)
                         return
                     }
                     // Byte cap FIRST — before any decode allocates a second copy.
                     // デコード前にバイト長で弾く。
-                    guard data.count <= maxAcceptedBytes else {
+                    guard data.count <= ClipboardHistoryManager.maxItemByteCount else {
                         pasteLog.error("dati rifiutati: \(data.count, privacy: .public) byte oltre il limite")
-                        continuation.resume(returning: nil)
+                        continuation.resume(returning: .rejectedOversized)
                         return
                     }
-                    continuation.resume(returning: Self.decodePlainText(data))
+                    guard let text = Self.decodePlainText(data) else {
+                        continuation.resume(returning: .unavailable)
+                        return
+                    }
+                    continuation.resume(returning: .text(text))
                 }
             }
         }

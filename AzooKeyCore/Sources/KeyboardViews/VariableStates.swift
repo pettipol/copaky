@@ -348,15 +348,45 @@ public final class VariableStates: ObservableObject {
     /// Copaky: store text delivered by the system paste button. Nothing reads the pasteboard here,
     /// so iOS shows no "pasted from…" banner — the tap on its own control IS the consent.
     /// Copaky: システムのペーストボタンから渡されたテキストを保存する（バナーなし）。
-    @MainActor public func capturePastedText(_ text: String) {
-        self.clipboardHistoryManager.captureProvidedText(text, isSecureEntry: self.isSecureEntry)
-        self.clipboardHistoryManager.save()
+    @discardableResult
+    @MainActor public func capturePastedText(_ text: String) -> ClipboardHistoryManager.CaptureResult {
+        let result = self.clipboardHistoryManager.captureProvidedText(text, isSecureEntry: self.isSecureEntry)
+        self.completeClipboardCapture(result)
+        return result
     }
 
-    @MainActor public func captureClipboard() {
-        self.clipboardHistoryManager.captureCurrentClipboard(isSecureEntry: self.isSecureEntry)
-        // Persisti subito: l'estensione può essere terminata prima di closeKeyboard (perdita dell'elemento).
-        self.clipboardHistoryManager.save()
+    @discardableResult
+    @MainActor public func captureClipboard() -> ClipboardHistoryManager.CaptureResult {
+        let result = self.clipboardHistoryManager.captureCurrentClipboard(isSecureEntry: self.isSecureEntry)
+        self.completeClipboardCapture(result)
+        return result
+    }
+
+    /// Segnala un rifiuto già applicato prima che il testo raggiunga il manager (es. raw Data di
+    /// `UIPasteControl` oltre cap). Nessun save/reload deve partire in questo giro.
+    /// manager 到達前に拒否された oversized paste を通知する。この処理では保存しない。
+    @MainActor public func reportSourceRejectedOversizedClipboardCapture() {
+        self.clipboardHistoryManager.markCurrentClipboardRejectedOversized()
+        self.showOversizedClipboardCaptureWarning()
+    }
+
+    @MainActor private func showOversizedClipboardCaptureWarning() {
+        self.temporalMessage = .clipboardCaptureTooLarge
+    }
+
+    @MainActor private func completeClipboardCapture(_ result: ClipboardHistoryManager.CaptureResult) {
+        switch result {
+        case .captured:
+            // Persisti subito: l'estensione può essere terminata prima di closeKeyboard (perdita dell'elemento).
+            self.clipboardHistoryManager.save()
+        case .rejectedOversized:
+            // Fail closed sotto pressione: niente JSONEncoder/write della history invariata.
+            self.showOversizedClipboardCaptureWarning()
+        case .rejected:
+            // Preserve the pre-E-17 behavior for non-size rejections (for example a no-text race):
+            // pending pin/delete mutations may still rely on this persistence opportunity.
+            self.clipboardHistoryManager.save()
+        }
     }
 
     @MainActor public func setEnterKeyState(_ state: RoughEnterKeyState) {
