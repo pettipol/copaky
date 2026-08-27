@@ -34,8 +34,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ "$LANG_ARG" != "en" && "$LANG_ARG" != "ja" ]]; then
-  echo "ERROR: --lang must be 'en' or 'ja' (got '$LANG_ARG')" >&2
+if [[ "$LANG_ARG" != "en" && "$LANG_ARG" != "ja" && "$LANG_ARG" != "it" ]]; then
+  echo "ERROR: --lang must be 'en', 'ja' or 'it' (got '$LANG_ARG')" >&2
   exit 2
 fi
 
@@ -126,6 +126,13 @@ if lang == "ja":
         ("https://copaky.app/demo", 180, None),
         ("今週どこかでお茶しませんか。", 260, None),
     ]
+elif lang == "it":
+    entries = [
+        ("Spedire a: Via Roma 12, 20121 Milano MI", 400, 40),
+        ("Il tuo codice di verifica \u00e8 482913", 90, None),
+        ("https://copaky.app/demo", 180, None),
+        ("Ci prendiamo un caff\u00e8 questa settimana?", 260, None),
+    ]
 else:
     entries = [
         ("Ship to: 350 Fifth Ave, New York, NY 10118", 400, 40),
@@ -149,5 +156,22 @@ with open(history_path, "w", encoding="utf-8") as f:
 print("wrote", tabbar_path)
 print("wrote", history_path, "(%d items, lang=%s)" % (len(items), lang))
 PY
+
+# The Latin/English tab must be the QWERTY for the store shots — the default is FLICK
+# (keyboard_type_en, LanguageLayoutKeyboardSetting.swift), so a fresh container shows the
+# T9-style flick ABC tab and shot06 finds no letter keys (measured 2026-08-27). The getter
+# accepts the plain string "roman"; on the Simulator the extension reads the DEVICE-WIDE
+# group plist, not the app-container one (known sim App-Group split).
+# With WORKING App-Group entitlements the extension reads the plist inside the shared
+# container itself; the device-wide plist only mattered while the entitlements were broken.
+# Write both, cheap and covers either world.
+for PREFS in "$CONTAINER/Library/Preferences/$GROUP_ID.plist" \
+             "$HOME/Library/Developer/CoreSimulator/Devices/$UDID/data/Library/Preferences/$GROUP_ID.plist"; do
+  killall cfprefsd 2>/dev/null || true
+  /usr/libexec/PlistBuddy -c "Set :keyboard_type_en roman" "$PREFS" 2>/dev/null \
+    || /usr/libexec/PlistBuddy -c "Add :keyboard_type_en string roman" "$PREFS" 2>/dev/null || true
+  killall cfprefsd 2>/dev/null || true
+  echo "keyboard_type_en=roman written to $PREFS"
+done
 
 echo "Seed complete for lang=$LANG_ARG"

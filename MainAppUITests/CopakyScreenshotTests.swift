@@ -28,9 +28,9 @@ private enum SL {
     static let closeOnboarding = ["閉じる", "Close", "Chiudi"]
     static let settingsTab = ["設定", "Settings", "Impostazioni"]
     static let themesTab = ["着せ替え", "Themes", "Temi"]
-    static let clipboardToggle = ["Keep clipboard histories", "クリップボードの履歴を保存"]
+    static let clipboardToggle = ["Keep clipboard histories", "クリップボードの履歴を保存", "Salva la cronologia degli appunti"]
     static let clipboardTab = ["コピー履歴", "clipboard_history_tab", "doc.badge.clock"]
-    static let captureBar = ["コピーした内容を追加", "現在のクリップボードを追加", "Add copied text", "Add current clipboard"]
+    static let captureBar = ["コピーした内容を追加", "現在のクリップボードを追加", "Add copied text", "Add current clipboard", "Aggiungi il testo copiato", "Aggiungi gli appunti correnti"]
     /// Existing slot whose LONG-PRESS opens Clipboard history when enabled, otherwise the tab bar.
     static let tabBarToggleKey = [
         "☆123", "123", "#+=", "numbers", "Numbers", "numeri", "Numeri", "数字",
@@ -113,7 +113,15 @@ final class CopakyScreenshotTests: XCTestCase {
     /// keyboard is on screen that exposes no stock `Key` elements (custom SwiftUI keyboard).
     private func copakyActive(in app: XCUIApplication) -> Bool {
         dismissCopakyNotice(in: app)
-        let markers = ["空白", "改行", "あいう", "戻る", "逆順", "お知らせ", "ABC", "☆123"]
+        // Copaky-ONLY labels: never use generic or Latin key labels — the SYSTEM keyboard
+        // exposes those too and a false positive here skips the switch (measured 2026-08-27
+        // twice: «spazio/space/return» matched the stock Italian keyboard, and so did
+        // «A capo», which is the stock return key's Italian accessibility label).
+        // Japanese labels are safe: the stock Italian keyboard never shows them.
+        // «#+=» and «Conferma» are visible on Copaky's Latin QWERTY at the letters layer;
+        // the stock keyboard shows neither there («#+=» only on its symbols layer).
+        let markers = ["空白", "改行", "あいう", "戻る", "逆順", "お知らせ", "☆123",
+                       "#+=", "Conferma"]
         let match = app.descendants(matching: .any).matching(NSPredicate(format: "label IN %@", markers)).firstMatch
         if match.exists { return true }
         let kb = app.keyboards.firstMatch
@@ -212,28 +220,55 @@ final class CopakyScreenshotTests: XCTestCase {
         return web
     }
 
-    /// Tap a sequence of Copaky keys by label.
+    /// Tap a sequence of Copaky keys by label. On an empty field auto-capitalization shifts
+    /// the QWERTY, so the key labels are uppercase — fall back to the other case rather than
+    /// failing (measured 2026-08-27: shot06 on a freshly loaded page found "H", not "h").
     private func tapKeys(_ labels: [String], in app: XCUIApplication) {
         for label in labels {
-            let key = app.descendants(matching: .any)[label]
-            if key.waitForExistence(timeout: 4) && key.isHittable {
-                key.tap()
-                settle(0.2)
-            } else {
-                XCTFail("Key '\(label)' not found on Copaky keyboard")
+            var key = app.descendants(matching: .any)[label]
+            if !(key.waitForExistence(timeout: 4) && key.isHittable) {
+                let other = label == label.lowercased() ? label.uppercased() : label.lowercased()
+                key = app.descendants(matching: .any)[other]
+                guard key.waitForExistence(timeout: 2) && key.isHittable else {
+                    XCTFail("Key '\(label)' (or '\(other)') not found on Copaky keyboard")
+                    continue
+                }
             }
+            key.tap()
+            settle(0.2)
         }
     }
 
-    /// Switch Copaky's internal tab to English QWERTY via the language-switch key ("A" when on JP).
+    /// Switch Copaky's internal tab to the Latin QWERTY. From the JP flick tab the tab key is
+    /// labelled "ABC" ("A" is the QWERTY language key); the demo page text can also match those
+    /// labels, so among the candidates pick the BOTTOM-most hittable one (the keyboard) — the
+    /// same trick the globe lookup uses. Verify the switch happened (q/Q on screen) and fail
+    /// loudly otherwise (measured 2026-08-27: the old silent no-op left shot06 on the flick tab).
     private func switchToEnglishTab(in app: XCUIApplication) {
         dismissCopakyNotice(in: app)
-        let toEnglish = app.descendants(matching: .any)["A"]
-        if toEnglish.waitForExistence(timeout: 3) && toEnglish.isHittable {
-            toEnglish.tap()
-            settle(0.6)
-            dismissCopakyNotice(in: app)
+        let latinProbe = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label IN %@", ["q", "Q"])).firstMatch
+        if latinProbe.exists { return }
+        for label in ["ABC", "A"] {
+            let matches = app.descendants(matching: .any)
+                .matching(NSPredicate(format: "label == %@", label))
+            var key: XCUIElement?
+            var bestY: CGFloat = -1
+            for i in 0..<min(matches.count, 8) {
+                let el = matches.element(boundBy: i)
+                if el.exists && el.isHittable && el.frame.maxY > bestY {
+                    bestY = el.frame.maxY
+                    key = el
+                }
+            }
+            if let key {
+                key.tap()
+                settle(0.8)
+                dismissCopakyNotice(in: app)
+                if latinProbe.waitForExistence(timeout: 2) { return }
+            }
         }
+        XCTFail("Could not switch to the Latin QWERTY tab (no q/Q after tapping bottom-most ABC/A)")
     }
 
     /// Open Clipboard history through A-11's direct long-press, or through the tab-bar fallback.
@@ -419,16 +454,13 @@ final class CopakyScreenshotTests: XCTestCase {
         switchToCopaky(in: safari)
         switchToEnglishTab(in: safari)
         settle(0.5)
-        // type a short English word so the QWERTY layout is clearly in use
-        tapKeys(["h", "e", "l", "l", "o"], in: safari)
+        // type a short word so the QWERTY layout is clearly in use — Italian on the
+        // Italian demo page, English elsewhere (this shot feeds the per-locale listing)
+        let word = demoURL.contains("demo.it") ? ["c", "i", "a", "o"] : ["h", "e", "l", "l", "o"]
+        tapKeys(word, in: safari)
         settle(0.6)
-        // BONUS: try to reveal the accent popup on "e" (long-press). Capturing the popup
-        // mid-hold is unreliable in XCUITest, so this is best-effort and does not gate the shot.
-        let eKey = safari.descendants(matching: .any)["e"].firstMatch
-        if eKey.exists && eKey.isHittable {
-            eKey.press(forDuration: 0.9)
-            settle(0.3)
-        }
+        // (The old best-effort accent-popup long-press typed a stray letter on release —
+        // measured 2026-08-27: «helloe» — so it is gone.)
         shot("shot06")
         if let value = field.value as? String {
             NSLog("shot06 field value: \(value)")

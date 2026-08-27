@@ -162,7 +162,27 @@ if [[ -z "$CONTAINER" || ! -d "$CONTAINER" ]]; then
     -only-testing:"$UITEST_BUNDLE/CopakyCampaignTests/test10_phaseB_enableFullAccess" \
     2>&1 | tail -25 || true
 
+  # A test run does NOT reinstall the app when Xcode judges it unchanged, so the
+  # simulator can keep serving a stale build whose entitlements predate the current
+  # tree (measured 2026-08-27: an Aug-26 app without the App Group section survived
+  # three warmups). Install the freshly built product explicitly and launch the
+  # MainApp once: creating the shared UserDefaults births the App Group container.
+  FRESH_APP="$(ls -td "$HOME"/Library/Developer/Xcode/DerivedData/azooKey-*/Build/Products/Debug-iphonesimulator/azooKey.app 2>/dev/null | head -n1)"
+  if [[ -n "$FRESH_APP" ]]; then
+    log "Installing fresh app build and launching once ($FRESH_APP)"
+    xcrun simctl terminate "$UDID" com.pettipol.copaky 2>/dev/null || true
+    xcrun simctl install "$UDID" "$FRESH_APP" 2>/dev/null || true
+    xcrun simctl launch "$UDID" com.pettipol.copaky >/dev/null 2>&1 || true
+    sleep 5
+    xcrun simctl terminate "$UDID" com.pettipol.copaky 2>/dev/null || true
+    CONTAINER="$(container_path)"
+  fi
+
   for attempt in 1 2 3; do
+    if [[ -n "$CONTAINER" && -d "$CONTAINER" ]]; then
+      log "Container created: $CONTAINER"
+      break
+    fi
     log "warmup attempt $attempt (create container)"
     openurl_clean
     TEST_RUNNER_COPAKY_DEMO_URL="$DEMO_URL" \
@@ -187,6 +207,10 @@ fi
 
 # ---- d. seed -------------------------------------------------------------------
 log "Seeding clipboard container (lang=$LANG_ARG)"
+# The keyboard-extension process outlives its host app and reads the shared settings
+# only at launch: whatever the seed writes (tab bar, keyboard_type_en) is invisible to a
+# running extension (measured 2026-08-27: a 14-minute-old process kept the flick layout).
+pkill -f "Keyboard.appex/Keyboard" 2>/dev/null || true
 if ! bash "$SEED" --lang "$LANG_ARG" --udid "$UDID"; then
   log "FATAL: clipboard seed failed — stale history from a previous language pass could leak into shot03"
   exit 1
