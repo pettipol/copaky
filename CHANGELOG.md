@@ -13,12 +13,16 @@ All notable changes to **Copaky** (an independent project based on azooKey). For
   `☆123` (Japanese flick) opens the Clipboard-history tab directly when «Save clipboard history» is on;
   otherwise it keeps toggling the tab bar. The decision is evaluated at press time (`NumbersSlotLongPressDecision`,
   unit-tested), the layout is unchanged; the back key of the history tab returns to the previous tab and its long
-  press opens the tab bar. The candidate-bar Copaky button can now be hidden (Settings ▸ «Show the Copaky button
-  in the candidate bar», on by default).
+  press opens the tab bar. The candidate-bar Copaky button is now hidden by default (Settings ▸ «Show the Copaky
+  button in the candidate bar» brings it back); when the long press would open the history, the `123` / `#+=` /
+  `☆123` key shows a small clipboard badge in its corner (A-12). A new option «Hide the suggestion bar when it is
+  empty (Latin keyboards)» (E-12, off by default) collapses the bar row on the English/Italian tabs when there is
+  nothing to show, lowering the keyboard.
 - **Guide images per language** (A-09): the «Getting started» / Tips pictures of the iOS Settings screens now
   have English and Italian variants (light and dark), captured on the iPhone 17 Pro Max and composed with the
   same highlight + hand as the Japanese originals (`scripts/compose_guide_assets.py` in the workspace); the
-  paste-permission pictures use the English capture for Italian until a device capture exists.
+  paste-permission dialog and Settings-row pictures are real iPhone captures in Italian (light + dark) and
+  English (dark), and the onboarding Globe picture has English/Italian light + dark variants too.
 - **Offline clipboard manager**: privacy-first redesign with a DETECT (metadata-only, no "pasted from…"
   banner) / CAPTURE (read on explicit user intent) split, a secure-field guard (password fields are never
   captured), a per-item size cap (~50 KB), and a 7-day auto-prune. Pasteboard source and clock are injectable
