@@ -55,11 +55,21 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
         defaultTab ?? variableStates.tabManager.existentialTab()
     }
 
+    private var hasVisibleMessageView: Bool {
+        showMessage && messageManager.necessaryMessages.contains { messageManager.requireShow($0.id) }
+    }
+
+    private var hasVisibleTemporalMessage: Bool {
+        showMessage && variableStates.temporalMessage != nil
+    }
+
     private var showsCandidateBar: Bool {
         variableStates.shouldShowCandidateBar(
             for: activeTab,
             copakyButtonVisible: Extension.SettingProvider.displayTabBarButton,
-            hideEmptyLatinBarEnabled: Extension.SettingProvider.hideEmptyCandidateBarOnLatin
+            hideEmptyLatinBarEnabled: Extension.SettingProvider.hideEmptyCandidateBarOnLatin,
+            hasMessageView: hasVisibleMessageView,
+            hasTemporalMessage: hasVisibleTemporalMessage
         )
     }
 
@@ -186,6 +196,11 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
             }
         }
         .frame(height: totalBackgroundHeight)
+        .onChange(of: hasVisibleMessageView, initial: true) { _, isVisible in
+            // Keep UIKit's advertised height synchronized when a persistent notice is dismissed.
+            // 永続通知が閉じられた時もUIKit側の宣言高さを同期する。
+            variableStates.setHasVisibleMessageView(isVisible)
+        }
     }
 
     @MainActor @ViewBuilder

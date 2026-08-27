@@ -28,7 +28,9 @@ enum CandidateBarVisibilityDecision {
         hasPredictions: Bool,
         hasNoticeOrAlternateBarContent: Bool,
         copakyButtonVisible: Bool,
-        hideEmptyLatinBarEnabled: Bool
+        hideEmptyLatinBarEnabled: Bool,
+        hasMessageView: Bool = false,
+        hasTemporalMessage: Bool = false
     ) -> Bool {
         !isLatinQwertyTab
             || !hideEmptyLatinBarEnabled
@@ -36,6 +38,8 @@ enum CandidateBarVisibilityDecision {
             || hasPredictions
             || hasNoticeOrAlternateBarContent
             || copakyButtonVisible
+            || hasMessageView
+            || hasTemporalMessage
     }
 }
 

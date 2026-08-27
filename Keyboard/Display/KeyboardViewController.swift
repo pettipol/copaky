@@ -86,7 +86,9 @@ final class KeyboardViewController: UIInputViewController {
               !states.shouldShowCandidateBar(
                   for: states.tabManager.existentialTab(),
                   copakyButtonVisible: DisplayTabBarButton.value,
-                  hideEmptyLatinBarEnabled: HideEmptyCandidateBarOnLatin.value
+                  hideEmptyLatinBarEnabled: HideEmptyCandidateBarOnLatin.value,
+                  hasMessageView: states.hasVisibleMessageView,
+                  hasTemporalMessage: states.temporalMessage != nil
               ) else {
             return 0
         }
@@ -216,8 +218,9 @@ final class KeyboardViewController: UIInputViewController {
             }
             .store(in: &cancellables)
 
-        // Candidate content, active tab and Undo can all flip E-12 without changing interfaceSize.
+        // Candidate content, active tab, Undo and notices can all flip E-12 without changing interfaceSize.
         // Re-advertise the extension height whenever one of those inputs changes.
+        // 候補・タブ・Undo・通知の変化でも拡張の高さを再通知する。
         Publishers.MergeMany([
             KeyboardViewController.variableStates.$resultModel.map { _ in () }.eraseToAnyPublisher(),
             KeyboardViewController.variableStates.$tabManager.map { _ in () }.eraseToAnyPublisher(),
@@ -225,6 +228,8 @@ final class KeyboardViewController: UIInputViewController {
             KeyboardViewController.variableStates.$barState.map { _ in () }.eraseToAnyPublisher(),
             KeyboardViewController.variableStates.$undoAction.map { _ in () }.eraseToAnyPublisher(),
             KeyboardViewController.variableStates.$textChangedCount.map { _ in () }.eraseToAnyPublisher(),
+            KeyboardViewController.variableStates.$hasVisibleMessageView.map { _ in () }.eraseToAnyPublisher(),
+            KeyboardViewController.variableStates.$temporalMessage.map { _ in () }.eraseToAnyPublisher(),
         ])
         .receive(on: DispatchQueue.main)
         .sink { [weak self] _ in

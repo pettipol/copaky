@@ -1574,6 +1574,30 @@ final class CopakyCampaignTests: XCTestCase {
             if symbol.exists, symbol.isHittable { return symbol }
             return firstMatch(in: safari, labels: L.clipboardTab, timeout: 1)
         }
+        func clipboardBackKey(timeout: TimeInterval) -> XCUIElement? {
+            let predicate = NSPredicate(format: "label IN %@ OR identifier IN %@", L.backKey, L.backKey)
+            let candidates = safari.descendants(matching: .any).matching(predicate)
+            guard candidates.firstMatch.waitForExistence(timeout: timeout) else {
+                return nil
+            }
+            // Safari can expose its own Back button; the keyboard key is the lowest hittable match.
+            // Safari側のBackも存在し得るため、最下部のヒット可能な要素をキーボードの戻るキーとする。
+            var match: XCUIElement?
+            for index in 0..<candidates.count {
+                let candidate = candidates.element(boundBy: index)
+                guard candidate.exists, candidate.isHittable else {
+                    continue
+                }
+                if let currentMatch = match {
+                    if candidate.frame.maxY > currentMatch.frame.maxY {
+                        match = candidate
+                    }
+                } else {
+                    match = candidate
+                }
+            }
+            return match
+        }
         if clipboardTabItem() == nil,
            let barButton = firstMatch(in: safari, labels: L.tabBarButton, timeout: 3),
            barButton.isHittable {
@@ -1615,6 +1639,56 @@ final class CopakyCampaignTests: XCTestCase {
 
         XCTAssertTrue(opened, "Long-pressing the Latin 123 key must open Clipboard history directly")
         shot("39-clipboard-open")
+
+        // Copaky: touch-up must release the exact reservation so the same long press remains reusable
+        // after returning from Clipboard history.
+        // Copaky: touch-upで同じ予約を解放し、履歴から戻った後も同じ長押しを再利用できること。
+        guard let clipboardBack = clipboardBackKey(timeout: 4),
+              clipboardBack.isHittable else {
+            dump(safari, "39-clipboard-back-not-found")
+            shot("39-clipboard-back-not-found")
+            XCTFail("Clipboard history back key not found")
+            return
+        }
+        clipboardBack.tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+
+        guard latinQwertyVisible(timeout: 4) else {
+            dump(safari, "39-latin-qwerty-did-not-return")
+            shot("39-latin-qwerty-did-not-return")
+            XCTFail("Clipboard history back key did not return to Latin QWERTY")
+            return
+        }
+        shot("39-latin-qwerty-returned")
+
+        // Re-query after the tab transition: the first XCUIElement belongs to the removed key view.
+        // タブ遷移後は削除済みビューのXCUIElementを再利用せず、123キーを取り直す。
+        guard let secondNumbersKey = firstMatch(in: safari, labels: numberKeyLabels, timeout: 4),
+              secondNumbersKey.isHittable else {
+            dump(safari, "39-second-numbers-key-not-found")
+            shot("39-second-numbers-key-not-found")
+            XCTFail("Latin QWERTY numbers key not found after returning from Clipboard history")
+            return
+        }
+
+        secondNumbersKey.press(forDuration: 1.0)
+        RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+
+        let secondMarker = firstMatch(
+            in: safari,
+            labels: L.backKey + ["ピン留め", "Pinned", "Fissati"],
+            timeout: 4
+        )
+        let reopened = secondMarker != nil && clipboardPanelIsOpen(timeout: 2)
+        if !reopened {
+            dump(safari, "39-clipboard-not-open-second-time")
+            shot("39-clipboard-not-open-second-time")
+            XCTFail("Long-pressing the Latin 123 key did not reopen Clipboard history")
+            return
+        }
+
+        XCTAssertTrue(reopened, "The Latin 123 long press must open Clipboard history repeatedly")
+        shot("39-clipboard-open-second-time")
     }
 
     // MARK: - 34 · Copaky extension: the system paste control renders inside the input view

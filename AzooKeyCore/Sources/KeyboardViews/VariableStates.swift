@@ -191,6 +191,16 @@ public final class VariableStates: ObservableObject {
 
     @Published public var temporalMessage: TemporalMessage?
 
+    /// Copaky [E-12]: bridge the MessageView state owned by KeyboardView to the UIKit height owner.
+    /// Copaky [E-12]: KeyboardViewが持つMessageView状態をUIKit側の高さ管理へ共有する。
+    @Published private(set) public var hasVisibleMessageView = false
+
+    @MainActor public func setHasVisibleMessageView(_ isVisible: Bool) {
+        guard self.hasVisibleMessageView != isVisible else {
+            return
+        }
+        self.hasVisibleMessageView = isVisible
+    }
 
     public func setSurroundingText(leftSide: String, center: String, rightSide: String) {
         self.surroundingText.leftSideText = leftSide
@@ -214,7 +224,9 @@ public final class VariableStates: ObservableObject {
     @MainActor public func shouldShowCandidateBar(
         for tab: KeyboardTab.ExistentialTab,
         copakyButtonVisible: Bool,
-        hideEmptyLatinBarEnabled: Bool
+        hideEmptyLatinBarEnabled: Bool,
+        hasMessageView: Bool = false,
+        hasTemporalMessage: Bool = false
     ) -> Bool {
         let isLatinQwertyTab = switch tab {
         case .qwerty_abc, .qwerty_numbers, .qwerty_symbols:
@@ -229,7 +241,9 @@ public final class VariableStates: ObservableObject {
             hasPredictions: self.resultModel.displayState == .predictions,
             hasNoticeOrAlternateBarContent: hasCurrentUndo || self.barState != .none,
             copakyButtonVisible: copakyButtonVisible,
-            hideEmptyLatinBarEnabled: hideEmptyLatinBarEnabled
+            hideEmptyLatinBarEnabled: hideEmptyLatinBarEnabled,
+            hasMessageView: hasMessageView,
+            hasTemporalMessage: hasTemporalMessage
         )
     }
 

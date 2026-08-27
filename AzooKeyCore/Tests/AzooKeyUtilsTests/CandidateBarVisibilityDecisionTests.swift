@@ -47,7 +47,7 @@ final class CandidateBarVisibilityDecisionTests: XCTestCase {
         ))
     }
 
-    func testPredictionsNoticeAndCopakyButtonEachKeepLatinTabVisible() {
+    func testPredictionsAlternateContentAndCopakyButtonEachKeepLatinTabVisible() {
         XCTAssertTrue(CandidateBarVisibilityDecision.isVisible(
             isLatinQwertyTab: true,
             hasCandidates: false,
@@ -71,6 +71,30 @@ final class CandidateBarVisibilityDecisionTests: XCTestCase {
             hasNoticeOrAlternateBarContent: false,
             copakyButtonVisible: true,
             hideEmptyLatinBarEnabled: true
+        ))
+    }
+
+    func testActiveMessageViewKeepsEmptyLatinBarVisible() {
+        XCTAssertTrue(CandidateBarVisibilityDecision.isVisible(
+            isLatinQwertyTab: true,
+            hasCandidates: false,
+            hasPredictions: false,
+            hasNoticeOrAlternateBarContent: false,
+            copakyButtonVisible: false,
+            hideEmptyLatinBarEnabled: true,
+            hasMessageView: true
+        ))
+    }
+
+    func testActiveTemporalMessageKeepsEmptyLatinBarVisible() {
+        XCTAssertTrue(CandidateBarVisibilityDecision.isVisible(
+            isLatinQwertyTab: true,
+            hasCandidates: false,
+            hasPredictions: false,
+            hasNoticeOrAlternateBarContent: false,
+            copakyButtonVisible: false,
+            hideEmptyLatinBarEnabled: true,
+            hasTemporalMessage: true
         ))
     }
 }
