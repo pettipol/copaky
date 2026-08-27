@@ -26,6 +26,20 @@ final class InputManager {
     // DisplayedTextManager temporarily prefers an in-keyboard text field.
     // Copaky: キーボード内入力欄への切替中もホスト側の入力属性を確認できるよう保持する。
     private var mainTextDocumentProxy: (any UITextDocumentProxy)?
+    private struct LatinSpaceCorrection {
+        let original: String
+        let corrected: String
+        let undoEligible: Bool
+    }
+    private struct LastLatinAutocorrection {
+        let original: String
+        let corrected: String
+        let leftContextAfterCorrection: String
+        let rightContextAfterCorrection: String
+    }
+    // Copaky: one-shot stock-keyboard-style undo. It never survives another key or cursor move.
+    // Copaky: 直後の削除キー1回だけで元の語へ戻す一時状態。他の操作では必ず破棄する。
+    private var lastLatinAutocorrection: LastLatinAutocorrection?
     // TODO: displayedTextManagerとliveConversionManagerを何らかの形で統合したい
     // ライブ変換を管理するクラス
     var liveConversionManager: LiveConversionManager
@@ -245,7 +259,13 @@ final class InputManager {
         }
     })
 
-    func setTextDocumentProxy(_ proxy: AnyTextDocumentProxy) {
+    @MainActor func setTextDocumentProxy(_ proxy: AnyTextDocumentProxy) {
+        switch proxy {
+        case .mainProxy, .ikTextFieldProxy:
+            self.clearLastLatinAutocorrection()
+        case .preference:
+            break
+        }
         if case let .mainProxy(mainProxy) = proxy {
             self.mainTextDocumentProxy = mainProxy
         }
@@ -396,6 +416,7 @@ final class InputManager {
 
     /// 入力を停止する。DisplayedTextには特に何もしない。
     @MainActor func stopComposition() {
+        self.clearLastLatinAutocorrection()
         self.composingText.stopComposition()
         self.displayedTextManager.stopComposition()
         self.liveConversionManager.stopComposition()
@@ -417,6 +438,7 @@ final class InputManager {
 
     @MainActor func closeKeyboard() {
         debug("closeKeyboard: キーボードが閉じます")
+        self.clearLastLatinAutocorrection()
         self.kanaKanjiConverter.commitUpdateLearningData()
         self.kanaKanjiConverter.updateUserDictionaryURL(Self.sharedContainerURL, forceReload: true)
         self.displayedTextManager.closeKeyboard()
@@ -499,19 +521,24 @@ final class InputManager {
     ///   - simpleInsert: `ComposingText`を作るのではなく、直接文字を入力し、変換候補を表示しない。
     ///   - inputStyle: 入力スタイル
     @MainActor func input(text: String, requireSetResult: Bool = true, simpleInsert: Bool = false, inputStyle: InputStyle) {
+        self.clearLastLatinAutocorrection()
         // 直接入力の条件
         if self.shouldDirectInsert(text: text, simpleInsert: simpleInsert) {
             // 必要に応じて確定する
+            var correction: LatinSpaceCorrection?
             if !self.isSelected {
-                // Copaky: on the Italian tab, a plain space may commit a safe dictionary-backed
-                // accent fix; every failed gate falls through to the unchanged plain commit.
-                // Copaky: イタリア語タブの空白確定時だけ、安全条件を満たすアクセント補正を適用する。
-                let textOverride = text == " " ? self.italianAccentFixForSpace() : nil
-                _ = self.enter(textOverride: textOverride)
+                // Copaky: A-01c remains first; B-04 generalizes the same space-time textOverride
+                // commit for opt-in Italian/English typo correction.
+                // Copaky: A-01c を優先し、同じ空白確定経路を伊英の誤字補正へ一般化する。
+                correction = text == " " ? self.latinCorrectionForSpace() : nil
+                _ = self.enter(textOverride: correction?.corrected)
             } else {
                 self.stopComposition()
             }
             self.displayedTextManager.insertText(text)
+            if let correction, correction.undoEligible {
+                self.rememberLatinAutocorrection(correction)
+            }
             return
         }
         // 直接入力にならない場合はまず選択部分を削除する
@@ -534,9 +561,20 @@ final class InputManager {
             || self.keyboardLanguage == .none
     }
 
-    @MainActor private func italianAccentFixForSpace() -> String? {
-        guard self.keyboardLanguage == .it_IT,
-              ItalianAutoAccentOnSpace.value,
+    @MainActor private func latinCorrectionForSpace() -> LatinSpaceCorrection? {
+        let generalEnabled = EnableLatinAutocorrect.value
+        let accentEnabled = self.keyboardLanguage == .it_IT && ItalianAutoAccentOnSpace.value
+        let language: LatinAutocorrectPolicy.Language
+        switch self.keyboardLanguage {
+        case .it_IT:
+            language = .italian
+        case .en_US:
+            language = .english
+        default:
+            return nil
+        }
+
+        guard generalEnabled || accentEnabled,
               !self.isSelected,
               !self.composingText.isEmpty,
               self.composingText.isAtEndIndex,
@@ -558,17 +596,106 @@ final class InputManager {
         ) else {
             return nil
         }
-        guard let fix = ItalianAccentAutocorrect.accentFix(forTypedWord: typed) else {
+
+        var italianAutoAccentCandidateExists = false
+        var preferredItalianAutoAccentCorrection: String?
+        if language == .italian,
+           let fix = ItalianAccentAutocorrect.accentFix(forTypedWord: typed) {
+            italianAutoAccentCandidateExists = true
+            // Copaky: A-01c keeps its own setting and double fail-closed oracle. When B-04 is also
+            // on, this confirmed answer is passed into the general policy and wins without a second
+            // spell-check query. If A-01c owns but rejects the word, the general path cannot claim it.
+            // Copaky: A-01c の確認済み回答を優先し、同じ語を一般補正で再判定しない。
+            if accentEnabled,
+               ItalianAutoAccentPolicy.systemConfirmsAccentFix(forTyped: typed, fix: fix) {
+                preferredItalianAutoAccentCorrection = fix
+            }
+        }
+
+        // B-04 OFF preserves A-01c byte-for-byte at the behavior boundary, including no new undo.
+        if !generalEnabled {
+            return preferredItalianAutoAccentCorrection.map {
+                LatinSpaceCorrection(original: typed, corrected: $0, undoEligible: false)
+            }
+        }
+
+        let policyContext = LatinAutocorrectPolicy.Context(
+            isEnabled: generalEnabled,
+            keyboardType: proxy.keyboardType ?? .default,
+            textContentType: proxy.textContentType,
+            autocorrectionType: proxy.autocorrectionType,
+            isSecureField: KeyboardViewController.isSecureField(proxy),
+            documentContextBeforeWord: context,
+            preferredItalianAutoAccentCorrection: preferredItalianAutoAccentCorrection,
+            italianAutoAccentCandidateExists: italianAutoAccentCandidateExists
+        )
+        guard let correction = LatinAutocorrectPolicy.correction(
+            forTypedWord: typed,
+            language: language,
+            context: policyContext
+        ) else {
             return nil
         }
-        // Copaky: double fail-closed oracle — the device's Italian checker must reject the plain
-        // word AND itself suggest the accented form we are about to insert; otherwise leave the
-        // text exactly as typed ("Sara", "meta", any name the dictionary simply lacks).
-        // Copaky: 端末の校正が誤りと判定し、かつ同じ補正形を提案する場合のみ置換する。
-        guard ItalianAutoAccentPolicy.systemConfirmsAccentFix(forTyped: typed, fix: fix) else {
-            return nil
+        return LatinSpaceCorrection(original: typed, corrected: correction, undoEligible: true)
+    }
+
+    @MainActor func clearLastLatinAutocorrection() {
+        self.lastLatinAutocorrection = nil
+    }
+
+    /// Keeps the one-shot undo across host no-op callbacks, while still invalidating it when the
+    /// text, selection, or cursor context actually changed outside the keyboard action pipeline.
+    /// ホストの無変更通知では復元状態を保持し、本文・選択・カーソルの実変更時だけ破棄する。
+    @MainActor func clearLastLatinAutocorrectionIfContextChanged(
+        left: String,
+        center: String,
+        right: String
+    ) {
+        guard let correction = self.lastLatinAutocorrection else {
+            return
         }
-        return fix
+        if left != correction.leftContextAfterCorrection
+            || !center.isEmpty
+            || right != correction.rightContextAfterCorrection {
+            self.lastLatinAutocorrection = nil
+        }
+    }
+
+    @MainActor private func rememberLatinAutocorrection(_ correction: LatinSpaceCorrection) {
+        guard self.composingText.isEmpty,
+              !self.isSelected,
+              let leftContext = self.displayedTextManager.documentContextBeforeInput(),
+              leftContext.hasSuffix(correction.corrected + " ") else {
+            return
+        }
+        self.lastLatinAutocorrection = LastLatinAutocorrection(
+            original: correction.original,
+            corrected: correction.corrected,
+            leftContextAfterCorrection: leftContext,
+            rightContextAfterCorrection: self.displayedTextManager.documentContextAfterInput ?? ""
+        )
+    }
+
+    /// Restores the original word and consumes the just-inserted space. The exact surrounding-text
+    /// snapshot makes this fail closed if the host moved the cursor or edited behind our back.
+    @MainActor func undoLastLatinAutocorrectionIfPossible() -> Bool {
+        guard let correction = self.lastLatinAutocorrection else {
+            return false
+        }
+        self.lastLatinAutocorrection = nil
+        guard self.composingText.isEmpty,
+              !self.isSelected,
+              (self.displayedTextManager.selectedText ?? "").isEmpty,
+              self.displayedTextManager.documentContextBeforeInput() == correction.leftContextAfterCorrection,
+              (self.displayedTextManager.documentContextAfterInput ?? "") == correction.rightContextAfterCorrection,
+              correction.leftContextAfterCorrection.hasSuffix(correction.corrected + " ") else {
+            return false
+        }
+
+        self.displayedTextManager.deleteBackward(count: correction.corrected.count + 1)
+        self.displayedTextManager.insertText(correction.original)
+        self.resetPostCompositionPredictionCandidates()
+        return true
     }
 
     /// テキストの進行方向に削除する
@@ -896,6 +1023,7 @@ final class InputManager {
 
     /// キーボード経由でのカーソル移動
     @MainActor func moveCursor(count: Int, requireSetResult: Bool = true) {
+        self.clearLastLatinAutocorrection()
         if self.isSelected {
             // ただ横に動かす(選択解除)
             self.displayedTextManager.moveCursor(count: 1)
@@ -927,6 +1055,7 @@ final class InputManager {
     /// ユーザがキーボードを経由せずにカーソルを何かした場合の後処理を行う関数。
     ///  - note: この関数をユーティリティとして用いてはいけない。
     @MainActor func userMovedCursor(count: Int) -> [ActionType] {
+        self.clearLastLatinAutocorrection()
         debug("userによるカーソル移動を検知、今の位置は\(composingText.convertTargetCursorPosition)、動かしたオフセットは\(count)")
         // 選択しているテキストがある場合はリザルトバーを表示する
         if self.isSelected {
@@ -950,6 +1079,7 @@ final class InputManager {
 
     /// ユーザが行を跨いでカーソルを動かした場合に利用する
     @MainActor func userJumpedCursor() -> [ActionType] {
+        self.clearLastLatinAutocorrection()
         if self.composingText.isEmpty {
             @KeyboardSetting(.displayCursorBarAutomatically) var displayCursorBarAutomatically
             return displayCursorBarAutomatically ? [.setCursorBar(.on)] : []

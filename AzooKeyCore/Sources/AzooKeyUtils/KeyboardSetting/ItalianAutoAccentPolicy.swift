@@ -9,6 +9,11 @@ import UIKit
 // keyboard extension so the safety decisions have focused unit coverage.
 // Copaky: イタリア語アクセント自動補正の入力欄・大文字判定を純粋関数としてテスト可能にする。
 public enum ItalianAutoAccentPolicy {
+    // Copaky: one checker instance per keyboard process; each confirmation uses it for both the
+    // misspelling range and guesses, avoiding the former double allocation/query on every space.
+    // Copaky: 1回の空白確定で同じ checker を誤字判定と候補取得に再利用する。
+    @MainActor private static let checker = UITextChecker()
+
     public static func allowsKeyboardType(_ keyboardType: UIKeyboardType) -> Bool {
         switch keyboardType {
         case .URL, .emailAddress, .twitter, .namePhonePad, .asciiCapableNumberPad,
@@ -37,7 +42,6 @@ public enum ItalianAutoAccentPolicy {
         guard !typed.isEmpty, UITextChecker.availableLanguages.contains(where: { $0.hasPrefix("it") }) else {
             return false
         }
-        let checker = UITextChecker()
         let range = checker.rangeOfMisspelledWord(
             in: typed,
             range: NSRange(location: 0, length: (typed as NSString).length),
@@ -54,11 +58,20 @@ public enum ItalianAutoAccentPolicy {
     // our candidate, which closes the residual path of the 2026-08-19 re-review.
     // Copaky: 端末の校正候補にこちらの補正形が含まれる場合のみ適用（fail-closed の後段）。
     @MainActor public static func systemConfirmsAccentFix(forTyped typed: String, fix: String) -> Bool {
-        guard systemFlagsAsMisspelledItalian(typed) else {
+        guard !typed.isEmpty, UITextChecker.availableLanguages.contains(where: { $0.hasPrefix("it") }) else {
             return false
         }
-        let checker = UITextChecker()
         let range = NSRange(location: 0, length: (typed as NSString).length)
+        let misspelledRange = checker.rangeOfMisspelledWord(
+            in: typed,
+            range: range,
+            startingAt: 0,
+            wrap: false,
+            language: "it_IT"
+        )
+        guard misspelledRange.location != NSNotFound else {
+            return false
+        }
         let guesses = checker.guesses(forWordRange: range, in: typed, language: "it_IT") ?? []
         let locale = Locale(identifier: "it_IT")
         return guesses.contains { $0.compare(fix, options: [.caseInsensitive], range: nil, locale: locale) == .orderedSame }

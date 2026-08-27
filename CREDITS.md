@@ -54,7 +54,7 @@ section of Settings; this file is a consolidated summary.
 | [Emoji-IME-Dictionary](https://github.com/peaceiris/emoji-ime-dictionary) | Emoji candidates | see LICENSE |
 | [Kaomojitoka to Google IME Dictionary](https://github.com/nikukyugamer/kaomojitoka-to-google-ime-dictionary) | Kaomoji candidates | see LICENSE |
 | [Kaomojic](https://github.com/mika-f/kaomojic) | Kaomoji candidates | see LICENSE |
-| [Leipzig Corpora Collection](https://wortschatz.uni-leipzig.de/en) | Italian frequency lexicon (`it_words.txt` in the converter fork) | **CC BY** — © Universität Leipzig / Sächsische Akademie der Wissenschaften / InfAI ([terms](https://wortschatz.uni-leipzig.de/en/usage)); details in the fork's `ITALIAN_LEXICON_LICENSE.md` |
+| [Leipzig Corpora Collection](https://wortschatz.uni-leipzig.de/en) | Italian frequency lexicon (`it_words.txt` in the converter fork) and the derived compact tie-break list embedded in the keyboard's typo autocorrection (`ItalianAutocorrectFrequencyLexicon.swift`) | **CC BY** — © Universität Leipzig / Sächsische Akademie der Wissenschaften / InfAI ([terms](https://wortschatz.uni-leipzig.de/en/usage)); details in the fork's `ITALIAN_LEXICON_LICENSE.md` |
 
 If you believe an attribution is missing or incorrect, please open an issue. The in-app Acknowledgements
 screen remains the source of truth for the exact license texts.

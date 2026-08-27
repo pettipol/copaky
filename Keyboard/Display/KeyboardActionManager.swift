@@ -49,6 +49,7 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
     // already-open Latin tab before the next key action runs.
     // Copaky: 設定変更で表示中のラテン文字言語を切り替えた際、次のキー入力前に変換器も同期する。
     @MainActor func synchronizeKeyboardLanguage(_ language: KeyboardLanguage) {
+        self.inputManager.clearLastLatinAutocorrection()
         self.inputManager.setKeyboardLanguage(language)
     }
 
@@ -74,6 +75,7 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
     ///   - candidate: 確定された候補。
     ///   - variableStates: 状態。
     override func notifyComplete(_ candidate: any ResultViewItemData, variableStates: VariableStates) {
+        self.inputManager.clearLastLatinAutocorrection()
         if let candidate = candidate as? Candidate {
             self.inputManager.complete(candidate: candidate)
             self.registerActions(candidate.actions.map(\.action), variableStates: variableStates)
@@ -134,6 +136,17 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
 
     @MainActor private func doAction(_ action: ActionType, requireSetResult: Bool = true, variableStates: VariableStates) {
         debug("doAction", action)
+        // Copaky: only the first ordinary backspace may consume B-04's one-shot undo. Every other
+        // keyboard action invalidates it before doing any work.
+        // Copaky: 通常の削除1回以外のキー操作では B-04 の復元状態を先に破棄する。
+        if case .delete(1) = action {
+            // Keep the token until the delete branch validates the exact host context.
+        } else if case .setSearchQuery = action {
+            // This is an ancillary binding update emitted by the same input action, not another key.
+            // 同じ入力操作に伴うバインディング更新であり、別のキー入力ではない。
+        } else {
+            self.inputManager.clearLastLatinAutocorrection()
+        }
         var undoAction: ActionType?
         switch action {
         case let .input(text, simpleInsert):
@@ -172,7 +185,10 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
         case let .delete(count):
             self.textEditingActionDidBegin(variableStates: variableStates)
             self.shiftStateOff(variableStates: variableStates)
-            self.inputManager.deleteBackward(convertTargetCount: count, requireSetResult: requireSetResult)
+            if count != 1 || !self.inputManager.undoLastLatinAutocorrectionIfPossible() {
+                self.inputManager.clearLastLatinAutocorrection()
+                self.inputManager.deleteBackward(convertTargetCount: count, requireSetResult: requireSetResult)
+            }
         case .smoothDelete:
             KeyboardFeedback<AzooKeyKeyboardViewExtension>.smoothDelete()
             self.textEditingActionDidBegin(variableStates: variableStates)
@@ -565,6 +581,11 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
         }
         // 前のデータが保存されていない場合は操作しない
         guard let (tempLeft, b_center, b_right) = self.tempTextData else {
+            self.inputManager.clearLastLatinAutocorrectionIfContextChanged(
+                left: a_left,
+                center: a_center,
+                right: a_right
+            )
             debug("notifySomethingDidChange: Could not found `tempTextData`")
             return
         }
@@ -583,6 +604,15 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
         case .noMatch:
             break
         }
+
+        // A host no-op callback is not another key or cursor movement. Preserve the token for that
+        // case, but invalidate it before handling any real text/selection/cursor delta.
+        // ホストの無変更通知では保持し、本文・選択・カーソルの実変更時だけ破棄する。
+        self.inputManager.clearLastLatinAutocorrectionIfContextChanged(
+            left: a_left,
+            center: a_center,
+            right: a_right
+        )
 
         // 終了時に必ずtempTextDataを`nil`にする
         defer {

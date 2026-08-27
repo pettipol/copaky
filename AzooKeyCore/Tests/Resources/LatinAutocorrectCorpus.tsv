@@ -1,0 +1,165 @@
+# kind	language	typed	expected	context_before_word	misspelled	guesses
+typo	it-IT	qundo	quando	Scrivo\s	1	quando|zzzzzzzz
+typo	it-IT	anhce	anche	Scrivo\s	1	anche|zzzzzzzz
+typo	it-IT	qusto	questo	Scrivo\s	1	questo|zzzzzzzz
+typo	it-IT	qaundo	quando	Scrivo\s	1	quando|zzzzzzzz
+typo	it-IT	ancge	anche	Scrivo\s	1	anche|zzzzzzzz
+typo	it-IT	anchd	anche	Scrivo\s	1	anche|zzzzzzzz
+typo	it-IT	quesot	questo	Scrivo\s	1	questo|zzzzzzzz
+typo	it-IT	quesfo	questo	Scrivo\s	1	questo|zzzzzzzz
+typo	it-IT	quesro	questo	Scrivo\s	1	questo|zzzzzzzz
+typo	it-IT	motlo	molto	Scrivo\s	1	molto|zzzzzzzz
+typo	it-IT	tnto	tanto	Scrivo\s	1	tanto|zzzzzzzz
+typo	it-IT	pocp	poco	Scrivo\s	1	poco|zzzzzzzz
+typo	it-IT	semore	sempre	Scrivo\s	1	sempre|zzzzzzzz
+typo	it-IT	nesusno	nessuno	Scrivo\s	1	nessuno|zzzzzzzz
+typo	it-IT	nienet	niente	Scrivo\s	1	niente|zzzzzzzz
+typo	it-IT	alllora	allora	Scrivo\s	1	allora|zzzzzzzz
+typo	it-IT	dobve	dove	Scrivo\s	1	dove|zzzzzzzz
+typo	it-IT	priima	prima	Scrivo\s	1	prima|zzzzzzzz
+typo	it-IT	doop	dopo	Scrivo\s	1	dopo|zzzzzzzz
+typo	it-IT	ogig	oggi	Scrivo\s	1	oggi|zzzzzzzz
+typo	it-IT	irei	ieri	Scrivo\s	1	ieri|zzzzzzzz
+typo	it-IT	lavro	lavoro	Scrivo\s	1	lavoro|zzzzzzzz
+typo	it-IT	famgilia	famiglia	Scrivo\s	1	famiglia|zzzzzzzz
+typo	it-IT	amcio	amico	Scrivo\s	1	amico|zzzzzzzz
+typo	it-IT	belol	bello	Scrivo\s	1	bello|zzzzzzzz
+typo	it-IT	brutot	brutto	Scrivo\s	1	brutto|zzzzzzzz
+typo	it-IT	girono	giorno	Scrivo\s	1	giorno|zzzzzzzz
+typo	it-IT	setimana	settimana	Scrivo\s	1	settimana|zzzzzzzz
+typo	it-IT	msee	mese	Scrivo\s	1	mese|zzzzzzzz
+typo	it-IT	annoo	anno	Scrivo\s	1	anno|zzzzzzzz
+typo	it-IT	sorpa	sopra	Scrivo\s	1	sopra|zzzzzzzz
+typo	it-IT	sotot	sotto	Scrivo\s	1	sotto|zzzzzzzz
+typo	it-IT	rpima	prima	Scrivo\s	1	prima|zzzzzzzz
+typo	it-IT	utlimo	ultimo	Scrivo\s	1	ultimo|zzzzzzzz
+typo	it-IT	qualhce	qualche	Scrivo\s	1	qualche|zzzzzzzz
+typo	it-IT	anocra	ancora	Scrivo\s	1	ancora|zzzzzzzz
+typo	it-IT	allroa	allora	Scrivo\s	1	allora|zzzzzzzz
+typo	it-IT	pnesare	pensare	Scrivo\s	1	pensare|zzzzzzzz
+typo	it-IT	pralare	parlare	Scrivo\s	1	parlare|zzzzzzzz
+typo	it-IT	snetire	sentire	Scrivo\s	1	sentire|zzzzzzzz
+typo	it-IT	gaurdare	guardare	Scrivo\s	1	guardare|zzzzzzzz
+typo	it-IT	crdere	credere	Scrivo\s	1	credere|zzzzzzzz
+typo	it-IT	protare	portare	Scrivo\s	1	portare|zzzzzzzz
+typo	it-IT	ragazo	ragazzo	Scrivo\s	1	ragazzo|zzzzzzzz
+typo	it-IT	seocndo	secondo	Scrivo\s	1	secondo|zzzzzzzz
+typo	it-IT	modno	mondo	Scrivo\s	1	mondo|zzzzzzzz
+typo	it-IT	satto	stato	Scrivo\s	1	stato|zzzzzzzz
+typo	it-IT	prate	parte	Scrivo\s	1	parte|zzzzzzzz
+typo	it-IT	putno	punto	Scrivo\s	1	punto|zzzzzzzz
+typo	it-IT	propro	proprio	Scrivo\s	1	proprio|zzzzzzzz
+typo	it-IT	caas	casa	Scrivo\s	1	casa|zzzzzzzz
+typo	it-IT	tepmo	tempo	Scrivo\s	1	tempo|zzzzzzzz
+typo	it-IT	lvaoro	lavoro	Scrivo\s	1	lavoro|zzzzzzzz
+typo	it-IT	famigila	famiglia	Scrivo\s	1	famiglia|zzzzzzzz
+typo	it-IT	aimco	amico	Scrivo\s	1	amico|zzzzzzzz
+typo	it-IT	blelo	bello	Scrivo\s	1	bello|zzzzzzzz
+typo	it-IT	brtuto	brutto	Scrivo\s	1	brutto|zzzzzzzz
+typo	it-IT	gioorno	giorno	Scrivo\s	1	giorno|zzzzzzzz
+typo	it-IT	settmana	settimana	Scrivo\s	1	settimana|zzzzzzzz
+typo	it-IT	emse	mese	Scrivo\s	1	mese|zzzzzzzz
+typo	it-IT	anmo	anno	Scrivo\s	1	anno|zzzzzzzz
+typo	it-IT	dmoani	domani	Scrivo\s	1	domani|zzzzzzzz
+typo	it-IT	buogiorno	buongiorno	Scrivo\s	1	buongiorno|zzzzzzzz
+typo	it-IT	graize	grazie	Scrivo\s	1	grazie|zzzzzzzz
+typo	it-IT	probelma	problema	Scrivo\s	1	problema|zzzzzzzz
+typo	it-IT	insime	insieme	Scrivo\s	1	insieme|zzzzzzzz
+typo	it-IT	scuoloa	scuola	Scrivo\s	1	scuola|zzzzzzzz
+typo	it-IT	macchian	macchina	Scrivo\s	1	macchina|zzzzzzzz
+typo	en-US	teh	the	I\ssaw\s	1	the|zzzzzzzz
+typo	en-US	adn	and	This\s	1	and|zzzzzzzz
+typo	en-US	hte	the	Read\s	1	the|zzzzzzzz
+typo	en-US	thier	their	I\swrote\s	1	their|zzzzzzzz
+typo	en-US	recieve	receive	I\swrote\s	1	receive|zzzzzzzz
+typo	en-US	freind	friend	I\swrote\s	1	friend|zzzzzzzz
+typo	en-US	becuase	because	I\swrote\s	1	because|zzzzzzzz
+typo	en-US	definately	definitely	I\swrote\s	1	definitely|zzzzzzzz
+typo	en-US	seperate	separate	I\swrote\s	1	separate|zzzzzzzz
+typo	en-US	occured	occurred	I\swrote\s	1	occurred|zzzzzzzz
+typo	en-US	untill	until	I\swrote\s	1	until|zzzzzzzz
+typo	en-US	adress	address	I\swrote\s	1	address|zzzzzzzz
+typo	en-US	wierd	weird	I\swrote\s	1	weird|zzzzzzzz
+typo	en-US	acheive	achieve	I\swrote\s	1	achieve|zzzzzzzz
+typo	en-US	beleive	believe	I\swrote\s	1	believe|zzzzzzzz
+typo	en-US	calender	calendar	I\swrote\s	1	calendar|zzzzzzzz
+typo	en-US	enviroment	environment	I\swrote\s	1	environment|zzzzzzzz
+typo	en-US	goverment	government	I\swrote\s	1	government|zzzzzzzz
+typo	en-US	tommorow	tomorrow	I\swrote\s	1	tomorrow|zzzzzzzz
+typo	en-US	begining	beginning	I\swrote\s	1	beginning|zzzzzzzz
+typo	en-US	comming	coming	I\swrote\s	1	coming|zzzzzzzz
+typo	en-US	writting	writing	I\swrote\s	1	writing|zzzzzzzz
+typo	en-US	suprise	surprise	I\swrote\s	1	surprise|zzzzzzzz
+typo	en-US	restarant	restaurant	I\swrote\s	1	restaurant|zzzzzzzz
+typo	en-US	langauge	language	I\swrote\s	1	language|zzzzzzzz
+typo	en-US	buisness	business	I\swrote\s	1	business|zzzzzzzz
+typo	en-US	remeber	remember	I\swrote\s	1	remember|zzzzzzzz
+typo	en-US	Febuary	February		1	February|zzzzzzzz
+typo	en-US	libary	library	I\swrote\s	1	library|zzzzzzzz
+typo	en-US	neccessary	necessary	I\swrote\s	1	necessary|zzzzzzzz
+typo	en-US	occassion	occasion	I\swrote\s	1	occasion|zzzzzzzz
+typo	en-US	publically	publicly	I\swrote\s	1	publicly|zzzzzzzz
+typo	en-US	arguement	argument	I\swrote\s	1	argument|zzzzzzzz
+typo	en-US	independant	independent	I\swrote\s	1	independent|zzzzzzzz
+typo	en-US	existance	existence	I\swrote\s	1	existence|zzzzzzzz
+typo	en-US	grammer	grammar	I\swrote\s	1	grammar|zzzzzzzz
+typo	en-US	truely	truly	I\swrote\s	1	truly|zzzzzzzz
+typo	en-US	usefull	useful	I\swrote\s	1	useful|zzzzzzzz
+typo	en-US	fullfill	fulfill	I\swrote\s	1	fulfill|zzzzzzzz
+typo	en-US	occurence	occurrence	I\swrote\s	1	occurrence|zzzzzzzz
+typo	en-US	prefered	preferred	I\swrote\s	1	preferred|zzzzzzzz
+typo	en-US	refered	referred	I\swrote\s	1	referred|zzzzzzzz
+typo	en-US	transfered	transferred	I\swrote\s	1	transferred|zzzzzzzz
+typo	en-US	embarass	embarrass	I\swrote\s	1	embarrass|zzzzzzzz
+typo	en-US	accomodate	accommodate	I\swrote\s	1	accommodate|zzzzzzzz
+typo	en-US	commited	committed	I\swrote\s	1	committed|zzzzzzzz
+typo	en-US	succesful	successful	I\swrote\s	1	successful|zzzzzzzz
+typo	en-US	responsability	responsibility	I\swrote\s	1	responsibility|zzzzzzzz
+control	it-IT	Sara		Ciao\s	1	Sarà
+control	it-IT	Sara		<nil>	0	
+control	it-IT	Marco		Ciao\s	1	marzo
+control	it-IT	Roma		Vivo\sa\s	1	roba
+control	it-IT	Luca		Con\s	1	luce
+control	it-IT	Giulia		Con\s	1	giuria
+control	it-IT	meta		Test\s	0	
+control	it-IT	faro		Test\s	0	
+control	it-IT	pero		Test\s	0	
+control	it-IT	cosi		Test\s	0	
+control	it-IT	si		Test\s	0	
+control	it-IT	da		Test\s	0	
+control	it-IT	ciao		Test\s	0	
+control	it-IT	casa		Test\s	0	
+control	it-IT	ASAP		Test\s	1	ASAPs
+control	it-IT	CIAO		Test\s	1	CIAOa
+control	it-IT	b2b		Test\s	1	bob
+control	it-IT	example.com		Test\s	1	examplecom
+control	it-IT	un'ora		Test\s	1	unora
+control	it-IT	l’acqua		Test\s	1	lacqua
+control	it-IT	iPhone		Test\s	1	iPhobe
+control	it-IT	e-mail		Test\s	1	email
+control	it-IT	123		Test\s	1	example
+control	it-IT	test@example.com		Test\s	1	testexamplecom
+control	en-US	Alice		Hello\s	1	alive
+control	en-US	John		Hello\s	1	join
+control	en-US	London		From\s	1	Landon
+control	en-US	Swift		Using\s	1	shift
+control	en-US	NASA		Test\s	1	NASAs
+control	en-US	ASAP		Test\s	1	ASAPs
+control	en-US	B2B		Test\s	1	BoB
+control	en-US	example.com		Test\s	1	examplecom
+control	en-US	don't		Test\s	1	dont
+control	en-US	user_name		Test\s	1	username
+control	en-US	iPhone		Test\s	1	iPhobe
+control	en-US	hello2		Test\s	1	hellos
+control	en-US	the		Test\s	0	
+control	en-US	and		Test\s	0	
+control	en-US	meta		Test\s	0	
+control	en-US	email		Test\s	0	
+control	en-US	e-mail		Test\s	1	email
+control	en-US	C3PO		Test\s	1	CAPO
+control	en-US	hello/world		Test\s	1	helloworld
+control	en-US	O'Reilly		Test\s	1	OReilly
+control	en-US	open.ai		Test\s	1	openai
+control	en-US	support@example.com		Test\s	1	supportexamplecom
+control	en-US	HTTP		Test\s	1	HTTPs
+control	en-US	v2beta		Test\s	1	vabeta

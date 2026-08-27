@@ -287,6 +287,20 @@ public extension KeyboardSettingKey where Self == ItalianAutoAccentOnSpace {
     static var italianAutoAccentOnSpace: Self { .init() }
 }
 
+// Copaky: conservative IT/EN typo correction when a Latin word is committed with space. It is
+// opt-in until the permanent corpus and device campaign meet their accuracy and memory gates.
+// Copaky: ラテン文字（伊英）の空白確定時誤字補正。検証完了までは既定オフ。
+public struct EnableLatinAutocorrect: BoolKeyboardSettingKey {
+    public static let title: LocalizedStringKey = "ラテン文字の自動修正"
+    public static let explanation: LocalizedStringKey = "ラテン文字キーボードで単語の後にスペースを押すと、イタリア語・英語のよくある入力ミスを自動で修正します。修正直後に削除キーを押すと元の単語に戻せます。"
+    public static let defaultValue = false
+    public static let key: String = "enable_latin_autocorrect"
+}
+
+public extension KeyboardSettingKey where Self == EnableLatinAutocorrect {
+    static var enableLatinAutocorrect: Self { .init() }
+}
+
 /// クリップボード履歴の取り込みにシステムのペーストボタンを使う設定（試験的） / Experimental: use Apple's
 /// system paste button (`UIPasteControl`) to add to the clipboard history. iOS treats a tap on its own
 /// control as consent, so the text is handed over without us reading the pasteboard and no

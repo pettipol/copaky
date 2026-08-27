@@ -14305,6 +14305,38 @@
           }
         }
       }
+    },
+    "ラテン文字の自動修正" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Autocorrect typos (Latin keyboards)"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Correzione automatica dei refusi (tastiere latine)"
+          }
+        }
+      }
+    },
+    "ラテン文字キーボードで単語の後にスペースを押すと、イタリア語・英語のよくある入力ミスを自動で修正します。修正直後に削除キーを押すと元の単語に戻せます。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On Latin keyboards, pressing space after a word automatically corrects common Italian and English typos. Press backspace immediately after a correction to restore the original word."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sulle tastiere latine, premendo spazio dopo una parola vengono corretti automaticamente i refusi comuni in italiano e inglese. Premi backspace subito dopo una correzione per ripristinare la parola originale."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"
