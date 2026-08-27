@@ -1,3 +1,4 @@
+import enum KanaKanjiConverterModule.KeyboardLanguage
 import XCTest
 @testable import KeyboardViews
 
@@ -55,6 +56,28 @@ final class QwertyLanguageSwitchDecisionTests: XCTestCase {
                 needsInputModeSwitchKey: true
             ),
             .ja_JP
+        )
+    }
+
+    func testLanguageBearingTabUsesTheConfiguredLatinOrder() {
+        let cycle: [KeyboardLanguage] = [.ja_JP, .it_IT, .en_US]
+        XCTAssertEqual(
+            QwertyLanguageSwitchDecision.targetLanguage(
+                currentTabLanguage: .ja_JP,
+                keyboardLanguage: .ja_JP,
+                cycle: cycle,
+                needsInputModeSwitchKey: false
+            ),
+            .it_IT
+        )
+        XCTAssertEqual(
+            QwertyLanguageSwitchDecision.targetLanguage(
+                currentTabLanguage: .it_IT,
+                keyboardLanguage: .it_IT,
+                cycle: cycle,
+                needsInputModeSwitchKey: false
+            ),
+            .en_US
         )
     }
 

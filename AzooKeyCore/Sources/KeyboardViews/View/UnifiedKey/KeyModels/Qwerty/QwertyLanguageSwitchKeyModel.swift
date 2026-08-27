@@ -27,8 +27,6 @@ enum QwertyLanguageSwitchDecision {
 }
 
 struct QwertyLanguageSwitchKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: UnifiedKeyModelProtocol {
-    let languages: (KeyboardLanguage, KeyboardLanguage)
-
     /// The language the keyboard is really typing right now. A tab that declares itself English is
     /// the LATIN tab: which Latin language is active lives in `latinKeyboardLanguage`.
     /// 実際に入力中の言語。英語を宣言するタブはラテン文字タブであり、実際の言語は状態側にある。
@@ -37,15 +35,8 @@ struct QwertyLanguageSwitchKeyModel<Extension: ApplicationSpecificKeyboardViewEx
         return declared == .en_US ? variableStates.latinKeyboardLanguage : declared
     }
 
-    /// Copaky: the languages this key cycles through, in order. Italian joins the cycle only when the
-    /// user turned it on in Settings, so a two-language user keeps exactly today's behaviour.
-    /// Copaky: このキーが巡回する言語。イタリア語は設定でオンにした場合のみ加わる。
     @MainActor private var cycle: [KeyboardLanguage] {
-        var cycle = [languages.0, languages.1]
-        if Extension.SettingProvider.enableItalianKeyboardLanguage, !cycle.contains(.it_IT) {
-            cycle.append(.it_IT)
-        }
-        return cycle
+        Extension.SettingProvider.activeKeyboardLanguages
     }
 
     /// The language one tap moves to, given what is active now.
@@ -78,12 +69,9 @@ struct QwertyLanguageSwitchKeyModel<Extension: ApplicationSpecificKeyboardViewEx
     func longPressActions(variableStates _: VariableStates) -> LongpressActionType {
         .none
     }
-    /// Copaky: with three languages in the cycle, long-pressing the key opens a direct-pick menu
-    /// (あ / A / IT) — tapping still cycles. With two languages a tap already toggles, so no menu.
-    /// Copaky: 3言語のときは長押しで直接選択メニューを表示（タップは従来どおり巡回）。
     func variationSpace(variableStates: VariableStates) -> UnifiedVariationSpace {
         let cycle = self.cycle
-        guard cycle.count > 2 else {
+        guard cycle.count > 1 else {
             return .none
         }
         let elements = cycle.map { language in

@@ -1,6 +1,74 @@
 {
   "sourceLanguage" : "ja",
   "strings" : {
+    "使用する言語" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Active languages"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lingue attive"
+          }
+        }
+      }
+    },
+    "先頭に固定" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinned first"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fissato in cima"
+          }
+        }
+      }
+    },
+    "常に有効" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Always active"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sempre attiva"
+          }
+        }
+      }
+    },
+    "日本語は先頭に固定され、英語は常に有効です。イタリア語を有効にすると、英語との順番を並べ替えられます。" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Japanese is pinned first, and English is always active. Enable Italian to reorder it relative to English."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il giapponese è fissato in cima e l'inglese è sempre attivo. Attiva l'italiano per riordinarlo rispetto all'inglese."
+          }
+        }
+      }
+    },
     "システムのペーストボタンを使う" : {
       "localizations" : {
         "en" : {
@@ -8774,18 +8842,18 @@
         }
       }
     },
-    "初回の既定は日本語タブです。QWERTYの言語キーは、イタリア語が有効なとき「あ」→「A」→「IT」の順に切り替わり、長押しで直接選べます。" : {
+    "初回の既定は日本語タブです。QWERTYの言語キーは「使用する言語」の順に切り替わり、長押しですべての有効な言語から直接選べます。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The Japanese tab is the initial default. When Italian is enabled, the QWERTY language key cycles あ → A → IT; long-press it to choose a language directly."
+            "value" : "The Japanese tab is the initial default. The QWERTY language key cycles in the order shown under “Active languages”; long-press it to choose directly from every active language."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "La scheda giapponese è quella iniziale predefinita. Quando l'italiano è attivo, il tasto lingua QWERTY passa in sequenza da あ ad A a IT; tienilo premuto per scegliere direttamente una lingua."
+            "value" : "La scheda giapponese è quella iniziale predefinita. Il tasto lingua QWERTY segue l'ordine di «Lingue attive»; tienilo premuto per scegliere direttamente una lingua attiva."
           }
         }
       }
@@ -13195,18 +13263,18 @@
         }
       }
     },
-    "言語キーで日本語と英語を切り替えられます。「イタリア語を使う」をオンにするとイタリア語も巡回に加わり、長押しでメニューから直接選べます。" : {
+    "言語キーは「使用する言語」の順に切り替わります。長押しすると、すべての有効な言語から直接選べます。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The language key switches between Japanese and English. With “Use Italian” on, Italian joins the cycle and a long-press opens a menu to pick a language directly."
+            "value" : "The language key cycles in the order shown under “Active languages”. Long-press it to choose directly from every active language."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Il tasto lingua passa da giapponese a inglese. Con «Usa l'italiano» attivo si aggiunge anche l'italiano e con un tocco lungo si apre un menù per scegliere direttamente la lingua."
+            "value" : "Il tasto lingua segue l'ordine di «Lingue attive». Tienilo premuto per scegliere direttamente una lingua attiva."
           }
         }
       }

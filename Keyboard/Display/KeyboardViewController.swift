@@ -51,10 +51,9 @@ extension UIKeyboardType: @retroactive CustomDebugStringConvertible {
 final class KeyboardViewController: UIInputViewController {
     private static var keyboardViewHost: KeyboardHostingController<Keyboard>?
     private static var loadedInstanceCount: Int = 0
-    /// Copaky: remember the setting value that last seeded the Latin tab. Ordinary reappearances keep
-    /// a manual EN/IT choice; an actual setting change intentionally re-seeds it without a restart.
-    /// Copaky: 前回反映した設定値を保持し、通常の再表示では手動選択を守り、設定変更時だけ再設定する。
-    private static var seededItalianEnabled: Bool?
+    /// Ordinary reappearances preserve a manual EN/IT choice; an active-list change intentionally
+    /// re-seeds from its first Latin language without waiting for an extension restart.
+    private static var seededActiveLanguages: [KeyboardLanguage]?
     private static let action = KeyboardActionManager()
     private static let variableStates = VariableStates(
         clipboardHistoryManagerConfig: ClipboardHistoryManagerConfig(),
@@ -101,11 +100,11 @@ final class KeyboardViewController: UIInputViewController {
     // Copaky: pull the App Group setting at each appearance because the extension has no observer for
     // changes made in the containing app while this process remains alive.
     // Copaky: App側の設定変更を監視できないため、表示のたびにApp Group設定を読み直す。
-    @MainActor private static func reseedLatinLanguageIfSettingChanged() {
-        let enabled = EnableItalianKeyboardLanguage.value
-        guard let language = EnableItalianKeyboardLanguage.latinLanguageSeed(
-            enabled: enabled,
-            lastSeeded: seededItalianEnabled
+    @MainActor private static func reseedLatinLanguageIfActiveLanguagesChanged() {
+        let languages = ActiveKeyboardLanguagesSetting.value
+        guard let language = ActiveKeyboardLanguagesSetting.latinLanguageSeed(
+            languages: languages,
+            lastSeededLanguages: seededActiveLanguages
         ) else {
             return
         }
@@ -114,7 +113,7 @@ final class KeyboardViewController: UIInputViewController {
             variableStates.keyboardLanguage = language
             action.synchronizeKeyboardLanguage(language)
         }
-        seededItalianEnabled = enabled
+        seededActiveLanguages = languages
     }
 
     // 現在のデバイス向きをWindowSceneから判定（取得不能時はUIDeviceでフォールバック）
@@ -181,7 +180,7 @@ final class KeyboardViewController: UIInputViewController {
         KeyboardViewController.loadedInstanceCount += 1
         // Copaky: seed BEFORE initialize(), which restores the last tab through latinKeyboardLanguage.
         // Copaky: 前回タブの復元に使われるため initialize() より前に設定する。
-        KeyboardViewController.reseedLatinLanguageIfSettingChanged()
+        KeyboardViewController.reseedLatinLanguageIfActiveLanguagesChanged()
         // 初期化の順序としてこの位置に置くこと
         KeyboardViewController.variableStates.initialize()
         // Copaky: initialize() may restore a Latin tab after the pre-initialize seed; synchronize the
@@ -296,7 +295,7 @@ final class KeyboardViewController: UIInputViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        KeyboardViewController.reseedLatinLanguageIfSettingChanged()
+        KeyboardViewController.reseedLatinLanguageIfActiveLanguagesChanged()
         // サイズに関する情報はこのタイミングで設定する
         if #available(iOS 26, *) {
             let size = self.currentKeyboardViewSize()

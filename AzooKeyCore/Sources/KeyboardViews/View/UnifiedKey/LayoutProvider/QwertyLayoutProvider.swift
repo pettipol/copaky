@@ -40,7 +40,7 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
         changeKeyboardKey: any UnifiedKeyModelProtocol<Extension>
     ) {
         // language key
-        let languageKey: any UnifiedKeyModelProtocol<Extension> = QwertyLanguageSwitchKeyModel<Extension>(languages: (.ja_JP, .en_US))
+        let languageKey: any UnifiedKeyModelProtocol<Extension> = QwertyLanguageSwitchKeyModel<Extension>()
         // numbers key
         let numbersKey: any UnifiedKeyModelProtocol<Extension> = QwertyGeneralKeyModel(
             labelType: .image("textformat.123"),

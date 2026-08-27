@@ -13,6 +13,9 @@ import SwiftUI
 
 struct SettingTabView: View {
     @State private var searchQuery: String = ""
+    // The Form must own this editMode: reorder handles are drawn by the List machinery, which reads
+    // editMode from ITS environment — a value set inside a row never reaches it (measured 27/08).
+    @State private var activeLanguagesEditMode = EditMode.inactive
     @State private var path: [CustomizeTabView.Path] = []
     /// Copaky: 13 sections is a lot to land in. Off = a short "Essentials" list with the settings
     /// people actually look for; on = every section, exactly as before. Persisted, and always
@@ -61,7 +64,7 @@ struct SettingTabView: View {
                         }
                         BoolSettingView(.liveConversion)
                         BoolSettingView(.enableNumberRowHints)
-                        BoolSettingView(.enableItalianKeyboardLanguage)
+                        ActiveKeyboardLanguagesSettingRows(editMode: $activeLanguagesEditMode)
                         // Copaky: keep auto-accent next to the Italian-language switch it qualifies.
                         // Copaky: アクセント自動補正を対象となるイタリア語設定の直後に置く。
                         BoolSettingView(.italianAutoAccentOnSpace)
@@ -189,7 +192,7 @@ struct SettingTabView: View {
                     }
                     BoolSettingView(.enableNumberRowHints)
                         .searchKeys("数字", "数字キー", "ナンバー", "上段", "number", "numeri", "cifre", "digits")
-                    BoolSettingView(.enableItalianKeyboardLanguage)
+                    ActiveKeyboardLanguagesSettingRows(editMode: $activeLanguagesEditMode)
                         .searchKeys("イタリア語", "italiano", "italian", "lingua", "language", "言語")
                     // Copaky: the optional space behavior is adjacent and searchable in JA/EN/IT.
                     // Copaky: 空白での補正設定を隣接表示し、日英伊の語で検索可能にする。
@@ -293,6 +296,7 @@ struct SettingTabView: View {
                 }   // showsEverything
             }
             .searchQuery(searchQuery.isEmpty ? nil : searchQuery.searchFolded)
+            .environment(\.editMode, $activeLanguagesEditMode)
             .navigationTitle("設定")
             .navigationBarTitleDisplayMode(.large)
             .navigationDestination(for: CustomizeTabView.Path.self) { destination in

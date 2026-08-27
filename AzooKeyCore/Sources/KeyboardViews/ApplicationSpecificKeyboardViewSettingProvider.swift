@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import enum KanaKanjiConverterModule.KeyboardLanguage
 
 @MainActor public protocol ApplicationSpecificKeyboardViewSettingProvider {
     static var koganaFlickCustomKey: KeyFlickSetting { get }
@@ -33,6 +34,8 @@ import Foundation
     /// イタリア語をキーボードの言語として使う / Italian as a keyboard language: it joins the language-switch cycle
     /// and the Latin tab predicts from the Italian dictionary instead of the English one.
     static var enableItalianKeyboardLanguage: Bool { get }
+    /// Internal keyboard languages in tap-cycle order. Japanese and English are always present.
+    static var activeKeyboardLanguages: [KeyboardLanguage] { get }
     /// クリップボード取り込みにシステムのペーストボタンを使う（試験的） / Experimental: capture through
     /// `UIPasteControl` instead of reading the pasteboard ourselves — no system banner.
     static var useSystemPasteControl: Bool { get }
@@ -54,4 +57,14 @@ import Foundation
     static var canResetLearningForCandidate: Bool { get }
 
     static func get(_: CustomizableFlickKey) -> KeyFlickSetting.SettingData
+}
+
+public extension ApplicationSpecificKeyboardViewSettingProvider {
+    static var activeKeyboardLanguages: [KeyboardLanguage] {
+        var languages: [KeyboardLanguage] = [.ja_JP, .en_US]
+        if enableItalianKeyboardLanguage {
+            languages.append(.it_IT)
+        }
+        return languages
+    }
 }

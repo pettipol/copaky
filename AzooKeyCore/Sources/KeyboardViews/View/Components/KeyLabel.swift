@@ -197,7 +197,9 @@ public struct KeyLabel<Extension: ApplicationSpecificKeyboardViewExtension>: Vie
                     .foregroundStyle(.gray)
                     .padding(.leading, -5)
                     .offset(y: -1)
-            }.allowsHitTesting(false)
+            }
+            .accessibilityIdentifier("keyboard-language-switch-\(primary)-\(secondery)")
+            .allowsHitTesting(false)
         }
     }
 

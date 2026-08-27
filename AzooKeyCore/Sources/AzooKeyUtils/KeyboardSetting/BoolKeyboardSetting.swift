@@ -257,14 +257,13 @@ public struct EnableItalianKeyboardLanguage: BoolKeyboardSettingKey {
     public static func isItalianSystemLanguage(preferredLanguages: [String]) -> Bool {
         preferredLanguages.first?.hasPrefix("it") == true
     }
-    // Copaky: seed from the setting on first load and only when that setting later changes, so a
-    // manual EN/IT choice survives ordinary keyboard reappearances.
-    // Copaky: 初回と設定変更時だけ言語を与え、通常の再表示では手動の言語選択を保持する。
-    public static func latinLanguageSeed(enabled: Bool, lastSeeded: Bool?) -> KeyboardLanguage? {
-        guard lastSeeded != enabled else {
-            return nil
+    @MainActor public static var value: Bool {
+        get {
+            ActiveKeyboardLanguagesSetting.value.contains(.it_IT)
         }
-        return enabled ? .it_IT : .en_US
+        set {
+            ActiveKeyboardLanguagesSetting.setItalianEnabled(newValue, in: SharedStore.userDefaults)
+        }
     }
     public static let key: String = "enable_italian_keyboard_language"
 }

@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import enum KanaKanjiConverterModule.KeyboardLanguage
 import KeyboardViews
 
 public enum AzooKeyKeyboardViewExtension: ApplicationSpecificKeyboardViewExtension {
@@ -88,6 +89,10 @@ public enum AzooKeyKeyboardViewExtension: ApplicationSpecificKeyboardViewExtensi
 
     public static var enableItalianKeyboardLanguage: Bool {
         EnableItalianKeyboardLanguage.value
+    }
+
+    public static var activeKeyboardLanguages: [KeyboardLanguage] {
+        ActiveKeyboardLanguagesSetting.value
     }
 
     public static var useSystemPasteControl: Bool {

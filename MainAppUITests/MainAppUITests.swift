@@ -60,6 +60,18 @@ private enum L {
     static let tabBarButton = ["写", "タブバーを開く", "Open tab bar", "Open the tab bar", "Apri la barra dei tab"]
     static let numberHintsToggle = ["Show numbers on the top row", "上段に数字を表示", "Mostra i numeri nella riga superiore"]
     static let italianToggle = ["Use Italian", "イタリア語を使う", "Usa l'italiano"]
+    static let activeLanguages = ["Active languages", "使用する言語", "Lingue attive"]
+    static let japaneseLanguage = ["Japanese", "日本語", "Giapponese"]
+    static let englishLanguage = ["English", "英語", "Inglese"]
+    static let pinnedFirst = ["Pinned first", "先頭に固定", "Fissato in cima"]
+    static let edit = ["Edit", "編集", "Modifica"]
+    static let done = ["Done", "完了", "Fine"]
+    static let activeLanguagesEditorIdentifier = "active-languages-editor"
+    static let japaneseLanguageRowIdentifier = "active-language-row-ja_JP"
+    static let englishLanguageRowIdentifier = "active-language-row-en_US"
+    static let italianLanguageRowIdentifier = "active-language-row-it_IT"
+    static let italianLanguageToggleIdentifier = italianLanguageRowIdentifier
+    static let activeLanguagesEditButtonIdentifier = "active-language-edit-button"
     // Copaky: the auto-accent toggle is localized in every shipped UI language.
     // Copaky: アクセント自動補正の設定名を全対応言語で検索する。
     static let italianAutoAccentToggle = ["Auto-accent on space (Italian)", "スペースでアクセントを自動補正（イタリア語）", "Accento automatico con lo spazio (italiano)"]
@@ -583,6 +595,145 @@ final class CopakyCampaignTests: XCTestCase {
         RunLoop.current.run(until: Date().addingTimeInterval(1.0))
     }
 
+    private func activeLanguageElement(identifier: String) -> XCUIElement {
+        mainApp.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier == %@", identifier)).firstMatch
+    }
+
+    /// Reveal the inline active-language editor without depending on the current Form scroll offset.
+    /// Copaky: Formの保持スクロール位置に依存せず、言語エディタを表示する。
+    @discardableResult
+    /// A swipe starts with a press at the app's centre: when the list has scrolled the help «?»
+    /// there, the gesture degenerates into a tap and the explanation ALERT swallows every later tap
+    /// (measured: the canonical-restore drags all "missed" under an open alert). Dismiss first.
+    private func dismissMainAppAlertIfAny() {
+        let alert = mainApp.alerts.firstMatch
+        guard alert.exists else { return }
+        let dismiss = alert.buttons.firstMatch
+        if dismiss.exists, dismiss.isHittable {
+            dismiss.tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.4))
+        }
+    }
+
+    private func revealActiveLanguagesEditor() -> Bool {
+        func editor() -> XCUIElement {
+            dismissMainAppAlertIfAny()
+            return activeLanguageElement(identifier: L.activeLanguagesEditorIdentifier)
+        }
+        if editor().exists { return true }
+        for _ in 0..<8 where !editor().exists {
+            mainApp.swipeDown()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+        }
+        for _ in 0..<10 where !editor().exists {
+            mainApp.swipeUp()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+        }
+        return editor().exists
+    }
+
+    /// Enable/disable Italian through the new list row, retaining the legacy localized-label fallback.
+    /// Copaky: 新しい言語一覧のトグルを操作し、旧ラベル検索も互換用に残す。
+    @discardableResult
+    private func setItalianActive(_ active: Bool) -> Bool {
+        guard revealActiveLanguagesEditor() else { return false }
+        let identifierPredicate = NSPredicate(
+            format: "identifier == %@",
+            L.italianLanguageToggleIdentifier
+        )
+        let labelPredicate = NSPredicate(format: "label IN %@", L.italianToggle)
+        func toggle() -> XCUIElement {
+            let identified = mainApp.switches.matching(identifierPredicate).firstMatch
+            return identified.exists ? identified : mainApp.switches.matching(labelPredicate).firstMatch
+        }
+        let wanted = active ? "1" : "0"
+        var taps = 0
+        while toggle().exists, toggle().value as? String != wanted, taps < 4 {
+            toggle().coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+            taps += 1
+        }
+        return toggle().exists && toggle().value as? String == wanted
+    }
+
+    private func latinLanguageRowsHaveOrder(italianFirst: Bool) -> Bool {
+        let english = activeLanguageElement(identifier: L.englishLanguageRowIdentifier)
+        let italian = activeLanguageElement(identifier: L.italianLanguageRowIdentifier)
+        guard english.exists, italian.exists else { return false }
+        return italianFirst
+            ? italian.frame.midY < english.frame.midY
+            : english.frame.midY < italian.frame.midY
+    }
+
+    /// Reorder EN/IT through SwiftUI EditMode and the row's trailing drag grip.
+    /// Copaky: EditModeで右端のグリップをドラッグし、EN/ITの順序を確定する。
+    @discardableResult
+    private func setLatinLanguageOrder(italianFirst: Bool) -> Bool {
+        guard setItalianActive(true) else { return false }
+        if latinLanguageRowsHaveOrder(italianFirst: italianFirst) { return true }
+
+        let edit = mainApp.buttons
+            .matching(NSPredicate(format: "identifier == %@", L.activeLanguagesEditButtonIdentifier))
+            .firstMatch
+        guard edit.waitForExistence(timeout: 4), edit.isHittable else { return false }
+        dismissMainAppAlertIfAny()
+        edit.tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.6))
+        defer {
+            let done = mainApp.buttons
+                .matching(NSPredicate(format: "identifier == %@", L.activeLanguagesEditButtonIdentifier))
+                .firstMatch
+            if done.exists, done.isHittable {
+                done.tap()
+                RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+            }
+        }
+
+        let sourceIdentifier = italianFirst
+            ? L.italianLanguageRowIdentifier
+            : L.englishLanguageRowIdentifier
+        let destinationIdentifier = italianFirst
+            ? L.englishLanguageRowIdentifier
+            : L.italianLanguageRowIdentifier
+        func cell(containing identifier: String) -> XCUIElement {
+            let direct = mainApp.cells
+                .matching(NSPredicate(format: "identifier == %@", identifier)).firstMatch
+            return direct.exists
+                ? direct
+                : mainApp.cells.containing(.any, identifier: identifier).firstMatch
+        }
+        func reorderHandle(in cell: XCUIElement) -> XCUIElement {
+            cell.buttons.matching(NSPredicate(
+                format: "label BEGINSWITH 'Riordina' OR label BEGINSWITH 'Reorder' OR label CONTAINS '並べ替え'"
+            )).firstMatch
+        }
+        // Dropping on the destination HANDLE's centre can fall back into the source slot (measured:
+        // the same one-row swap took in one direction and silently no-opped in the other). Drop PAST
+        // the destination row's far edge instead, and retry: SwiftUI reorders on crossing the row
+        // boundary, not on landing near it.
+        for _ in 0..<3 {
+            let sourceHandle = reorderHandle(in: cell(containing: sourceIdentifier))
+            let destinationCell = cell(containing: destinationIdentifier)
+            guard sourceHandle.waitForExistence(timeout: 3), destinationCell.exists else { return false }
+            let movingUp = sourceHandle.frame.midY > destinationCell.frame.midY
+            let target = destinationCell.coordinate(
+                withNormalizedOffset: CGVector(dx: 0.9, dy: movingUp ? 0.08 : 0.92)
+            )
+            // Slow velocity + a hold before release: an instantaneous drag can release before the
+            // rows have animated apart, and SwiftUI silently drops the move (seen intermittently).
+            sourceHandle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+                .press(forDuration: 0.9, thenDragTo: target, withVelocity: .slow, thenHoldForDuration: 0.7)
+            let deadline = Date().addingTimeInterval(3)
+            while !latinLanguageRowsHaveOrder(italianFirst: italianFirst), Date() < deadline {
+                RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+            }
+            if latinLanguageRowsHaveOrder(italianFirst: italianFirst) { return true }
+        }
+
+        return latinLanguageRowsHaveOrder(italianFirst: italianFirst)
+    }
+
     // MARK: - 04 · Rotation with keyboard open (A-05 / Q-06)
 
     func test04_phaseA_rotation() throws {
@@ -993,11 +1144,14 @@ final class CopakyCampaignTests: XCTestCase {
         dismissCopakyNotice(in: app)
         if flickKanaVisible(in: app, timeout: 2) { return }
 
-        // 1. Latin QWERTY tab → the language-switch key carries the TARGET language's shortSymbol,
-        //    so 「あ」 is the one that goes BACK to Japanese (mirror of switchToEnglishTab's "A").
-        let toJapanese = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "あ")).firstMatch
-        if toJapanese.exists && toJapanese.isHittable {
-            toJapanese.tap()
+        // 1. Cycle a Latin QWERTY through every active language. 「あ」 may no longer be the next
+        //    target now that EN/IT are reorderable, so do not assume a fixed JP→EN→IT order.
+        //    Copaky: EN/ITの並び替え後も固定順を仮定せず、日本語まで最大一周する。
+        for _ in 0..<3 where latinQwertyVisible(in: app, timeout: 0.3) {
+            let switchKey = app.descendants(matching: .any)
+                .matching(NSPredicate(format: "label IN %@", ["あ", "IT"])).firstMatch
+            guard switchKey.exists, switchKey.isHittable else { break }
+            switchKey.tap()
             RunLoop.current.run(until: Date().addingTimeInterval(0.8))
             dismissCopakyNotice(in: app)
             if flickKanaVisible(in: app, timeout: 2) { return }
@@ -1058,27 +1212,29 @@ final class CopakyCampaignTests: XCTestCase {
 
     // MARK: - 30 · Copaky extension: accent variations on long-press (EN QWERTY)
 
-    /// Switch Copaky's internal tab to the Latin one, from EITHER Japanese layout.
+    /// Switch Copaky's internal tab to the first active Latin language, from EITHER Japanese layout.
     ///
     /// Two different keys do this, and which one exists depends on the tab the previous test left
     /// behind (the tab survives in the extension's static `VariableStates` — see
     /// `switchToJapaneseFlickTab`): the FLICK Japanese tab carries 「ABC」, the QWERTY Japanese tab
-    /// carries the language-switch key, which shows the TARGET language's shortSymbol
-    /// (`QwertyLanguageSwitchKeyModel.shortSymbol`) — "A" from Japanese, 「あ」 when already on Latin
-    /// (the no-op case this must not tap).
+    /// carries the language-switch key. Tap its unique current-language marker 「あ」 so an uppercase
+    /// letter key cannot be mistaken for the English target "A". The legacy name is retained for
+    /// existing call sites.
     /// フリック日本語タブでは「ABC」、ローマ字タブでは言語切替キー — 直前のタブに依存しないよう両方見る。
     private func switchToEnglishTab(in app: XCUIApplication) {
         dismissCopakyNotice(in: app)
+        if latinQwertyVisible(in: app, timeout: 0.5) { return }
         let abcKey = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "ABC")).firstMatch
         if abcKey.waitForExistence(timeout: 2) && abcKey.isHittable {
             abcKey.tap()
             RunLoop.current.run(until: Date().addingTimeInterval(0.8))
             dismissCopakyNotice(in: app)
-            return
+            if latinQwertyVisible(in: app, timeout: 2) { return }
         }
-        let toEnglish = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "A")).firstMatch
-        if toEnglish.waitForExistence(timeout: 2) && toEnglish.isHittable {
-            toEnglish.tap()
+        let toLatin = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label == %@", "あ")).firstMatch
+        if toLatin.waitForExistence(timeout: 2) && toLatin.isHittable {
+            toLatin.tap()
             RunLoop.current.run(until: Date().addingTimeInterval(0.8))
             dismissCopakyNotice(in: app)
         }
@@ -1093,6 +1249,94 @@ final class CopakyCampaignTests: XCTestCase {
         let space = app.descendants(matching: .any)
             .matching(NSPredicate(format: "label IN %@", latinSpaceLabels)).firstMatch
         return letter.waitForExistence(timeout: timeout) && space.exists
+    }
+
+    private func languageSwitchElement(
+        current: String,
+        next: String,
+        in app: XCUIApplication,
+        timeout: TimeInterval = 4
+    ) -> XCUIElement? {
+        let identifier = "keyboard-language-switch-\(current)-\(next)"
+        let element = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier == %@", identifier)).firstMatch
+        return element.waitForExistence(timeout: timeout) ? element : nil
+    }
+
+    private func currentLanguageSwitchState(
+        in app: XCUIApplication,
+        timeout: TimeInterval = 4
+    ) -> (current: String, next: String, element: XCUIElement)? {
+        let pairs = [("あ", "A"), ("あ", "IT"), ("A", "IT"), ("A", "あ"), ("IT", "A"), ("IT", "あ")]
+        let deadline = Date().addingTimeInterval(timeout)
+        repeat {
+            for (current, next) in pairs {
+                if let element = languageSwitchElement(
+                    current: current,
+                    next: next,
+                    in: app,
+                    timeout: 0
+                ) {
+                    return (current, next, element)
+                }
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+        } while Date() < deadline
+        return nil
+    }
+
+    private func tapLanguageSwitch(_ element: XCUIElement, in app: XCUIApplication) {
+        let frame = element.frame
+        let appFrame = app.frame
+        app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: frame.midX - appFrame.minX, dy: frame.midY - appFrame.minY))
+            .tap()
+    }
+
+    /// Select one direct-menu index without querying the transient popup: freeze the switch key,
+    /// derive one variation pitch from q→w, then hold and drag in a single continuous gesture.
+    /// Index zero still needs a small positive dx so release commits the first variation, not tap.
+    /// Copaky: 一時ポップアップを検索せず、q→w間隔で各候補へ一筆ドラッグする。
+    @discardableResult
+    private func selectActiveLanguageMenuIndex(
+        _ index: Int,
+        in app: XCUIApplication,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) -> Bool {
+        let languageKey = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label IN %@", ["IT", "あ"])).firstMatch
+        let q = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label IN %@", ["q", "Q"])).firstMatch
+        let w = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label IN %@", ["w", "W"])).firstMatch
+        guard languageKey.waitForExistence(timeout: 4), languageKey.isHittable,
+              q.waitForExistence(timeout: 4), w.waitForExistence(timeout: 4) else {
+            dump(app, "language-menu-prerequisite-missing-index-\(index)")
+            shot("language-menu-prerequisite-missing-index-\(index)")
+            XCTFail("Language key or q→w pitch keys missing before menu index \(index)", file: file, line: line)
+            return false
+        }
+
+        let pitch = abs(w.frame.midX - q.frame.midX)
+        guard pitch > 1 else {
+            XCTFail("Could not derive a positive QWERTY key pitch", file: file, line: line)
+            return false
+        }
+        let keyFrame = languageKey.frame
+        let appFrame = app.frame
+        let appOrigin = app.coordinate(withNormalizedOffset: .zero)
+        let start = appOrigin.withOffset(CGVector(
+            dx: keyFrame.midX - appFrame.minX,
+            dy: keyFrame.midY - appFrame.minY
+        ))
+        let target = start.withOffset(CGVector(
+            dx: pitch * (CGFloat(index) + 0.4),
+            dy: 0
+        ))
+        start.press(forDuration: 0.8, thenDragTo: target)
+        RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+        return true
     }
 
     /// Reach the Latin letters tab even when the extension restored a language-less or Japanese tab.
@@ -1318,82 +1562,385 @@ final class CopakyCampaignTests: XCTestCase {
 
     // MARK: - 33 · Copaky extension: Italian as a keyboard language
 
-    /// Turning on Settings ▸ Usability ▸ "Use Italian" must put Italian into the language-switch
-    /// cycle. English and Italian share ONE Latin tab (same layout, different prediction dictionary),
-    /// so the proof is the switch key offering "IT" — there is no second tab to look for.
-    /// イタリア語をオンにすると言語切替キーの巡回にITが加わることを確認する。
+    /// Enable Italian, move it before English in the active-language editor, then prove the circular
+    /// order JP→IT→EN→JP. English and Italian still share one physical Latin QWERTY tab.
+    /// イタリア語を英語より前へ移動し、JP→IT→EN→JPの巡回順を確認する。
     ///
     /// SIMULATOR PREREQUISITES (the App Group is not provisioned on an unsigned simulator build, so
     /// the app and the extension end up with SEPARATE "group.com.pettipol.copaky" domains — flipping
-    /// the toggle in the app does NOT reach the keyboard here; on a real device it does). The
-    /// orchestrator must seed the device-wide domain and flush cfprefsd before running:
+    /// or reordering in the app does NOT reach the keyboard here; on a real device it does). For this
+    /// reordered-cycle test the orchestrator must seed the exact array and flush cfprefsd:
     ///   P=~/Library/Developer/CoreSimulator/Devices/<UDID>/data/Library/Preferences/group.com.pettipol.copaky.plist
     ///   killall cfprefsd
+    ///   /usr/libexec/PlistBuddy -c "Delete :active_keyboard_languages_order" "$P" 2>/dev/null || true
+    ///   /usr/libexec/PlistBuddy -c "Add :active_keyboard_languages_order array" "$P"
+    ///   /usr/libexec/PlistBuddy -c "Add :active_keyboard_languages_order:0 string ja_JP" "$P"
+    ///   /usr/libexec/PlistBuddy -c "Add :active_keyboard_languages_order:1 string it_IT" "$P"
+    ///   /usr/libexec/PlistBuddy -c "Add :active_keyboard_languages_order:2 string en_US" "$P"
     ///   /usr/libexec/PlistBuddy -c "Add :enable_italian_keyboard_language bool true" "$P"
-    ///   /usr/libexec/PlistBuddy -c "Add :keyboard_type_en string roman" "$P"   # the switch key is QWERTY-only
+    ///   /usr/libexec/PlistBuddy -c "Add :keyboard_type string flick" "$P"
+    ///   /usr/libexec/PlistBuddy -c "Add :keyboard_type_en string roman" "$P"
     ///   killall cfprefsd
-    /// keyboard_type_en=roman matters: the language-switch key exists only on the QWERTY layouts, so
-    /// on a flick Latin tab there is nothing to assert (Italian still applies — it is seeded at load).
+    /// `keyboard_type_en=roman` exposes the cycle key; JP stays flick. A signed run also proves the
+    /// live first-Latin reseed; a persistent unsigned extension may retain a manual Latin choice.
     func test33_italianJoinsTheLanguageCycle() throws {
-        // 1. Enable the toggle in MainApp settings (idempotent)
+        // 1. Exercise the inline editor itself: enable IT, establish EN→IT, then drag IT before EN.
         mainApp.launch()
         if let close = firstMatch(in: mainApp, labels: L.closeOnboarding, timeout: 4) {
             close.tap()
         }
         openSettingsTab()
-        var row = firstMatch(in: mainApp, labels: L.italianToggle, timeout: 6)
-        var swipes = 0
-        while row == nil && swipes < 8 {
-            mainApp.swipeUp()
-            swipes += 1
-            row = firstMatch(in: mainApp, labels: L.italianToggle, timeout: 2)
-        }
-        guard let row else {
-            dump(mainApp, "33-no-toggle")
-            XCTFail("Italian toggle not found in MainApp settings")
+        guard revealActiveLanguagesEditor() else {
+            dump(mainApp, "33-no-active-languages-editor")
+            XCTFail("Active-languages editor not found in MainApp settings")
             return
         }
-        let sw = mainApp.switches.matching(NSPredicate(format: "label IN %@", L.italianToggle)).firstMatch
-        if (sw.exists ? (sw.value as? String) : nil) != "1" {
-            // SwiftUI Toggle: the cell tap does not flip it — hit the right-hand side.
-            (sw.exists ? sw : row).coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
-            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+        let japaneseRow = activeLanguageElement(identifier: L.japaneseLanguageRowIdentifier)
+        let englishRow = activeLanguageElement(identifier: L.englishLanguageRowIdentifier)
+        let italianRow = activeLanguageElement(identifier: L.italianLanguageRowIdentifier)
+        guard japaneseRow.exists, englishRow.exists, italianRow.exists,
+              firstMatch(in: mainApp, labels: L.pinnedFirst, timeout: 2) != nil else {
+            dump(mainApp, "33-active-language-rows-incomplete")
+            XCTFail("JP pinned row or EN/IT rows missing from the active-languages editor")
+            return
         }
-        if sw.exists {
-            XCTAssertEqual(sw.value as? String, "1", "Italian toggle did not turn ON")
+        guard setItalianActive(true) else {
+            dump(mainApp, "33-italian-not-active")
+            XCTFail("Italian activation toggle did not turn ON")
+            return
         }
-        shot("33-toggle-on")
+        guard setLatinLanguageOrder(italianFirst: false) else {
+            dump(mainApp, "33-reorder-failed")
+            XCTFail("Could not establish canonical English-before-Italian order")
+            return
+        }
+        if isDevice {
+            // Make the live extension observe the intermediate canonical list. This gives the next
+            // appearance a real EN→IT-first setting transition even when its static state survived
+            // an earlier test invocation.
+            _ = activatePreNavigatedField("plain-text")
+            switchToCopaky(in: safari)
+            mainApp.activate()
+            openSettingsTab()
+            guard revealActiveLanguagesEditor() else {
+                XCTFail("Active-languages editor disappeared after the live-reseed baseline")
+                return
+            }
+        }
+        guard setLatinLanguageOrder(italianFirst: true) else {
+            dump(mainApp, "33-reorder-failed")
+            XCTFail("Could not move Italian before English through EditMode/onMove")
+            return
+        }
+        let pinnedAfterMove = activeLanguageElement(identifier: L.japaneseLanguageRowIdentifier)
+        let englishAfterMove = activeLanguageElement(identifier: L.englishLanguageRowIdentifier)
+        let italianAfterMove = activeLanguageElement(identifier: L.italianLanguageRowIdentifier)
+        XCTAssertLessThan(pinnedAfterMove.frame.midY, italianAfterMove.frame.midY, "Japanese must stay pinned above Italian")
+        XCTAssertLessThan(pinnedAfterMove.frame.midY, englishAfterMove.frame.midY, "Japanese must stay pinned above English")
+        XCTAssertLessThan(italianAfterMove.frame.midY, englishAfterMove.frame.midY, "Italian must be ordered before English")
+        shot("33-active-languages-jp-it-en")
 
-        // 2. Bring up Copaky and move to the Latin tab.
+        var restoreCanonicalOrder = true
+        defer {
+            if restoreCanonicalOrder {
+                mainApp.activate()
+                openSettingsTab()
+                _ = revealActiveLanguagesEditor()
+                _ = setLatinLanguageOrder(italianFirst: false)
+            }
+        }
+
+        // 2. Start on JP flick. On a signed run the observed list change makes ABC enter IT first.
         _ = activatePreNavigatedField("plain-text")
         switchToCopaky(in: safari)
-        let abcKey = safari.descendants(matching: .any)["ABC"]
-        if abcKey.waitForExistence(timeout: 3) && abcKey.isHittable {
-            abcKey.tap()
-            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
-            dismissCopakyNotice(in: safari)
+        switchToJapaneseFlickTab(in: safari)
+        let abcKey = safari.descendants(matching: .any)
+            .matching(NSPredicate(format: "label == %@", "ABC")).firstMatch
+        guard abcKey.waitForExistence(timeout: 3), abcKey.isHittable else {
+            dump(safari, "33-no-abc-from-japanese")
+            XCTFail("ABC key missing on the Japanese flick tab")
+            return
         }
-        shot("33-latin-tab")
-
-        // 3. "IT" is the Italian shortSymbol: it appears on the switch key either as the language in
-        // use or as the one the next tap selects. Allow one extra tap for the cycle to reach it.
-        var italian = safari.descendants(matching: .any)
-            .matching(NSPredicate(format: "label == %@", "IT")).firstMatch
-        if !italian.waitForExistence(timeout: 4) {
-            let switchKey = safari.descendants(matching: .any)
-                .matching(NSPredicate(format: "label == %@ OR label == %@", "A", "あ")).firstMatch
-            if switchKey.exists && switchKey.isHittable {
-                switchKey.tap()
-                RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+        abcKey.tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+        let seededItalianLatin = latinQwertyVisible(in: safari, timeout: 4)
+        let seededFlick = flickKanaVisible(in: safari)
+        XCTAssertTrue(seededItalianLatin, "JP→IT must land on Latin QWERTY")
+        XCTAssertFalse(seededFlick, "JP→IT must not remain on Japanese flick")
+        if isDevice {
+            // 3 (device). The shared App Group lets the extension observe the app-side reorder, so
+            // the STRICT proof runs: IT is the first Latin, and the key closes IT→EN→JP in order.
+            guard let italianCurrent = languageSwitchElement(current: "IT", next: "A", in: safari) else {
+                dump(safari, "33-first-latin-not-italian")
+                XCTFail("Reordered JP→IT→EN list did not expose Italian as the first Latin language")
+                return
             }
-            italian = safari.descendants(matching: .any)
-                .matching(NSPredicate(format: "label == %@", "IT")).firstMatch
+            tapLanguageSwitch(italianCurrent, in: safari)
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+            XCTAssertTrue(latinQwertyVisible(in: safari, timeout: 4), "IT→EN must stay on Latin QWERTY")
+
+            guard let toJapanese = languageSwitchElement(current: "A", next: "あ", in: safari) else {
+                dump(safari, "33-en-to-jp-key-missing")
+                XCTFail("English language key did not offer Japanese next")
+                return
+            }
+            tapLanguageSwitch(toJapanese, in: safari)
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+            XCTAssertTrue(flickKanaVisible(in: safari, timeout: 4), "EN→JP must close the cycle on Japanese flick")
+            shot("33-cycle-jp-it-en-jp")
+        } else {
+            // 3 (Simulator). Split preference domains: the unsigned extension can NEVER observe the
+            // app-side reorder, so the reordered-cycle proof is impossible here by construction. The
+            // honest keyboard-phase check is that the key cycles the SEEDED canonical list
+            // (JP▸EN▸IT): A→IT, IT→あ, and the tap closes on the flick tab. The reordered cycle
+            // stays a device assert above; the editor-side reorder was already proven on the rows.
+            var englishCurrent = languageSwitchElement(current: "A", next: "IT", in: safari)
+            if englishCurrent == nil {
+                // ABC lands on whichever Latin was last active; align to EN via the direct menu.
+                guard selectActiveLanguageMenuIndex(1, in: safari) else { return }
+                englishCurrent = languageSwitchElement(current: "A", next: "IT", in: safari)
+            }
+            guard let englishCurrent else {
+                dump(safari, "33-seeded-canonical-en-missing")
+                XCTFail("Seeded canonical list did not expose English with Italian next")
+                return
+            }
+            tapLanguageSwitch(englishCurrent, in: safari)
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+            XCTAssertTrue(latinQwertyVisible(in: safari, timeout: 4), "EN→IT must stay on Latin QWERTY")
+            guard let italianKey = languageSwitchElement(current: "IT", next: "あ", in: safari) else {
+                dump(safari, "33-seeded-canonical-it-missing")
+                XCTFail("EN→IT did not reach Italian with Japanese next under the seeded canonical order")
+                return
+            }
+            tapLanguageSwitch(italianKey, in: safari)
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+            XCTAssertTrue(flickKanaVisible(in: safari, timeout: 4), "IT→JP must close the seeded canonical cycle on Japanese flick")
+            shot("33-cycle-canonical-sim")
         }
-        if !italian.exists {
-            dump(safari, "33-no-italian")
+
+        // 4. Do not leak the noncanonical order into test35/test37/test42 or later standalone runs.
+        mainApp.activate()
+        openSettingsTab()
+        guard revealActiveLanguagesEditor(), setLatinLanguageOrder(italianFirst: false) else {
+            dump(mainApp, "33-canonical-restore-failed")
+            XCTFail("Could not restore canonical JP→EN→IT order after the reordered-cycle test")
+            return
         }
-        shot("33-after-cycle")
-        XCTAssertTrue(italian.exists, "Italian ('IT') never appeared on the language-switch key with the toggle ON")
+        restoreCanonicalOrder = false
+        shot("33-restored-jp-en-it")
+    }
+
+    // MARK: - 33b · Direct active-language menu + Japanese flick integrity
+
+    /// One held gesture selects every direct-menu index in whichever EN/IT order the extension
+    /// actually loaded. Each selection starts from a different language; Latin targets must never
+    /// fall through to Japanese flick. JP must preserve its grid and the 空白 conversion behavior.
+    /// 拡張が読み込んだEN/IT順で全候補を選び、異なる言語からの遷移・FLICK誤遷移・日本語配列を検証する。
+    ///
+    /// Simulator seed: either Latin order is accepted, but IT must be active. Also seed
+    /// `keyboard_type=flick` and `keyboard_type_en=roman`.
+    func test33b_longPressLanguageMenuSelectsEveryActiveLanguage() throws {
+        // Establish canonical order through the real editor on signed runs; the legacy seed supplies
+        // the same order on an unsigned Simulator where App Group writes cannot cross processes.
+        mainApp.launch()
+        if let close = firstMatch(in: mainApp, labels: L.closeOnboarding, timeout: 4) {
+            close.tap()
+        }
+        openSettingsTab()
+        guard revealActiveLanguagesEditor(),
+              setItalianActive(true),
+              setLatinLanguageOrder(italianFirst: false) else {
+            dump(mainApp, "33b-canonical-list-not-ready")
+            XCTFail("Could not establish canonical JP→EN→IT active languages")
+            return
+        }
+        let field = activatePreNavigatedField("plain-text")
+        switchToCopaky(in: safari)
+        guard switchToLatinQwertyTab(in: safari) else {
+            dump(safari, "33b-no-initial-latin-qwerty")
+            XCTFail("Latin QWERTY not reached before opening the language menu")
+            return
+        }
+        clearFocusedField(field, placeholder: "plain-text", in: safari)
+
+        guard let loadedState = currentLanguageSwitchState(in: safari) else {
+            dump(safari, "33b-language-order-unreadable")
+            XCTFail("Could not read the extension's current/next language state")
+            return
+        }
+        let italianFirst: Bool
+        switch (loadedState.current, loadedState.next) {
+        case ("IT", "A"), ("A", "あ"):
+            italianFirst = true
+        case ("A", "IT"), ("IT", "あ"):
+            italianFirst = false
+        default:
+            dump(safari, "33b-unexpected-language-state")
+            XCTFail("Unexpected Latin language state \(loadedState.current)→\(loadedState.next)")
+            return
+        }
+        let firstLatin = italianFirst ? "IT" : "A"
+        let secondLatin = italianFirst ? "A" : "IT"
+
+        for index in 0..<3 {
+            if !latinQwertyVisible(in: safari, timeout: 0.5) {
+                guard switchToLatinQwertyTab(in: safari) else {
+                    dump(safari, "33b-no-latin-source-index-\(index)")
+                    XCTFail("Could not return to Latin QWERTY before menu index \(index)")
+                    return
+                }
+            }
+            if index == 1 {
+                // Index 1 targets the first Latin language. Start from the second so a no-op menu
+                // action cannot pass. Returning from JP may preserve either previous Latin state.
+                guard let source = currentLanguageSwitchState(in: safari) else { return }
+                if source.current == firstLatin {
+                    tapLanguageSwitch(source.element, in: safari)
+                    RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+                }
+                guard languageSwitchElement(
+                    current: secondLatin,
+                    next: "あ",
+                    in: safari
+                ) != nil else {
+                    dump(safari, "33b-index-1-source-not-second-latin")
+                    XCTFail("Menu index 1 must start from the second Latin language")
+                    return
+                }
+            } else if index == 2 {
+                // Index 2 targets the second Latin language; index 1 must have left the first active.
+                guard languageSwitchElement(
+                    current: firstLatin,
+                    next: secondLatin,
+                    in: safari
+                ) != nil else {
+                    dump(safari, "33b-index-2-source-not-first-latin")
+                    XCTFail("Menu index 2 must start from the first Latin language")
+                    return
+                }
+            }
+            guard selectActiveLanguageMenuIndex(index, in: safari) else { return }
+
+            switch index {
+            case 0:
+                let flickVisible = flickKanaVisible(in: safari, timeout: 4)
+                let latinVisible = latinQwertyVisible(in: safari, timeout: 0.3)
+                XCTAssertTrue(flickVisible, "Menu index 0 (JP) must land on Japanese flick")
+                XCTAssertFalse(latinVisible, "Menu index 0 (JP) must not stay on Latin QWERTY")
+                guard flickVisible else { return }
+
+                let exactJapaneseSpace = safari.descendants(matching: .any)
+                    .matching(NSPredicate(format: "label == %@", "空白")).firstMatch
+                guard exactJapaneseSpace.waitForExistence(timeout: 4) else {
+                    dump(safari, "33b-jp-space-missing")
+                    XCTFail("Japanese flick space key must remain exactly 「空白」")
+                    return
+                }
+
+                let expectedRows = [
+                    ["あ", "か", "さ"],
+                    ["た", "な", "は"],
+                    ["ま", "や", "ら"],
+                ]
+                var rowMidpoints: [CGFloat] = []
+                var middleColumnX: CGFloat?
+                for (rowIndex, labels) in expectedRows.enumerated() {
+                    let keys = labels.map { label in
+                        safari.descendants(matching: .any)
+                            .matching(NSPredicate(format: "label == %@", label)).firstMatch
+                    }
+                    guard keys.allSatisfy({ $0.waitForExistence(timeout: 3) }) else {
+                        dump(safari, "33b-jp-row-\(rowIndex)-missing")
+                        XCTFail("Japanese flick row \(labels) is incomplete")
+                        return
+                    }
+                    XCTAssertLessThan(keys[0].frame.midX, keys[1].frame.midX, "Japanese flick row \(rowIndex) changed column order")
+                    XCTAssertLessThan(keys[1].frame.midX, keys[2].frame.midX, "Japanese flick row \(rowIndex) changed column order")
+                    let ys = keys.map { $0.frame.midY }
+                    let ySpread = (ys.max() ?? 0) - (ys.min() ?? 0)
+                    XCTAssertLessThan(ySpread, 12, "Japanese flick row \(rowIndex) is no longer horizontally aligned")
+                    rowMidpoints.append(ys.reduce(0, +) / CGFloat(ys.count))
+                    if rowIndex == 1 { middleColumnX = keys[1].frame.midX }
+                }
+                XCTAssertLessThan(rowMidpoints[0], rowMidpoints[1], "Japanese flick first/second rows swapped")
+                XCTAssertLessThan(rowMidpoints[1], rowMidpoints[2], "Japanese flick second/third rows swapped")
+
+                let wa = safari.descendants(matching: .any)
+                    .matching(NSPredicate(format: "label == %@", "わ")).firstMatch
+                guard wa.waitForExistence(timeout: 3), let middleColumnX else {
+                    dump(safari, "33b-jp-wa-missing")
+                    XCTFail("Japanese flick bottom-row 「わ」 key missing")
+                    return
+                }
+                XCTAssertGreaterThan(wa.frame.midY, rowMidpoints[2], "Japanese flick 「わ」 must stay below the third kana row")
+                XCTAssertLessThan(abs(wa.frame.midX - middleColumnX), 12, "Japanese flick 「わ」 left its middle column")
+                XCTAssertGreaterThan(exactJapaneseSpace.frame.midX, wa.frame.midX, "Japanese 「空白」 key must stay in the right system-key column")
+
+                clearFocusedField(field, placeholder: "plain-text", in: safari)
+                tapKeys(["か", "な"], in: safari)
+                let candidate = safari.descendants(matching: .any)
+                    .matching(NSPredicate(format: "label == %@", "仮名")).firstMatch
+                guard candidate.waitForExistence(timeout: 4) else {
+                    dump(safari, "33b-jp-kana-candidate-missing")
+                    XCTFail("Japanese flick か+な must offer 仮名")
+                    return
+                }
+                let beforeSpace = field.value as? String ?? ""
+                let conversionSpace = safari.descendants(matching: .any)
+                    .matching(NSPredicate(format: "label == %@", "空白")).firstMatch
+                guard conversionSpace.exists, conversionSpace.isHittable else {
+                    XCTFail("Japanese conversion key lost its exact 「空白」 label while composing")
+                    return
+                }
+                conversionSpace.tap()
+                RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+                let afterSpace = field.value as? String ?? ""
+                XCTAssertNotEqual(afterSpace, beforeSpace, "Japanese 「空白」 conversion action was a no-op")
+                XCTAssertTrue(
+                    afterSpace.contains("仮名"),
+                    "Japanese 「空白」 must immediately commit the visible 仮名 conversion"
+                )
+                shot("33b-menu-japanese-intact")
+
+            case 1:
+                // Anti-regression: assert the raw result immediately, before any corrective helper.
+                let latinVisible = latinQwertyVisible(in: safari, timeout: 4)
+                let flickVisible = flickKanaVisible(in: safari)
+                XCTAssertTrue(latinVisible, "Menu index 1 (\(firstLatin)) must land on Latin QWERTY")
+                XCTAssertFalse(flickVisible, "Menu index 1 (\(firstLatin)) must NOT land on Japanese flick")
+                guard languageSwitchElement(
+                    current: firstLatin,
+                    next: secondLatin,
+                    in: safari
+                ) != nil else {
+                    dump(safari, "33b-menu-first-latin-wrong-language")
+                    XCTFail("Menu index 1 did not select the first active Latin language \(firstLatin)")
+                    return
+                }
+                shot("33b-menu-first-latin")
+
+            case 2:
+                // Explicit test35-quirk guard: no fallback to ABC/switchToLatin is allowed here.
+                let latinVisible = latinQwertyVisible(in: safari, timeout: 4)
+                let flickVisible = flickKanaVisible(in: safari)
+                XCTAssertTrue(latinVisible, "Menu index 2 (\(secondLatin)) must land on Latin QWERTY")
+                XCTAssertFalse(flickVisible, "Menu index 2 (\(secondLatin)) must NOT land on Japanese flick")
+                guard languageSwitchElement(
+                    current: secondLatin,
+                    next: "あ",
+                    in: safari
+                ) != nil else {
+                    dump(safari, "33b-menu-second-latin-wrong-language")
+                    XCTFail("Menu index 2 did not select the second active Latin language \(secondLatin)")
+                    return
+                }
+                shot("33b-menu-second-latin")
+
+            default:
+                XCTFail("Unexpected active-language menu index \(index)")
+            }
+        }
     }
 
     // MARK: - 35 · Italian lexicon: bundled predictions on the Latin tab
