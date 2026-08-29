@@ -230,6 +230,12 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
     private func backTabKey(_ design: TabDependentDesign) -> some View {
         SimpleKeyView<Extension>(model: SimpleKeyModel<Extension>(keyLabelType: .localizedText("戻る"), unpressedKeyColorType: .special, pressActions: [.moveTab(.system(.last_tab))], longPressActions: .init(start: [.setTabBar(.toggle)])), tabDesign: design)
             .accessibilityLabel(Text("戻る"))
+            // Copaky-only hook for liveness probes: with the system paste control ON this panel
+            // shows NO other Copaky-specific label (the capture bar becomes Apple's capsule and
+            // the section header is a generic localized "History"). Leaf-level on purpose —
+            // a container-level identifier propagates and clobbers children (paid in A-04).
+            // 生存プローブ用のCopaky固有フック。コンテナに付けると子に伝播するのでキー単位で。
+            .accessibilityIdentifier("copaky_clipboard_back")
     }
 
     var body: some View {

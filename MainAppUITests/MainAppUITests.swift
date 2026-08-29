@@ -300,7 +300,11 @@ final class CopakyCampaignTests: XCTestCase {
         // A-04 composite ja→next-Latin — measured on a real phone (20th session): Copaky was plainly
         // active on qwerty_hira and NO other marker existed on screen.
         // 「あA」「あIT」はローマ字入力ユーザーの日本語QWERTYタブの言語キー（実機で実測）。
-        let markers = ["写", "☆123", "小ﾞﾟ", "Aあ", "あA", "AIT", "ITA", "ITあ", "あIT", "あいう", "逆順", "お知らせ"]
+        // "copaky_clipboard_back": the panel with the system paste control ON exposes no other
+        // Copaky-only label (capture bar → Apple capsule, header → generic "Cronologia"/"History") —
+        // measured 29/08 (21ª) on the real phone, capsule phase of test41.
+        let markers = ["写", "☆123", "小ﾞﾟ", "Aあ", "あA", "AIT", "ITA", "ITあ", "あIT", "あいう", "逆順", "お知らせ",
+                       "copaky_clipboard_back"]
             + clipboardMarkers
         // The A-04 language key does not always put the composite in the LABEL: on the sim build
         // (29/08, 21ª — tree at test05 failure) it exposes identifier
@@ -354,10 +358,19 @@ final class CopakyCampaignTests: XCTestCase {
     private func switchToCopaky(in app: XCUIApplication) {
         if copakyActive(in: app) { return }
         let kb = keyboard(of: app)
-        // custom keyboards may not vend a Keyboard element; accept either signal before proceeding
+        // custom keyboards may not vend a Keyboard element; accept either signal before proceeding.
+        // On a REAL phone, re-presenting after a Settings round trip can outlast 8 s (measured
+        // 29/08, 21ª: the panel was plainly up in the final video frame while the 8 s assert had
+        // already failed) — wait 20 s and re-tap the focused field once at half-time as a belt.
+        // 実機では設定往復後の再表示が8秒を超える（実測）。20秒待ち、途中で一度フィールドを叩き直す。
         var up = false
-        for _ in 0..<8 {
+        for attempt in 0..<20 {
             if kb.exists || copakyActive(in: app) { up = true; break }
+            if attempt == 9 {
+                let focused = app.descendants(matching: .any)
+                    .matching(NSPredicate(format: "hasKeyboardFocus == true")).firstMatch
+                if focused.exists, focused.isHittable { focused.tap() }
+            }
             RunLoop.current.run(until: Date().addingTimeInterval(1.0))
         }
         XCTAssertTrue(up, "No software keyboard appeared (hardware keyboard connected?)")
@@ -2443,7 +2456,12 @@ final class CopakyCampaignTests: XCTestCase {
         guard current().exists else { return false }
         let wanted = on ? "1" : "0"
         var taps = 0
-        while taps < 4 {
+        // Budget 10, NOT 4: scroll rounds spend from the same counter, and on the narrower real
+        // iPhone 17 Pro the A-04/B-03/E-09 rows push deep rows (the clipboard toggle) beyond four
+        // swipes — measured 29/08 (21ª): the run ended at the bottom of the Form without ever
+        // resolving the row. Ten rounds cover the full Settings list on every current device.
+        // 実機ProではB-03/E-09の新行で4スワイプでは届かない（実測）。予算を10に。
+        while taps < 10 {
             // Re-resolve and re-check EVERY round: SwiftUI Forms virtualize rows, and on the
             // smaller phone the A-04/B-03 rows push this switch to the render-window edge — it can
             // vanish from the tree between the existence guard and a coordinate tap, which then
@@ -2740,6 +2758,22 @@ final class CopakyCampaignTests: XCTestCase {
                 RunLoop.current.run(until: Date().addingTimeInterval(3.0))
                 copyButton = safari.webViews.buttons["Copy test marker"].firstMatch
             }
+        }
+        // Re-entry with a field still focused: the open keyboard shrinks the viewport and Safari
+        // auto-scrolls to the field, parking the button at the top edge — it EXISTS in the tree
+        // (measured 29/08, 21ª: frame y=-7) but is not hittable. Dismiss the keyboard via the
+        // accessory-bar «Fine»/«Done» and scroll back up before giving up.
+        // 再入時はキーボードでビューポートが縮み、ボタンが上端外へ（実測）。「完了」で閉じて上へ戻す。
+        if copyButton.waitForExistence(timeout: 10), !copyButton.isHittable {
+            let done = safari.buttons
+                .matching(NSPredicate(format: "label IN %@", ["Fine", "Done", "完了"])).firstMatch
+            if done.exists, done.isHittable { done.tap() }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+            if !copyButton.isHittable {
+                safari.swipeDown()
+                RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+            }
+            copyButton = safari.webViews.buttons["Copy test marker"].firstMatch
         }
         guard copyButton.waitForExistence(timeout: 10), copyButton.isHittable else {
             dump(safari, "\(prefix)-no-copy-button")
