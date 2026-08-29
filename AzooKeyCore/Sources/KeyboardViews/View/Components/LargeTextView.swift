@@ -11,11 +11,13 @@ import SwiftUI
 @MainActor
 struct LargeTextView: View {
     private let text: String
+    private let height: CGFloat
     @Binding private var isViewOpen: Bool
     @EnvironmentObject private var variableStates: VariableStates
 
-    init(text: String, isViewOpen: Binding<Bool>) {
+    init(text: String, height: CGFloat, isViewOpen: Binding<Bool>) {
         self.text = text
+        self.height = height
         self._isViewOpen = isViewOpen
     }
 
@@ -33,9 +35,9 @@ struct LargeTextView: View {
                 isViewOpen = false
             } label: {
                 Label("閉じる", systemImage: "xmark")
-            }.frame(width: nil, height: Design.keyboardScreenHeight(upsideComponent: variableStates.upsideComponent, orientation: variableStates.keyboardOrientation) * 0.15)
+            }.frame(width: nil, height: height * 0.15)
         }
         .background(Color.background)
-        .frame(height: Design.keyboardScreenHeight(upsideComponent: variableStates.upsideComponent, orientation: variableStates.keyboardOrientation), alignment: .bottom)
+        .frame(height: height, alignment: .bottom)
     }
 }

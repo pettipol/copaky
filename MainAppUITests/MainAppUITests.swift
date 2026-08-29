@@ -59,6 +59,7 @@ private enum L {
     /// tab, unlike ☆123 which only exists on flick layouts. Keep the glyph and accessibility labels.
     static let tabBarButton = ["写", "タブバーを開く", "Open tab bar", "Open the tab bar", "Apri la barra dei tab"]
     static let numberHintsToggle = ["Show numbers on the top row", "上段に数字を表示", "Mostra i numeri nella riga superiore"]
+    static let realNumberRowToggle = ["Add a number row to QWERTY", "QWERTYに数字行を追加", "Aggiungi una riga numerica alla QWERTY"]
     static let italianToggle = ["Use Italian", "イタリア語を使う", "Usa l'italiano"]
     static let activeLanguages = ["Active languages", "使用する言語", "Lingue attive"]
     static let japaneseLanguage = ["Japanese", "日本語", "Giapponese"]
@@ -282,7 +283,13 @@ final class CopakyCampaignTests: XCTestCase {
         let clipboardMarkers = L.captureBar
             + L.clipboardTab.filter { $0 != "doc.badge.clock" }
             + L.clipboardEmptyState + L.oversizedClipboardToast
-        let markers = ["写", "☆123", "小ﾞﾟ", "Aあ", "あいう", "逆順", "お知らせ"]
+        // A-04 made the Latin language key show "current/next" from the ACTIVE LIST, so its composite
+        // label depends on the list order: A→IT ("AIT"), IT→A ("ITA"), IT→あ ("ITあ") joined "Aあ".
+        // Measured 20th session: with the Copaky bar button OFF (A-11 default) a Latin QWERTY tab
+        // carried NONE of the previous markers and copakyActive returned false while the keyboard
+        // was plainly on screen (UIRemoteKeyboardWindow present in the failure snapshot).
+        // これらの複合ラベルはA-04のアクティブリスト由来で、Copaky固有（純正には存在しない）。
+        let markers = ["写", "☆123", "小ﾞﾟ", "Aあ", "AIT", "ITA", "ITあ", "あいう", "逆順", "お知らせ"]
             + clipboardMarkers
         let predicate = NSPredicate(format: "label IN %@ OR identifier IN %@", markers, markers)
         let keyboardRoot = keyboard(of: app)
@@ -3502,6 +3509,197 @@ final class CopakyCampaignTests: XCTestCase {
             swipes += 1
         }
         shot("45-settings-paste-row")
+    }
+
+    // MARK: - 46 · Copaky extension: real QWERTY number row grows without compressing letters
+
+    /// Runs both states in one signed App Group session: OFF proves no standalone digit row, then ON
+    /// proves the row, its tap action, and unchanged letter-key frames. Number hints are kept OFF so
+    /// the two independent features remain distinguishable.
+    func test46_realQwertyNumberRowPreservesLetterHeights() throws {
+        mainApp.launch()
+        if let close = firstMatch(in: mainApp, labels: L.closeOnboarding, timeout: 4) {
+            close.tap()
+        }
+        openSettingsTab()
+        guard driveSwitch(L.realNumberRowToggle, to: false) else {
+            dump(mainApp, "46-real-row-not-off")
+            XCTFail("Could not switch the real QWERTY number row OFF; run test46 through scripts/run_ui_test.sh --fresh-install")
+            return
+        }
+        guard driveSwitch(L.numberHintsToggle, to: false) else {
+            dump(mainApp, "46-number-hints-not-off")
+            XCTFail("Could not isolate B-03 by switching the independent number hints OFF")
+            return
+        }
+
+        /// Resolve one key strictly inside the visual input region so matching page text cannot pass.
+        /// XCUI match ORDER is not stable across runs (measured 20th session: the "a" query bound an
+        /// element two rows below q in one run and the real key in the next, both stable in-run), so
+        /// when a reference key frame is available, admit only KEY-SIZED candidates and take the
+        /// topmost. / XCUIのマッチ順は run 間で不定（実測）。キー寸法の候補だけ許可し最上段を取る。
+        func keyboardKey(labels: [String], sizedLike reference: CGRect? = nil) -> XCUIElement? {
+            let matches = safari.descendants(matching: .any)
+                .matching(NSPredicate(format: "label IN %@", labels))
+            let cutoff = safari.frame.height * 0.45
+            var best: XCUIElement?
+            var bestMinY = CGFloat.greatestFiniteMagnitude
+            for index in 0..<min(matches.count, 12) {
+                let element = matches.element(boundBy: index)
+                guard element.exists else { continue }
+                let frame = element.frame
+                guard frame.minY >= cutoff else { continue }
+                if let reference {
+                    guard abs(frame.height - reference.height) <= reference.height * 0.3,
+                          abs(frame.width - reference.width) <= reference.width * 0.5 else { continue }
+                }
+                if frame.minY < bestMinY {
+                    bestMinY = frame.minY
+                    best = element
+                }
+            }
+            return best
+        }
+
+        /// Wait until the q-key frame stops moving: a frame captured mid-transition measured a
+        /// 26 pt letter (measured 20th session, confirmation run) — the tab-switch/grow animation
+        /// must finish before any geometry assert. / タブ切替アニメ中の計測を避ける（実測26ptの誤測定）。
+        func settleKeyboardGeometry() {
+            var previous = CGRect.null
+            for _ in 0..<10 {
+                guard let key = keyboardKey(labels: ["q", "Q"]) else {
+                    RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+                    continue
+                }
+                let current = key.frame
+                if !previous.isNull,
+                   abs(current.height - previous.height) < 0.5,
+                   abs(current.midY - previous.midY) < 0.5 {
+                    return
+                }
+                previous = current
+                RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+            }
+        }
+
+        func letterFrames(evidence: String) -> [CGRect]? {
+            settleKeyboardGeometry()
+            let labels = [["q", "Q"], ["a", "A"], ["z", "Z"]]
+            var frames: [CGRect] = []
+            for variants in labels {
+                // q anchors the key size; a/z are then admitted only at key dimensions (see keyboardKey).
+                guard let key = keyboardKey(labels: variants, sizedLike: frames.first), key.isHittable else {
+                    dump(safari, "46-\(evidence)-letter-missing-\(variants[0])")
+                    shot("46-\(evidence)-letter-missing-\(variants[0])")
+                    XCTFail("QWERTY letter key \(variants) missing during the \(evidence) phase")
+                    return nil
+                }
+                frames.append(key.frame)
+            }
+            return frames
+        }
+
+        let offField = activatePreNavigatedField("plain-text")
+        switchToCopaky(in: safari)
+        guard switchToLatinQwertyTab(in: safari) else {
+            dump(safari, "46-off-latin-tab-missing")
+            XCTFail("Could not establish the Latin QWERTY tab for the OFF baseline")
+            return
+        }
+        clearFocusedField(offField, placeholder: "plain-text", in: safari)
+        guard let offFrames = letterFrames(evidence: "off") else { return }
+        XCTAssertNil(keyboardKey(labels: ["5"]), "A standalone 5 key exists while the real number row is OFF")
+        shot("46-real-number-row-off")
+
+        // Re-activating the SAME Safari/keyboard session after the MainApp round trip leaves the
+        // field focused but never re-presents the keyboard body on the iOS 26 Simulator (measured
+        // 20th session: 3 runs, keyboard window present, body absent; same-field re-taps and a
+        // focus bounce both ineffective) — while the product path is healthy: the live flag flip on
+        // the ALIVE process renders the 5-row Latin tab correctly when driven by hand. Like test33's
+        // Simulator branch, prove the ON phase through first-entry semantics instead: terminate
+        // Safari so the next activation starts a fresh keyboard session that reads the new setting.
+        // iOS 26シミュレータではMainApp往復後の同一セッション再入でキーボード本体が再提示されない
+        // （実測3回）。手動では生きたプロセスでも5段QWERTYが正しく出る＝プロダクトは健全。
+        // test33と同じく「初回入場」の意味論で検証する：Safariを終了して新しいセッションで入る。
+        safari.terminate()
+        mainApp.activate()
+        RunLoop.current.run(until: Date().addingTimeInterval(1.0))
+        openSettingsTab()
+        guard driveSwitch(L.realNumberRowToggle, to: true) else {
+            dump(mainApp, "46-real-row-not-on")
+            XCTFail("Could not switch the real QWERTY number row ON")
+            return
+        }
+        RunLoop.current.run(until: Date().addingTimeInterval(1.0))
+
+        let onField = activatePreNavigatedField("plain-text")
+        // Re-entering Safari after a MainApp round trip restores the OFF-phase focus WITHOUT raising
+        // the keyboard, and re-tapping the SAME focused field never re-presents it (measured 20th
+        // session, twice: no keyboard within 8 s and within a 3×2 s re-tap loop, while a direct
+        // out-of-runner tap on a clean state showed the keyboard instantly). Only a focus CHANGE
+        // re-presents the keyboard: bounce to another fixture field, then back to the target.
+        // MainApp往復後は同じフィールドの再タップではキーボードが出ない。別フィールドへ一度
+        // フォーカスを移してから戻すと再提示される（フォーカス変化が必要、実測）。
+        let bouncePred = NSPredicate(format: "placeholderValue == %@ OR label == %@", "url-field", "url-field")
+        for _ in 0..<3 where !keyboard(of: safari).exists && !copakyActive(in: safari) {
+            let bounce = safari.webViews.firstMatch.descendants(matching: .any).matching(bouncePred).firstMatch
+            if bounce.exists && bounce.isHittable {
+                bounce.tap()
+                RunLoop.current.run(until: Date().addingTimeInterval(1.0))
+            }
+            onField.tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(2.0))
+        }
+        switchToCopaky(in: safari)
+        guard switchToLatinQwertyTab(in: safari) else {
+            dump(safari, "46-on-latin-tab-missing")
+            XCTFail("Could not re-establish the Latin QWERTY tab for the ON phase")
+            return
+        }
+        clearFocusedField(onField, placeholder: "plain-text", in: safari)
+        guard let onFrames = letterFrames(evidence: "on") else { return }
+
+        var digitKeys: [XCUIElement] = []
+        for digit in ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"] {
+            guard let key = keyboardKey(labels: [digit], sizedLike: onFrames.first), key.isHittable else {
+                dump(safari, "46-digit-row-missing-\(digit)")
+                shot("46-digit-row-missing-\(digit)")
+                XCTFail("Real digit key '\(digit)' is missing or not hittable")
+                return
+            }
+            digitKeys.append(key)
+        }
+        let firstDigitY = digitKeys[0].frame.midY
+        for index in digitKeys.indices {
+            XCTAssertEqual(digitKeys[index].frame.midY, firstDigitY, accuracy: 1.0, "Digit keys must share one top row")
+            if index > 0 {
+                XCTAssertGreaterThan(digitKeys[index].frame.midX, digitKeys[index - 1].frame.midX, "Digits must remain ordered 1234567890")
+            }
+        }
+        XCTAssertLessThan(firstDigitY, onFrames[0].midY, "The real digit row must sit above the QWERTY letters")
+
+        for index in offFrames.indices {
+            XCTAssertEqual(
+                onFrames[index].height,
+                offFrames[index].height,
+                accuracy: 2.0,
+                "Enabling the number row must not compress QWERTY letter row \(index)"
+            )
+            XCTAssertEqual(
+                onFrames[index].midY,
+                offFrames[index].midY,
+                accuracy: 2.0,
+                "Existing QWERTY rows should retain their screen position when growth occurs above them"
+            )
+        }
+        let digitToQPitch = onFrames[0].midY - digitKeys[4].frame.midY
+        let qToAPitch = onFrames[1].midY - onFrames[0].midY
+        XCTAssertEqual(digitToQPitch, qToAPitch, accuracy: 2.0, "The real row must use the existing row pitch")
+
+        digitKeys[4].tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.6))
+        XCTAssertEqual(onField.value as? String, "5", "Tapping the real 5 key must insert the plain digit 5")
+        shot("46-real-number-row-on")
     }
 
     // MARK: - 50 · Accessibility audit inventory across the Settings screens

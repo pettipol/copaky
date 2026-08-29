@@ -18,6 +18,7 @@ SEEDS=(
   keyboard_type=flick
   keyboard_type_en=roman
   enable_qwerty_number_row_hints=true
+  enable_qwerty_number_row=false
   enable_italian_keyboard_language=true
 )
 
@@ -134,6 +135,30 @@ fi
 # A fresh signed install must expose its App Group container; fail closed if that mirror is absent.
 COPAKY_SEED_REQUIRE_CONTAINER="$FRESH_INSTALL" \
   bash "$REPO_DIR/scripts/seed_sim_settings.sh" --udid "$UDID" --keep-keyboard "${SEEDS[@]}"
+
+# 20th session, measured: on a container created moments earlier the direct plist writes can lose
+# against a cfprefsd cache flush on the app's next launch — mirror read-back said OK, yet at test
+# time keyboard_type_en was gone and English fell back to flick (the E-14 trap on fresh containers).
+# The race never reproduced on a warm domain, so: warm the domain with one app launch, then verify
+# every seeded key is still there; one re-seed heals a lost write, a second loss is a hard failure.
+if [[ "$FRESH_INSTALL" == 1 ]]; then
+  SHARED_PLIST="$(xcrun simctl get_app_container "$UDID" "$APP_BUNDLE" group.com.pettipol.copaky 2>/dev/null || true)/Library/Preferences/group.com.pettipol.copaky.plist"
+  for attempt in 1 2; do
+    xcrun simctl launch "$UDID" "$APP_BUNDLE" >/dev/null 2>&1
+    sleep 2
+    xcrun simctl terminate "$UDID" "$APP_BUNDLE" >/dev/null 2>&1 || true
+    SEEDS_LOST=0
+    for pair in "${SEEDS[@]}"; do
+      key="${pair%%=*}"
+      /usr/libexec/PlistBuddy -c "Print :$key" "$SHARED_PLIST" >/dev/null 2>&1 || { SEEDS_LOST=1; echo "seed lost after app launch: $key" >&2; }
+    done
+    [[ "$SEEDS_LOST" == 0 ]] && break
+    [[ "$attempt" == 2 ]] && die "seeded keys vanished from the shared App Group container twice — aborting instead of testing an unseeded state"
+    echo "re-seeding the shared container once (cfprefsd race on fresh container)" >&2
+    COPAKY_SEED_REQUIRE_CONTAINER=1 \
+      bash "$REPO_DIR/scripts/seed_sim_settings.sh" --udid "$UDID" --keep-keyboard "${SEEDS[@]}"
+  done
+fi
 
 unset TEST_RUNNER_COPAKY_PASTEBOARD_PRESEEDED || true
 if [[ -n "$PBSEED_BYTES" ]]; then

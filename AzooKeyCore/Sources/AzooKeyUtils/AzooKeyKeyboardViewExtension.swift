@@ -87,6 +87,10 @@ public enum AzooKeyKeyboardViewExtension: ApplicationSpecificKeyboardViewExtensi
         EnableNumberRowHints.value
     }
 
+    public static var enableQwertyNumberRow: Bool {
+        EnableQwertyNumberRow.value
+    }
+
     public static var enableItalianKeyboardLanguage: Bool {
         EnableItalianKeyboardLanguage.value
     }

@@ -741,6 +741,22 @@
         }
       }
     },
+    "QWERTYに数字行を追加" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add a number row to QWERTY"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aggiungi una riga numerica alla QWERTY"
+          }
+        }
+      }
+    },
     "QWERTYの最上段に数字を小さく表示し、長押しで入力できます。オフにすると通常のキー表示になります。" : {
       "localizations" : {
         "en" : {
@@ -753,6 +769,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mostra piccoli numeri nella riga superiore della tastiera QWERTY; tieni premuto un tasto per digitare la cifra. Se disattivato, i tasti mostrano solo le lettere."
+          }
+        }
+      }
+    },
+    "QWERTYの最上部に数字キーの行を追加します。有効にすると、既存のキーの大きさを保つためキーボードが1行分高くなります。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adds a row of digit keys above QWERTY. When enabled, the keyboard becomes one row taller so the existing keys stay the same size."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aggiunge una riga di cifre sopra la QWERTY. Quando è attiva, la tastiera diventa più alta di una riga, così i tasti esistenti mantengono le stesse dimensioni."
           }
         }
       }

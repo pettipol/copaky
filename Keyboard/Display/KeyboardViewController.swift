@@ -209,7 +209,15 @@ final class KeyboardViewController: UIInputViewController {
                 let bodyHeight = (state == .resizing) ? maxH : interfaceSize.height
 
                 // 3. 全体の高さを「本体の高さ + upsideComponentの高さ」として計算する
-                let visibleBodyHeight = max(0, bodyHeight - Self.collapsedCandidateBarHeight(interfaceHeight: bodyHeight))
+                let candidateBarCollapsed = Self.collapsedCandidateBarHeight(interfaceHeight: bodyHeight) > 0
+                let visibleBodyHeight = Design.qwertyNumberRowVisibleHeight(
+                    standardInterfaceHeight: bodyHeight,
+                    interfaceWidth: interfaceSize.width,
+                    orientation: KeyboardViewController.variableStates.keyboardOrientation,
+                    tab: KeyboardViewController.variableStates.tabManager.existentialTab(),
+                    enabled: EnableQwertyNumberRow.value,
+                    candidateBarCollapsed: candidateBarCollapsed
+                )
                 let totalHeight = visibleBodyHeight + upsideComponentHeight + Design.keyboardScreenBottomPadding
 
                 // 4. 計算した全体の高さを制約に設定する
@@ -508,7 +516,15 @@ final class KeyboardViewController: UIInputViewController {
         } else {
             bodyHeight = variableStates.interfaceSize.height
         }
-        let visibleBodyHeight = max(0, bodyHeight - Self.collapsedCandidateBarHeight(interfaceHeight: bodyHeight))
+        let candidateBarCollapsed = Self.collapsedCandidateBarHeight(interfaceHeight: bodyHeight) > 0
+        let visibleBodyHeight = Design.qwertyNumberRowVisibleHeight(
+            standardInterfaceHeight: bodyHeight,
+            interfaceWidth: variableStates.interfaceSize.width,
+            orientation: orientation,
+            tab: variableStates.tabManager.existentialTab(),
+            enabled: EnableQwertyNumberRow.value,
+            candidateBarCollapsed: candidateBarCollapsed
+        )
         let totalHeight = visibleBodyHeight + componentHeight + Design.keyboardScreenBottomPadding
         KeyboardViewController.variableStates.maximumHeight = max(variableStates.maximumHeight, bodyHeight)
         debug(#function, "keyboardHeight prepared as", totalHeight)

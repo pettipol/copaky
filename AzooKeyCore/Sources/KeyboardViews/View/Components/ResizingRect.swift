@@ -46,22 +46,21 @@ struct ResizingRect<Extension: ApplicationSpecificKeyboardViewExtension>: View {
         self.candidateBarCollapsed = candidateBarCollapsed
     }
 
-    private func visibleHeight(for interfaceHeight: CGFloat) -> CGFloat {
-        if candidateBarCollapsed {
-            Design.keyboardKeysHeight(interfaceHeight: interfaceHeight, orientation: variableStates.keyboardOrientation)
-        } else {
-            interfaceHeight
-        }
+    private func visibleHeight(for standardInterfaceHeight: CGFloat) -> CGFloat {
+        Design.qwertyNumberRowVisibleHeight(
+            standardInterfaceHeight: standardInterfaceHeight,
+            interfaceWidth: size.width,
+            orientation: variableStates.keyboardOrientation,
+            tab: variableStates.tabManager.existentialTab(),
+            enabled: Extension.SettingProvider.enableQwertyNumberRow,
+            candidateBarCollapsed: candidateBarCollapsed
+        )
     }
 
     private var persistedSize: CGSize {
-        guard candidateBarCollapsed else {
-            return size
-        }
-        return CGSize(
-            width: size.width,
-            height: Design.keyboardInterfaceHeight(keysHeight: size.height, orientation: variableStates.keyboardOrientation)
-        )
+        // `size` is the projected binding shown by the resize overlay. Persist the canonical baseline
+        // instead, otherwise the optional row would become a sticky global height after tab switches.
+        variableStates.interfaceSize
     }
 
     func updateUserDefaults() {
@@ -96,8 +95,15 @@ struct ResizingRect<Extension: ApplicationSpecificKeyboardViewExtension>: View {
                 if width < minimumWidth || px < -initialSize.width / 2 || px > initialSize.width / 2 {
                     self[keyPath: target].wrappedValue.current.x = before
                 } else {
+                    let previousVisibleHeight = self.size.height
                     self.size.width = width
                     self.position.x = px
+                    // The optional row's vertical spacing follows key width. Keep the Y handles
+                    // synchronized with that projected-height change so a later vertical drag starts
+                    // from the geometry currently on screen instead of jumping the stored baseline.
+                    let projectedHeightDelta = self.size.height - previousVisibleHeight
+                    self.top_left_edge.current.y -= projectedHeightDelta / 2
+                    self.bottom_right_edge.current.y += projectedHeightDelta / 2
                 }
             }
             .onEnded {_ in
@@ -271,32 +277,66 @@ struct ResizingBindingFrame<Extension: ApplicationSpecificKeyboardViewExtension>
         self.size.width.isApproximatelyEqual(to: self.initialSize.width, absoluteTolerance: 0.1)
     }
 
-    private func visibleHeight(for interfaceHeight: CGFloat) -> CGFloat {
-        if candidateBarCollapsed {
-            Design.keyboardKeysHeight(interfaceHeight: interfaceHeight, orientation: variableStates.keyboardOrientation)
-        } else {
-            interfaceHeight
-        }
+    private var numberRowIsActive: Bool {
+        Extension.SettingProvider.enableQwertyNumberRow
+            && QwertyNumberRowLayoutDecision.supportsNumberRow(variableStates.tabManager.existentialTab())
+    }
+
+    private func visibleHeight(for standardInterfaceHeight: CGFloat, interfaceWidth: CGFloat) -> CGFloat {
+        Design.qwertyNumberRowVisibleHeight(
+            standardInterfaceHeight: standardInterfaceHeight,
+            interfaceWidth: interfaceWidth,
+            orientation: variableStates.keyboardOrientation,
+            tab: variableStates.tabManager.existentialTab(),
+            enabled: Extension.SettingProvider.enableQwertyNumberRow,
+            candidateBarCollapsed: candidateBarCollapsed
+        )
+    }
+
+    private func standardInterfaceHeight(for renderedVisibleHeight: CGFloat, interfaceWidth: CGFloat) -> CGFloat {
+        Design.standardInterfaceHeightForQwertyNumberRow(
+            renderedVisibleHeight: renderedVisibleHeight,
+            interfaceWidth: interfaceWidth,
+            orientation: variableStates.keyboardOrientation,
+            tab: variableStates.tabManager.existentialTab(),
+            enabled: Extension.SettingProvider.enableQwertyNumberRow,
+            candidateBarCollapsed: candidateBarCollapsed
+        )
     }
 
     private var visibleSize: Binding<CGSize> {
         Binding(
             get: {
-                CGSize(width: size.width, height: visibleHeight(for: size.height))
+                CGSize(
+                    width: size.width,
+                    height: visibleHeight(for: size.height, interfaceWidth: size.width)
+                )
             },
             set: { newValue in
-                let interfaceHeight = if candidateBarCollapsed {
-                    Design.keyboardInterfaceHeight(keysHeight: newValue.height, orientation: variableStates.keyboardOrientation)
-                } else {
-                    newValue.height
-                }
-                size = CGSize(width: newValue.width, height: interfaceHeight)
+                let currentStandardHeight = size.height
+                let currentRenderedHeight = visibleHeight(
+                    for: currentStandardHeight,
+                    interfaceWidth: size.width
+                )
+                let heightChanged = abs(newValue.height - currentRenderedHeight) >= 0.001
+                size = CGSize(
+                    width: newValue.width,
+                    height: heightChanged
+                        ? standardInterfaceHeight(
+                            for: newValue.height,
+                            interfaceWidth: newValue.width
+                        )
+                        : currentStandardHeight
+                )
             }
         )
     }
 
     private var visibleInitialSize: CGSize {
-        CGSize(width: initialSize.width, height: visibleHeight(for: initialSize.height))
+        CGSize(
+            width: initialSize.width,
+            height: visibleHeight(for: initialSize.height, interfaceWidth: initialSize.width)
+        )
     }
 
     @ViewBuilder
@@ -353,7 +393,10 @@ struct ResizingBindingFrame<Extension: ApplicationSpecificKeyboardViewExtension>
         case .onehanded:
             // 親Viewに対して、そのサイズを教えてくれるGeometryReaderを重ねる
             content
-                .frame(width: size.width, height: visibleHeight(for: size.height))
+                .frame(
+                    width: size.width,
+                    height: visibleHeight(for: size.height, interfaceWidth: size.width)
+                )
                 .offset(x: position.x, y: 0)
                 .overlay {
                     if !hideResetButtonInOneHandedMode && !isAtDefaultWidth {
@@ -384,7 +427,10 @@ struct ResizingBindingFrame<Extension: ApplicationSpecificKeyboardViewExtension>
         case .fullwidth:
             content
         case .resizing:
-            let maximumHeight = visibleHeight(for: variableStates.maximumHeight)
+            let maximumHeight = visibleHeight(
+                for: variableStates.maximumHeight,
+                interfaceWidth: size.width
+            )
             let height = visibleSize.wrappedValue.height
             let offSet = (maximumHeight - height) / 2
             ZStack {
@@ -401,7 +447,7 @@ struct ResizingBindingFrame<Extension: ApplicationSpecificKeyboardViewExtension>
                     initialSize: visibleInitialSize,
                     candidateBarCollapsed: candidateBarCollapsed
                 )
-                .id(candidateBarCollapsed)
+                .id("\(candidateBarCollapsed)-\(numberRowIsActive)")
             }
             .frame(width: visibleSize.wrappedValue.width, height: height)
             .offset(x: position.x, y: offSet)

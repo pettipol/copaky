@@ -33,7 +33,8 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
         }
     }
 
-    private var resolvedInterfaceHeight: CGFloat {
+    /// Canonical four-row/manual-resize height. The optional number row is projected from this value.
+    private var standardInterfaceHeight: CGFloat {
         let current = variableStates.interfaceSize.height
         if current > 0 {
             return current
@@ -78,13 +79,32 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
             return 0
         }
         return Design.keyboardBarReservedHeight(
-            interfaceHeight: resolvedInterfaceHeight,
+            interfaceHeight: standardInterfaceHeight,
+            orientation: variableStates.keyboardOrientation
+        )
+    }
+
+    private func numberRowLayout(for tab: KeyboardTab.ExistentialTab) -> QwertyNumberRowLayoutDecision.Layout {
+        Design.qwertyNumberRowLayout(
+            for: tab,
+            enabled: Extension.SettingProvider.enableQwertyNumberRow,
+            standardInterfaceSize: CGSize(
+                width: variableStates.interfaceSize.width,
+                height: standardInterfaceHeight
+            ),
             orientation: variableStates.keyboardOrientation
         )
     }
 
     private var visibleInterfaceHeight: CGFloat {
-        max(0, resolvedInterfaceHeight - collapsedCandidateBarHeight)
+        Design.qwertyNumberRowVisibleHeight(
+            standardInterfaceHeight: standardInterfaceHeight,
+            interfaceWidth: variableStates.interfaceSize.width,
+            orientation: variableStates.keyboardOrientation,
+            tab: activeTab,
+            enabled: Extension.SettingProvider.enableQwertyNumberRow,
+            candidateBarCollapsed: collapsedCandidateBarHeight > 0
+        )
     }
 
     private var totalBackgroundHeight: CGFloat {
@@ -149,7 +169,10 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
                 // キーボード本体部分を新しいVStackで囲み、モディファイアをこちらに移動
                 VStack(spacing: 0) {
                     if isResultViewExpanded {
-                        ExpandedResultView<Extension>(isResultViewExpanded: $isResultViewExpanded)
+                        ExpandedResultView<Extension>(
+                            height: visibleInterfaceHeight,
+                            isResultViewExpanded: $isResultViewExpanded
+                        )
                     } else {
                         if showsCandidateBar {
                             KeyboardBarView<Extension>(isResultViewExpanded: $isResultViewExpanded)
@@ -178,7 +201,11 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
             }
 
             if variableStates.boolStates.isTextMagnifying {
-                LargeTextView(text: variableStates.magnifyingText, isViewOpen: $variableStates.boolStates.isTextMagnifying)
+                LargeTextView(
+                    text: variableStates.magnifyingText,
+                    height: totalBackgroundHeight,
+                    isViewOpen: $variableStates.boolStates.isTextMagnifying
+                )
             }
             if showMessage {
                 ForEach(messageManager.necessaryMessages, id: \.id) {data in
@@ -207,9 +234,19 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
     func renderUnified(
         modelsDict: [UnifiedPositionSpecifier: any UnifiedKeyModelProtocol<Extension>],
         width: Int,
-        height: Int
+        height: Int,
+        keysHeight: CGFloat
     ) -> some View {
-        let design = TabDependentDesign(width: width, height: height, interfaceSize: variableStates.interfaceSize, orientation: variableStates.keyboardOrientation)
+        let design = TabDependentDesign(
+            width: width,
+            height: height,
+            interfaceSize: CGSize(
+                width: variableStates.interfaceSize.width,
+                height: standardInterfaceHeight
+            ),
+            orientation: variableStates.keyboardOrientation,
+            keysHeight: keysHeight
+        )
         let unifiedModels: [(UnifiedPositionSpecifier, any UnifiedKeyModelProtocol<Extension>)] = modelsDict.map { (pos, model) in (pos, model) }
         UnifiedKeysView(models: unifiedModels, tabDesign: design) { keyView, _ in keyView }
     }
@@ -224,15 +261,39 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
         case .flick_numbersymbols:
             CustomKeyboardView<Extension>(custard: settingAppliedFlickCustard(.flickNumberSymbols))
         case .qwerty_hira:
-            renderUnified(modelsDict: QwertyLayoutProvider<Extension>.hiraKeyboard(), width: 10, height: 4)
+            let layout = numberRowLayout(for: tab)
+            renderUnified(
+                modelsDict: QwertyLayoutProvider<Extension>.hiraKeyboard(),
+                width: 10,
+                height: layout.rowCount,
+                keysHeight: layout.keysHeight
+            )
         case .qwerty_abc:
-            renderUnified(modelsDict: QwertyLayoutProvider<Extension>.abcKeyboard(), width: 10, height: 4)
+            let layout = numberRowLayout(for: tab)
+            renderUnified(
+                modelsDict: QwertyLayoutProvider<Extension>.abcKeyboard(),
+                width: 10,
+                height: layout.rowCount,
+                keysHeight: layout.keysHeight
+            )
         case .qwerty_numbers:
             // Copaky: Language-less tabs render from the typing language preserved by TabManager.
             // Copaky: 言語なしタブはTabManagerが保持する入力言語で描画する。
-            renderUnified(modelsDict: QwertyLayoutProvider<Extension>.numberKeyboard(language: variableStates.keyboardLanguage), width: 10, height: 4)
+            let layout = numberRowLayout(for: tab)
+            renderUnified(
+                modelsDict: QwertyLayoutProvider<Extension>.numberKeyboard(language: variableStates.keyboardLanguage),
+                width: 10,
+                height: layout.rowCount,
+                keysHeight: layout.keysHeight
+            )
         case .qwerty_symbols:
-            renderUnified(modelsDict: QwertyLayoutProvider<Extension>.symbolsKeyboard(language: variableStates.keyboardLanguage), width: 10, height: 4)
+            let layout = numberRowLayout(for: tab)
+            renderUnified(
+                modelsDict: QwertyLayoutProvider<Extension>.symbolsKeyboard(language: variableStates.keyboardLanguage),
+                width: 10,
+                height: layout.rowCount,
+                keysHeight: layout.keysHeight
+            )
         case let .custard(custard):
             CustomKeyboardView<Extension>(custard: custard)
         case let .special(tab):

@@ -12,6 +12,7 @@ import SwiftUI
 @MainActor
 struct ExpandedResultView<Extension: ApplicationSpecificKeyboardViewExtension>: View {
     @EnvironmentObject private var variableStates: VariableStates
+    private let height: CGFloat
     @Binding private var isResultViewExpanded: Bool
 
     private var splitedResults: [SplitedResultData] {
@@ -27,7 +28,8 @@ struct ExpandedResultView<Extension: ApplicationSpecificKeyboardViewExtension>: 
     @Environment(Extension.Theme.self) private var theme
     @Environment(\.userActionManager) private var action
 
-    init(isResultViewExpanded: Binding<Bool>) {
+    init(height: CGFloat, isResultViewExpanded: Binding<Bool>) {
+        self.height = height
         self._isResultViewExpanded = isResultViewExpanded
     }
 
@@ -81,7 +83,7 @@ struct ExpandedResultView<Extension: ApplicationSpecificKeyboardViewExtension>: 
                 .padding(.leading, 15)
             }
         }
-        .frame(height: variableStates.interfaceSize.height, alignment: .bottom)
+        .frame(height: height, alignment: .bottom)
     }
 
     private func pressed(data: ResultData) {

@@ -243,6 +243,19 @@ public extension KeyboardSettingKey where Self == EnableNumberRowHints {
     static var enableNumberRowHints: Self { .init() }
 }
 
+/// QWERTY最上部に実際の数字キー列を追加する設定 / Optional real digit-key row above QWERTY
+/// - note: 既存の4行を圧縮せず、キー1行と行間の分だけキーボードを高くする。
+public struct EnableQwertyNumberRow: BoolKeyboardSettingKey {
+    public static let title: LocalizedStringKey = "QWERTYに数字行を追加"
+    public static let explanation: LocalizedStringKey = "QWERTYの最上部に数字キーの行を追加します。有効にすると、既存のキーの大きさを保つためキーボードが1行分高くなります。"
+    public static let defaultValue = false
+    public static let key: String = "enable_qwerty_number_row"
+}
+
+public extension KeyboardSettingKey where Self == EnableQwertyNumberRow {
+    static var enableQwertyNumberRow: Self { .init() }
+}
+
 /// イタリア語をキーボードの言語として使う設定 / Italian as a keyboard language.
 /// Defaults on only when the system's first preferred language is Italian, so Italian users get
 /// accented-word predictions on first launch; other locales retain the existing opt-in behavior.

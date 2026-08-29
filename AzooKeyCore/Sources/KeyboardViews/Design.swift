@@ -19,21 +19,24 @@ public struct TabDependentDesign {
 
     private var interfaceWidth: CGFloat
     private var interfaceHeight: CGFloat
+    private var fixedKeysHeight: CGFloat?
 
-    public init(width: Int, height: Int, interfaceSize: CGSize, orientation: KeyboardOrientation) {
+    public init(width: Int, height: Int, interfaceSize: CGSize, orientation: KeyboardOrientation, keysHeight: CGFloat? = nil) {
         self.horizontalKeyCount = CGFloat(width)
         self.verticalKeyCount = CGFloat(height)
         self.orientation = orientation
         self.interfaceWidth = interfaceSize.width
         self.interfaceHeight = interfaceSize.height
+        self.fixedKeysHeight = keysHeight
     }
 
-    public init(width: CGFloat, height: CGFloat, interfaceSize: CGSize, orientation: KeyboardOrientation) {
+    public init(width: CGFloat, height: CGFloat, interfaceSize: CGSize, orientation: KeyboardOrientation, keysHeight: CGFloat? = nil) {
         self.horizontalKeyCount = width
         self.verticalKeyCount = height
         self.orientation = orientation
         self.interfaceWidth = interfaceSize.width
         self.interfaceHeight = interfaceSize.height
+        self.fixedKeysHeight = keysHeight
     }
 
     /// screenWidthとhorizontalKeyCountに依存
@@ -60,7 +63,7 @@ public struct TabDependentDesign {
 
     // resultViewの幅を全体から引いたもの。キーを配置して良い部分の高さ。
     @MainActor var keysHeight: CGFloat {
-        Design.keyboardKeysHeight(interfaceHeight: interfaceHeight, orientation: orientation)
+        fixedKeysHeight ?? Design.keyboardKeysHeight(interfaceHeight: interfaceHeight, orientation: orientation)
     }
 
     /// This property is equivarent to `CGSize(width: keyViewWidth, height: keyViewHeight)`. if you want to use only either of two, call `keyViewWidth` or `keyViewHeight` directly.
@@ -217,6 +220,97 @@ public enum Design {
     @MainActor static func keyboardInterfaceHeight(keysHeight: CGFloat, orientation: KeyboardOrientation) -> CGFloat {
         let ratio = keyboardBarHeightRatio(orientation: orientation)
         return max(12, keysHeight / (1 - ratio) + 12)
+    }
+
+    /// Resolve the optional number-row projection from the same geometry used by every QWERTY key.
+    /// The supplied interface size is the standard/manual-resize baseline and is never mutated here.
+    @MainActor public static func qwertyNumberRowLayout(
+        for tab: KeyboardTab.ExistentialTab,
+        enabled: Bool,
+        standardInterfaceSize: CGSize,
+        orientation: KeyboardOrientation
+    ) -> QwertyNumberRowLayoutDecision.Layout {
+        let standardDesign = TabDependentDesign(
+            width: 10,
+            height: QwertyNumberRowLayoutDecision.standardRowCount,
+            interfaceSize: standardInterfaceSize,
+            orientation: orientation
+        )
+        return QwertyNumberRowLayoutDecision.resolve(
+            tab: tab,
+            enabled: enabled,
+            standardInterfaceHeight: standardInterfaceSize.height,
+            standardKeysHeight: standardDesign.keysHeight,
+            verticalSpacing: standardDesign.verticalSpacing
+        )
+    }
+
+    /// Visible keyboard-body height after candidate-bar collapse and optional QWERTY row projection.
+    @MainActor public static func qwertyNumberRowVisibleHeight(
+        standardInterfaceHeight: CGFloat,
+        interfaceWidth: CGFloat,
+        orientation: KeyboardOrientation,
+        tab: KeyboardTab.ExistentialTab,
+        enabled: Bool,
+        candidateBarCollapsed: Bool
+    ) -> CGFloat {
+        let standardVisibleHeight = candidateBarCollapsed
+            ? keyboardKeysHeight(interfaceHeight: standardInterfaceHeight, orientation: orientation)
+            : standardInterfaceHeight
+        let layout = qwertyNumberRowLayout(
+            for: tab,
+            enabled: enabled,
+            standardInterfaceSize: CGSize(width: interfaceWidth, height: standardInterfaceHeight),
+            orientation: orientation
+        )
+        return max(0, standardVisibleHeight + layout.additionalHeight)
+    }
+
+    /// Inverse used by the existing drag-resize binding so only the standard height is persisted.
+    /// A short monotonic solve keeps this projection independent from private device-specific ratios.
+    @MainActor public static func standardInterfaceHeightForQwertyNumberRow(
+        renderedVisibleHeight: CGFloat,
+        interfaceWidth: CGFloat,
+        orientation: KeyboardOrientation,
+        tab: KeyboardTab.ExistentialTab,
+        enabled: Bool,
+        candidateBarCollapsed: Bool
+    ) -> CGFloat {
+        guard enabled, QwertyNumberRowLayoutDecision.supportsNumberRow(tab) else {
+            return candidateBarCollapsed
+                ? keyboardInterfaceHeight(keysHeight: renderedVisibleHeight, orientation: orientation)
+                : renderedVisibleHeight
+        }
+        let target = max(0, renderedVisibleHeight)
+        var lower: CGFloat = 0
+        var upper = max(12, target)
+        while qwertyNumberRowVisibleHeight(
+            standardInterfaceHeight: upper,
+            interfaceWidth: interfaceWidth,
+            orientation: orientation,
+            tab: tab,
+            enabled: enabled,
+            candidateBarCollapsed: candidateBarCollapsed
+        ) < target {
+            upper *= 2
+        }
+        for _ in 0..<32 {
+            let middle = (lower + upper) / 2
+            let projected = qwertyNumberRowVisibleHeight(
+                standardInterfaceHeight: middle,
+                interfaceWidth: interfaceWidth,
+                orientation: orientation,
+                tab: tab,
+                enabled: enabled,
+                candidateBarCollapsed: candidateBarCollapsed
+            )
+            if projected < target {
+                lower = middle
+            } else {
+                upper = middle
+            }
+        }
+        return (lower + upper) / 2
     }
 
     @MainActor static func largeTextViewFontSize(_ text: String, upsideComponent: UpsideComponent?, orientation: KeyboardOrientation) -> CGFloat {
