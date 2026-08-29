@@ -3,6 +3,12 @@ import KeyboardThemes
 import SwiftUI
 
 struct QwertyNextCandidateKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: UnifiedKeyModelProtocol {
+    private let supportsSpaceSlideCursor: Bool
+
+    init(supportsSpaceSlideCursor: Bool = false) {
+        self.supportsSpaceSlideCursor = supportsSpaceSlideCursor
+    }
+
     /// The "next candidate" role belongs to the CONVERSION metaphor, which is Japanese.
     ///
     /// On a Latin tab the space bar must insert a space, always: Latin typists reach for a
@@ -33,6 +39,10 @@ struct QwertyNextCandidateKeyModel<Extension: ApplicationSpecificKeyboardViewExt
     }
     func variationSpace(variableStates _: VariableStates) -> UnifiedVariationSpace {
         .none
+    }
+
+    func enablesSpaceSlideCursor(variableStates _: VariableStates) -> Bool {
+        supportsSpaceSlideCursor && Extension.SettingProvider.enableSpaceSlideCursor
     }
 
     func label<ThemeExtension>(width: CGFloat, theme _: ThemeData<ThemeExtension>, states: VariableStates, color: Color?) -> KeyLabel<Extension> where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {

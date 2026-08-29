@@ -105,6 +105,10 @@ private struct PressLifecycle: Sendable {
         case allFlickSuggest
     }
     var lockedOutcome: Outcome?
+    // E-09 cursor-slide progress is tracked as emitted total plus a sticky activation bit: returning
+    // to the origin must move the cursor back, but must never turn the gesture into a space tap.
+    var spaceSlideCursorSteps = 0
+    var didSpaceSlideCursor = false
 
     mutating func reset(cancelTasks: Bool = true, preserveDoublePress: Bool = false) {
         if cancelTasks {
@@ -121,6 +125,8 @@ private struct PressLifecycle: Sendable {
         mode = .none
         flickStartLocation = nil
         lockedOutcome = nil
+        spaceSlideCursorSteps = 0
+        didSpaceSlideCursor = false
 
         if !preserveDoublePress {
             doublePress.reset()
@@ -200,6 +206,33 @@ public struct UnifiedGenericKeyView<Extension: ApplicationSpecificKeyboardViewEx
     private func variation(for direction: FlickDirection) -> UnifiedVariation? { flickMap()[direction] }
 
     private func linearVariations() -> (arr: [QwertyVariationsModel.VariationElement], direction: VariationsViewDirection) { model.getLinearVariations(variableStates: variableStates) }
+
+    private func handleSpaceSlideCursor(horizontalTranslation: CGFloat) {
+        let enabled = self.model.enablesSpaceSlideCursor(variableStates: variableStates)
+        let incrementalSteps = SpaceSlideCursorDecision.incrementalSteps(
+            horizontalTranslation: horizontalTranslation,
+            keyWidth: tabDesign.keyViewWidth,
+            emittedSteps: lifecycle.spaceSlideCursorSteps,
+            isEnabled: enabled
+        )
+        guard incrementalSteps != 0 else { return }
+
+        lifecycle.didSpaceSlideCursor = true
+        lifecycle.spaceSlideCursorSteps += incrementalSteps
+        lifecycle.longPressTask?.cancel()
+        lifecycle.longPressTask = nil
+        self.endReservedLongPressAction()
+        self.qwertySuggestType = nil
+        self.isSuggesting = false
+        // Reuse the cursor bar's existing unit action path. Do not aggregate sparse drag updates:
+        // the first unit may commit live composition and return, while the following unit moves.
+        // Vertical translation is deliberately not consulted.
+        let direction = incrementalSteps.signum()
+        self.action.registerActions(
+            Array(repeating: .moveCursor(direction), count: abs(incrementalSteps)),
+            variableStates: variableStates
+        )
+    }
 
     private func commitFlickLongPress() {
         guard case .started = lifecycle.state else { return }
@@ -547,6 +580,17 @@ public struct UnifiedGenericKeyView<Extension: ApplicationSpecificKeyboardViewEx
                 case .longFlicked:
                     break
                 }
+                // Both long-press tasks wake at the same deadline. Check the original touch-down time
+                // too, so MainActor scheduling cannot reclassify post-deadline drift as E-09 while
+                // the lifecycle state is momentarily still `.started`. Once E-09 has crossed its first
+                // threshold, its canceled long press cannot fire and the slide remains live until lift.
+                if case let .started(startedAt) = self.lifecycle.state,
+                   self.lifecycle.didSpaceSlideCursor
+                    || Date().timeIntervalSince(startedAt) < self.longpressDuration {
+                    self.handleSpaceSlideCursor(
+                        horizontalTranslation: value.location.x - value.startLocation.x
+                    )
+                }
             }
             .onEnded { _ in
                 self.endReservedLongPressAction()
@@ -563,6 +607,10 @@ public struct UnifiedGenericKeyView<Extension: ApplicationSpecificKeyboardViewEx
                 self.isSuggesting = false
                 self.lifecycle.longPressTask?.cancel()
                 self.lifecycle.longPressTask = nil
+                if self.lifecycle.didSpaceSlideCursor {
+                    self.lifecycle.reset()
+                    return
+                }
                 switch self.lifecycle.state {
                 case .idle:
                     break

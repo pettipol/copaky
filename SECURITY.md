@@ -5,7 +5,7 @@
 **Please do not open a public issue for a security problem.**
 
 Report it privately through GitHub's [private vulnerability reporting](https://github.com/pettipol/copaky/security/advisories/new)
-on this repository. If that is unavailable to you, email **vittoriovillani@gmail.com** with
+on this repository. If that is unavailable to you, email **support@copaky.app** with
 `[copaky-security]` in the subject.
 
 What to expect:
@@ -61,7 +61,7 @@ Copaky is pre-release. Only the latest build is supported; there are no backport
 
 このリポジトリの[非公開の脆弱性報告](https://github.com/pettipol/copaky/security/advisories/new)
 からご報告ください。利用できない場合は、件名に `[copaky-security]` を入れて
-**vittoriovillani@gmail.com** までメールをお願いします。
+**support@copaky.app** までメールをお願いします。
 
 初回返信は **7日以内**、評価と対応方針は **30日以内**を目安としています。謝辞はリリースノートと
 `CREDITS.md` に記載します（匿名をご希望の場合はそのように扱います）。個人が無償で開発している

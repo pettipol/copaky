@@ -256,6 +256,19 @@ public extension KeyboardSettingKey where Self == EnableQwertyNumberRow {
     static var enableQwertyNumberRow: Self { .init() }
 }
 
+/// Copaky [E-09]: opt-in cursor movement by sliding the space bar on alphabetic QWERTY tabs.
+/// Copaky [E-09]: アルファベットQWERTYの空白スライドによるカーソル移動（既定オフ）。
+public struct EnableSpaceSlideCursor: BoolKeyboardSettingKey {
+    public static let title: LocalizedStringKey = "スペースをスライドしてカーソルを移動"
+    public static let explanation: LocalizedStringKey = "英語・イタリア語とローマ字日本語のQWERTYでスペースキーを左右にスライドすると、カーソルを1文字ずつ移動します。英語・イタリア語ではタップで通常どおりスペースを入力し、ローマ字日本語のタップ・変換動作も変わりません。日本語フリックには影響しません。"
+    public static let defaultValue = false
+    public static let key: String = "enable_space_slide_cursor"
+}
+
+public extension KeyboardSettingKey where Self == EnableSpaceSlideCursor {
+    static var enableSpaceSlideCursor: Self { .init() }
+}
+
 /// イタリア語をキーボードの言語として使う設定 / Italian as a keyboard language.
 /// Defaults on only when the system's first preferred language is Italian, so Italian users get
 /// accented-word predictions on first launch; other locales retain the existing opt-in behavior.

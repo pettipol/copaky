@@ -20,7 +20,7 @@ struct ContactView: View {
                 FallbackLink("機能の改善・追加", destination: URL(string: "https://github.com/pettipol/copaky/issues/new/choose")!)
             }
             Section(footer: Text("その他の質問・連絡などはメールでお寄せください")) {
-                FallbackLink("その他の質問・連絡など", destination: URL(string: "mailto:vittoriovillani@gmail.com")!, icon: .mail)
+                FallbackLink("その他の質問・連絡など", destination: URL(string: "mailto:support@copaky.app")!, icon: .mail)
             }
         }
         .multilineTextAlignment(.leading)

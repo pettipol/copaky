@@ -33,6 +33,8 @@ import enum KanaKanjiConverterModule.KeyboardLanguage
     static var enableNumberRowHints: Bool { get }
     /// QWERTY最上部に実際の数字キーを1行追加する / Add a real digit-key row above QWERTY
     static var enableQwertyNumberRow: Bool { get }
+    /// アルファベットQWERTYの空白スライドでカーソルを移動する / Slide alphabetic QWERTY space to move the cursor
+    static var enableSpaceSlideCursor: Bool { get }
     /// イタリア語をキーボードの言語として使う / Italian as a keyboard language: it joins the language-switch cycle
     /// and the Latin tab predicts from the Italian dictionary instead of the English one.
     static var enableItalianKeyboardLanguage: Bool { get }

@@ -16,10 +16,12 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
         case leftbottom
         case off
     }
-    @MainActor private static func spaceKey() -> any UnifiedKeyModelProtocol<Extension> {
+    @MainActor private static func spaceKey(
+        supportsSpaceSlideCursor: Bool = false
+    ) -> any UnifiedKeyModelProtocol<Extension> {
         Extension.SettingProvider.useNextCandidateKey
-            ? QwertyNextCandidateKeyModel<Extension>()
-            : QwertySpaceKeyModel<Extension>()
+            ? QwertyNextCandidateKeyModel<Extension>(supportsSpaceSlideCursor: supportsSpaceSlideCursor)
+            : QwertySpaceKeyModel<Extension>(supportsSpaceSlideCursor: supportsSpaceSlideCursor)
     }
     @MainActor static func shiftBehaviorPreference() -> ShiftBehaviorPreference {
         if #available(iOS 18, *) {
@@ -370,7 +372,7 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
         // Row 3: hiragana layout never shows Shift; always numbers key at left
         dict[.init(x: 0, y: 3, width: 1.4)] = tabs.numbersKey
         dict[.init(x: 1.4, y: 3, width: 1.4)] = tabs.changeKeyboardKey
-        dict[.init(x: 2.8, y: 3, width: 4.4)] = spaceKey()
+        dict[.init(x: 2.8, y: 3, width: 4.4)] = spaceKey(supportsSpaceSlideCursor: true)
         dict[.init(x: 7.2, y: 3, width: 2.8)] = UnifiedEnterKeyModel<Extension>(textSize: .small)
         return applyingNumberRow(to: dict)
     }
@@ -481,11 +483,11 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
         dict[.init(x: 1.4, y: 3, width: 1.4)] = tabsAbc.changeKeyboardKey
         switch shiftBehavior {
         case .leftbottom:
-            dict[.init(x: 2.8, y: 3, width: 4.4)] = spaceKey()
+            dict[.init(x: 2.8, y: 3, width: 4.4)] = spaceKey(supportsSpaceSlideCursor: true)
         case .left, .off:
             // Copaky: Shift/Aa occupies row 1, so keep punctuation beside Return and narrow Space.
             // Copaky: Shift/Aa使用時は句点をReturn左に置き、Spaceを狭める。
-            dict[.init(x: 2.8, y: 3, width: 3.4)] = spaceKey()
+            dict[.init(x: 2.8, y: 3, width: 3.4)] = spaceKey(supportsSpaceSlideCursor: true)
             dict[.init(x: 6.2, y: 3)] = dotKey()
         }
         dict[.init(x: 7.2, y: 3, width: 2.8)] = UnifiedEnterKeyModel<Extension>(textSize: .small)

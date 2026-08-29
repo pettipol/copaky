@@ -11,6 +11,7 @@ import Combine
 import Contacts
 import KanaKanjiConverterModule
 import KeyboardViews
+import os
 import SwiftUI
 import SwiftUtils
 import UIKit
@@ -49,6 +50,20 @@ extension UIKeyboardType: @retroactive CustomDebugStringConvertible {
 }
 
 final class KeyboardViewController: UIInputViewController {
+    private static let launchSignposter = OSSignposter(
+        subsystem: "com.pettipol.copaky.keyboard",
+        category: "Launch"
+    )
+    private static let launchLog = OSLog(
+        subsystem: "com.pettipol.copaky.keyboard",
+        category: "Launch"
+    )
+    // Instance-property initialization runs before UIInputViewController finishes initializing, so
+    // this brackets extension startup earlier than any lifecycle override without extra dispatching.
+    private let launchStartedAt = ContinuousClock.now
+    private let launchIntervalState = KeyboardViewController.launchSignposter.beginInterval("KeyboardLaunch")
+    private var launchIntervalEnded = false
+
     private static var keyboardViewHost: KeyboardHostingController<Keyboard>?
     private static var loadedInstanceCount: Int = 0
     /// Ordinary reappearances preserve a manual EN/IT choice; an active-list change intentionally
@@ -78,6 +93,21 @@ final class KeyboardViewController: UIInputViewController {
     private var hostViewBottomConstraint: NSLayoutConstraint?
     private var cancellables = Set<AnyCancellable>()
     private var lastKnownContainerSize: CGSize = .zero
+
+    private func endLaunchInstrumentationIfNeeded() {
+        guard !launchIntervalEnded else { return }
+        launchIntervalEnded = true
+        Self.launchSignposter.endInterval("KeyboardLaunch", launchIntervalState)
+        let elapsed = launchStartedAt.duration(to: .now)
+        let milliseconds = Double(elapsed.components.seconds) * 1_000
+            + Double(elapsed.components.attoseconds) / 1_000_000_000_000_000
+        os_log(
+            .info,
+            log: Self.launchLog,
+            "KeyboardLaunch elapsed_ms=%{public}.2f",
+            milliseconds
+        )
+    }
 
     @MainActor private static func collapsedCandidateBarHeight(interfaceHeight: CGFloat) -> CGFloat {
         let states = variableStates
@@ -321,6 +351,8 @@ final class KeyboardViewController: UIInputViewController {
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        // CC-09 endpoint: the first viewDidAppear callback, before state/geometry refresh work below.
+        self.endLaunchInstrumentationIfNeeded()
         self.updateStates()
 
         // Floating Keyboardなどの一部の処理に限り、このタイミングにならないとウィンドウ幅が不明なケースが存在する

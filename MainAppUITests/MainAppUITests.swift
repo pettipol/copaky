@@ -60,6 +60,7 @@ private enum L {
     static let tabBarButton = ["写", "タブバーを開く", "Open tab bar", "Open the tab bar", "Apri la barra dei tab"]
     static let numberHintsToggle = ["Show numbers on the top row", "上段に数字を表示", "Mostra i numeri nella riga superiore"]
     static let realNumberRowToggle = ["Add a number row to QWERTY", "QWERTYに数字行を追加", "Aggiungi una riga numerica alla QWERTY"]
+    static let spaceSlideCursorToggle = ["Slide space to move the cursor", "スペースをスライドしてカーソルを移動", "Scorri sullo spazio per spostare il cursore"]
     static let italianToggle = ["Use Italian", "イタリア語を使う", "Usa l'italiano"]
     static let activeLanguages = ["Active languages", "使用する言語", "Lingue attive"]
     static let japaneseLanguage = ["Japanese", "日本語", "Giapponese"]
@@ -82,6 +83,12 @@ private enum L {
     /// Lowercase variants included: the catalog ships them lowercase ("space"/"spazio", seen on
     /// the phone 2026-08-14) and XCUI label matching is case-sensitive.
     static let spaceKey = ["空白", "Space", "space", "Spazio", "spazio"]
+    // The delete key renders as a bare SF-Symbol Image: its LABEL is the OS-derived localized
+    // symbol name (it-IT 26.5 exposes "Ritorno Unitario" — measured 29/08, tree at failure), so
+    // the stable handle is the symbol IDENTIFIER. Labels kept for other device languages.
+    // 削除キーはSFシンボルのImageで、labelはOS派生の翻訳名（不安定）。identifierで掴む。
+    static let deleteKey = ["delete", "削除", "Elimina", "⌫"]
+    static let deleteKeyIdentifiers = ["delete.left", "delete.backward"]
     /// Back key of the clipboard and emoji tabs — localized since the key-label fix.
     static let backKey = ["戻る", "Back", "Indietro"]
     /// Master switch that reveals every settings section (the paste-control row lives behind it).
@@ -289,7 +296,11 @@ final class CopakyCampaignTests: XCTestCase {
         // carried NONE of the previous markers and copakyActive returned false while the keyboard
         // was plainly on screen (UIRemoteKeyboardWindow present in the failure snapshot).
         // これらの複合ラベルはA-04のアクティブリスト由来で、Copaky固有（純正には存在しない）。
-        let markers = ["写", "☆123", "小ﾞﾟ", "Aあ", "AIT", "ITA", "ITあ", "あいう", "逆順", "お知らせ"]
+        // 「あA」/「あIT」: the JP ROMAJI QWERTY tab (device users with keyboard_type=roman) shows the
+        // A-04 composite ja→next-Latin — measured on a real phone (20th session): Copaky was plainly
+        // active on qwerty_hira and NO other marker existed on screen.
+        // 「あA」「あIT」はローマ字入力ユーザーの日本語QWERTYタブの言語キー（実機で実測）。
+        let markers = ["写", "☆123", "小ﾞﾟ", "Aあ", "あA", "AIT", "ITA", "ITあ", "あIT", "あいう", "逆順", "お知らせ"]
             + clipboardMarkers
         let predicate = NSPredicate(format: "label IN %@ OR identifier IN %@", markers, markers)
         let keyboardRoot = keyboard(of: app)
@@ -453,7 +464,7 @@ final class CopakyCampaignTests: XCTestCase {
         }
         for _ in currentValue {
             let delete = app.descendants(matching: .any)
-                .matching(NSPredicate(format: "label IN %@", ["delete", "削除", "Elimina", "⌫"])).firstMatch
+                .matching(NSPredicate(format: "label IN %@ OR identifier IN %@", L.deleteKey, L.deleteKeyIdentifiers)).firstMatch
             guard delete.waitForExistence(timeout: 3), delete.isHittable else {
                 dump(app, "clear-field-delete-not-found")
                 shot("clear-field-delete-not-found")
@@ -2025,7 +2036,7 @@ final class CopakyCampaignTests: XCTestCase {
             // wrong Latin language (or still English): clear and cycle the language key once
             for _ in 0..<6 {
                 let del = safari.descendants(matching: .any)
-                    .matching(NSPredicate(format: "label IN %@", ["delete", "削除", "Elimina", "⌫"])).firstMatch
+                    .matching(NSPredicate(format: "label IN %@ OR identifier IN %@", L.deleteKey, L.deleteKeyIdentifiers)).firstMatch
                 if del.exists && del.isHittable { del.tap() } else { break }
             }
             // Exact labels only: CONTAINS 'A' matched half the page and the first hit was
@@ -2419,8 +2430,21 @@ final class CopakyCampaignTests: XCTestCase {
         guard current().exists else { return false }
         let wanted = on ? "1" : "0"
         var taps = 0
-        while current().value as? String != wanted && taps < 4 {
-            current().coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+        while taps < 4 {
+            // Re-resolve and re-check EVERY round: SwiftUI Forms virtualize rows, and on the
+            // smaller phone the A-04/B-03 rows push this switch to the render-window edge — it can
+            // vanish from the tree between the existence guard and a coordinate tap, which then
+            // fails HARD ("Failed to get matching snapshot", measured on device, 20th session).
+            // 毎回再解決する：Form の仮想化で行が消えると座標タップは致命的エラーになる（実測）。
+            let sw = current()
+            if !sw.exists {
+                mainApp.swipeUp()
+                RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+                taps += 1
+                continue
+            }
+            if sw.value as? String == wanted { break }
+            sw.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
             // enabling the clipboard history raises a confirmation alert; dismiss whatever appears
             let alertOK = mainApp.alerts.buttons
                 .matching(NSPredicate(format: "label == %@", "OK")).firstMatch
@@ -2428,7 +2452,7 @@ final class CopakyCampaignTests: XCTestCase {
             RunLoop.current.run(until: Date().addingTimeInterval(0.8))
             taps += 1
         }
-        return current().value as? String == wanted
+        return current().exists && current().value as? String == wanted
     }
 
     /// Open the app's settings, reveal every section, and switch one row ON.
@@ -2688,10 +2712,23 @@ final class CopakyCampaignTests: XCTestCase {
     /// back from the page, and park the caret in the page's plain field. Requires Safari to be
     /// PRE-NAVIGATED to https://copaky.app/qa by the orchestrator (devicectl --payload-url).
     private func seedMarkerFromQaPage(evidence prefix: String) throws -> String {
-        safari.launch()
+        // activate(), NOT launch(): launch() terminates Safari and discards the very page the
+        // orchestrator pre-navigated, and on a REAL phone Safari restores the USER's tabs anyway
+        // (measured 20th session: the front tab was an unrelated user page in three runs).
+        // Self-navigate from the address bar when the qa page is not already up.
+        // launch()はSafariを終了させ事前ナビの頁を捨てる上、実機はユーザーのタブを復元する（実測）。
+        // qaページが無ければアドレスバーから自前で移動する。
+        safari.activate()
         RunLoop.current.run(until: Date().addingTimeInterval(2.0))
-        let copyButton = safari.webViews.buttons["Copy test marker"].firstMatch
-        guard copyButton.waitForExistence(timeout: 6), copyButton.isHittable else {
+        var copyButton = safari.webViews.buttons["Copy test marker"].firstMatch
+        if !copyButton.waitForExistence(timeout: 6) {
+            if focusSafariAddressBar() {
+                safari.typeText("https://copaky.app/qa\n")
+                RunLoop.current.run(until: Date().addingTimeInterval(3.0))
+                copyButton = safari.webViews.buttons["Copy test marker"].firstMatch
+            }
+        }
+        guard copyButton.waitForExistence(timeout: 10), copyButton.isHittable else {
             dump(safari, "\(prefix)-no-copy-button")
             throw XCTSkip("qa page not open in Safari — pre-navigate with devicectl --payload-url https://copaky.app/qa")
         }
@@ -2938,9 +2975,8 @@ final class CopakyCampaignTests: XCTestCase {
     }
 
     private func clearTyped(atLeast charCount: Int, in app: XCUIApplication) {
-        let delLabels = ["delete", "削除", "Elimina", "⌫"]
         for _ in 0..<(charCount + 3) {
-            let del = app.descendants(matching: .any).matching(NSPredicate(format: "label IN %@", delLabels)).firstMatch
+            let del = app.descendants(matching: .any).matching(NSPredicate(format: "label IN %@ OR identifier IN %@", L.deleteKey, L.deleteKeyIdentifiers)).firstMatch
             if del.exists && del.isHittable {
                 del.tap()
             } else {
@@ -3700,6 +3736,102 @@ final class CopakyCampaignTests: XCTestCase {
         RunLoop.current.run(until: Date().addingTimeInterval(0.6))
         XCTAssertEqual(onField.value as? String, "5", "Tapping the real 5 key must insert the plain digit 5")
         shot("46-real-number-row-on")
+    }
+
+    // MARK: - 47 · Copaky extension: slide the Latin QWERTY space bar to move the cursor
+
+    /// Requires external App Group seeds because Simulator app/extension preference domains can
+    /// diverge: `scripts/run_ui_test.sh --fresh-install --seed enable_space_slide_cursor=true
+    /// --seed live_conversion=true test47_spaceSlideCursorOnLatinQwerty`. A roughly two-letter-key
+    /// drag emits two unit actions:
+    /// one commits live composition and one produces the visible cursor step. A later ordinary tap
+    /// still inserts Space.
+    func test47_spaceSlideCursorOnLatinQwerty() throws {
+        let field = activatePreNavigatedField("plain-text")
+        switchToCopaky(in: safari)
+        dismissCopakyNotice(in: safari)
+        guard switchToLatinQwertyTab(in: safari) else {
+            dump(safari, "47-latin-tab-missing")
+            shot("47-latin-tab-missing")
+            XCTFail("Could not establish Latin QWERTY; seed keyboard_type_en=roman")
+            return
+        }
+        clearFocusedField(field, placeholder: "plain-text", in: safari)
+        tapKeys(["a", "b"], in: safari)
+        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+        XCTAssertEqual(field.value as? String, "ab", "Fixture must contain exactly 'ab' before the cursor gesture")
+
+        let qKey = safari.descendants(matching: .any)
+            .matching(NSPredicate(format: "label IN %@", ["q", "Q"])).firstMatch
+        let wKey = safari.descendants(matching: .any)
+            .matching(NSPredicate(format: "label IN %@", ["w", "W"])).firstMatch
+        guard qKey.waitForExistence(timeout: 4), wKey.waitForExistence(timeout: 4) else {
+            dump(safari, "47-pitch-keys-missing")
+            XCTFail("Could not derive the Latin QWERTY key pitch")
+            return
+        }
+        let keyPitch = abs(wKey.frame.midX - qKey.frame.midX)
+        XCTAssertGreaterThan(keyPitch, 1, "Latin QWERTY key pitch must be positive")
+
+        // Select the wide, lower-screen space key rather than any page text with the same label.
+        let spaceLabels = L.spaceKey.filter { $0 != "空白" }
+        let matches = safari.descendants(matching: .any)
+            .matching(NSPredicate(format: "label IN %@", spaceLabels))
+        let keyboardCutoff = safari.frame.height * 0.45
+        var space: XCUIElement?
+        var widest = CGFloat.zero
+        for index in 0..<min(matches.count, 10) {
+            let candidate = matches.element(boundBy: index)
+            guard candidate.exists, candidate.isHittable,
+                  candidate.frame.minY >= keyboardCutoff,
+                  candidate.frame.width > widest else { continue }
+            widest = candidate.frame.width
+            space = candidate
+        }
+        guard let space else {
+            dump(safari, "47-space-not-found")
+            shot("47-space-not-found")
+            XCTFail("Latin QWERTY space bar not found")
+            return
+        }
+
+        // Two unit actions are intentional here: the first commits Copaky's live composition and
+        // returns; the second moves one visible character through the same upstream action path.
+        //
+        // The E-09 threshold is the RENDERED key width (Design.swift keyViewWidth ≈ 0.82 × cell on
+        // a 10-column portrait tab), which XCUI cannot see: a key's accessibility frame is its
+        // padded CELL — measured on the it-IT Pro Max, q's frame (43.67 pt) is even wider than the
+        // q→w pitch (43.5 pt), so cell-based bounds mis-assert (this exact line failed 29/08).
+        // 2.05 pitches ≈ 2.5 thresholds: safely past two, and a third would need spacing ≥ ~32 %
+        // of the pitch — roughly double the real design ratio in either orientation.
+        // E-09の閾値は描画キー幅（セルではない）。XCUIのframeはセル全体なので、ピッチ基準で判定する。
+        let dragDistance = keyPitch * 2.05
+        XCTAssertGreaterThan(dragDistance, keyPitch * 2, "The drag must exceed two key pitches, hence two E-09 thresholds (threshold < pitch since spacing > 0)")
+
+        let appFrame = safari.frame
+        let appOrigin = safari.coordinate(withNormalizedOffset: .zero)
+        let start = appOrigin.withOffset(CGVector(
+            dx: space.frame.midX - appFrame.minX,
+            dy: space.frame.midY - appFrame.minY
+        ))
+        // Include small vertical drift deliberately: only horizontal translation participates.
+        let target = start.withOffset(CGVector(dx: -dragDistance, dy: keyPitch * 0.15))
+        start.press(
+            forDuration: 0.05,
+            thenDragTo: target,
+            withVelocity: .fast,
+            thenHoldForDuration: 0.05
+        )
+        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+
+        field.typeText("X")
+        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+        XCTAssertEqual(field.value as? String, "aXb", "One leftward space slide must place X between a and b")
+
+        tapLatinSpace(in: safari)
+        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+        XCTAssertEqual(field.value as? String, "aX b", "An ordinary tap after a slide must still insert one space")
+        shot("47-space-slide-cursor")
     }
 
     // MARK: - 50 · Accessibility audit inventory across the Settings screens

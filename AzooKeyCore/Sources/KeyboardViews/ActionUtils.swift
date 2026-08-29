@@ -51,6 +51,41 @@ enum ClipboardHistoryKeyHintDecision {
     }
 }
 
+// Copaky [E-09]: pure, width-derived quantization for space-bar cursor sliding.
+// Copaky [E-09]: 通常QWERTYキー幅からカーソル移動量を量子化する純粋判定。
+enum SpaceSlideCursorDecision {
+    /// One cursor action per rendered ordinary QWERTY key width.
+    static func stepThreshold(keyWidth: CGFloat) -> CGFloat {
+        guard keyWidth > 0 else { return .infinity }
+        return keyWidth
+    }
+
+    static func totalSteps(
+        horizontalTranslation: CGFloat,
+        keyWidth: CGFloat,
+        isEnabled: Bool
+    ) -> Int {
+        guard isEnabled else { return 0 }
+        let threshold = stepThreshold(keyWidth: keyWidth)
+        guard threshold.isFinite else { return 0 }
+        return Int(horizontalTranslation / threshold)
+    }
+
+    static func incrementalSteps(
+        horizontalTranslation: CGFloat,
+        keyWidth: CGFloat,
+        emittedSteps: Int,
+        isEnabled: Bool
+    ) -> Int {
+        guard isEnabled else { return 0 }
+        return totalSteps(
+            horizontalTranslation: horizontalTranslation,
+            keyWidth: keyWidth,
+            isEnabled: true
+        ) - emittedSteps
+    }
+}
+
 extension CodableActionData {
     var actionType: ActionType {
         switch self {

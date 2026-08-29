@@ -91,6 +91,10 @@ public enum AzooKeyKeyboardViewExtension: ApplicationSpecificKeyboardViewExtensi
         EnableQwertyNumberRow.value
     }
 
+    public static var enableSpaceSlideCursor: Bool {
+        EnableSpaceSlideCursor.value
+    }
+
     public static var enableItalianKeyboardLanguage: Bool {
         EnableItalianKeyboardLanguage.value
     }

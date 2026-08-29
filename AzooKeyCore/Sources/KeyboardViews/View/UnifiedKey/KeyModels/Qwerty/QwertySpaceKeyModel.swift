@@ -3,6 +3,12 @@ import KeyboardThemes
 import SwiftUI
 
 struct QwertySpaceKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: UnifiedKeyModelProtocol {
+    private let supportsSpaceSlideCursor: Bool
+
+    init(supportsSpaceSlideCursor: Bool = false) {
+        self.supportsSpaceSlideCursor = supportsSpaceSlideCursor
+    }
+
     func pressActions(variableStates _: VariableStates) -> [ActionType] {
         [.input(" ")]
     }
@@ -11,6 +17,10 @@ struct QwertySpaceKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>:
     }
     func variationSpace(variableStates _: VariableStates) -> UnifiedVariationSpace {
         .none
+    }
+
+    func enablesSpaceSlideCursor(variableStates _: VariableStates) -> Bool {
+        supportsSpaceSlideCursor && Extension.SettingProvider.enableSpaceSlideCursor
     }
 
     func label<ThemeExtension>(width: CGFloat, theme _: ThemeData<ThemeExtension>, states: VariableStates, color: Color?) -> KeyLabel<Extension> where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {

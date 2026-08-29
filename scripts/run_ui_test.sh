@@ -19,6 +19,7 @@ SEEDS=(
   keyboard_type_en=roman
   enable_qwerty_number_row_hints=true
   enable_qwerty_number_row=false
+  enable_space_slide_cursor=false
   enable_italian_keyboard_language=true
 )
 

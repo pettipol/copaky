@@ -65,6 +65,7 @@ struct SettingTabView: View {
                         BoolSettingView(.liveConversion)
                         BoolSettingView(.enableNumberRowHints)
                         BoolSettingView(.enableQwertyNumberRow)
+                        BoolSettingView(.enableSpaceSlideCursor)
                         ActiveKeyboardLanguagesSettingRows(editMode: $activeLanguagesEditMode)
                         // Copaky: keep auto-accent next to the Italian-language switch it qualifies.
                         // Copaky: アクセント自動補正を対象となるイタリア語設定の直後に置く。
@@ -195,6 +196,8 @@ struct SettingTabView: View {
                         .searchKeys("数字", "数字キー", "ナンバー", "上段", "number", "numeri", "cifre", "digits")
                     BoolSettingView(.enableQwertyNumberRow)
                         .searchKeys("数字", "数字行", "数字キー", "number", "number row", "digits", "numeri", "cifre", "riga numerica")
+                    BoolSettingView(.enableSpaceSlideCursor)
+                        .searchKeys("スペース", "カーソル", "スライド", "cursor", "swipe", "slide", "cursore", "spazio")
                     ActiveKeyboardLanguagesSettingRows(editMode: $activeLanguagesEditMode)
                         .searchKeys("イタリア語", "italiano", "italian", "lingua", "language", "言語")
                     // Copaky: the optional space behavior is adjacent and searchable in JA/EN/IT.

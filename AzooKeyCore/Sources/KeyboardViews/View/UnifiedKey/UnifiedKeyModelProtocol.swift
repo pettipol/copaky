@@ -41,6 +41,8 @@ public protocol UnifiedKeyModelProtocol<Extension> {
     @MainActor func hasFlickVariations(variableStates: VariableStates) -> Bool
     @MainActor func hasLinearVariations(variableStates: VariableStates) -> Bool
     @MainActor func hasLongPressAction(variableStates: VariableStates) -> Bool
+    /// Opt-in capability used only by alphabetic QWERTY space-key models.
+    @MainActor func enablesSpaceSlideCursor(variableStates: VariableStates) -> Bool
 }
 
 public extension UnifiedKeyModelProtocol {
@@ -48,6 +50,7 @@ public extension UnifiedKeyModelProtocol {
     @MainActor func isFlickAble(to direction: FlickDirection, variableStates _: VariableStates) -> Bool { false }
     @MainActor func flickSensitivity(to direction: FlickDirection) -> CGFloat { 25 / Extension.SettingProvider.flickSensitivity }
     @MainActor func showsTapBubble(variableStates _: VariableStates) -> Bool { false }
+    @MainActor func enablesSpaceSlideCursor(variableStates _: VariableStates) -> Bool { false }
     @MainActor func labelCornerHintSystemImage(variableStates _: VariableStates) -> String? { nil }
     @MainActor func backgroundStyleWhenPressed<ThemeExtension>(theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         (theme.pushedKeyFillColor.color, theme.pushedKeyFillColor.blendMode)

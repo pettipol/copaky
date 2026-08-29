@@ -309,18 +309,18 @@
         }
       }
     },
-    "設定の「操作性」にある「イタリア語を使う」をオンにすると、言語切替キーにイタリア語が加わり、ラテン文字タブの予測変換がイタリア語の辞書から行われます。" : {
+    "イタリア語を選ぶと、ラテン文字タブの予測候補はイタリア語の辞書に切り替わります。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Turning on \"Use Italian\" in Settings > Usability adds Italian to the language-switch key, and predictions on the Latin tab come from the Italian dictionary."
+            "value" : "When you select Italian, predictions on the Latin tab switch to the Italian dictionary."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Attivando \"Usa l'italiano\" in Impostazioni > Usabilità, l'italiano si aggiunge al tasto di cambio lingua e i suggerimenti nella scheda latina arrivano dal dizionario italiano."
+            "value" : "Quando selezioni l'italiano, i suggerimenti nella scheda latina passano al dizionario italiano."
           }
         }
       }
@@ -785,6 +785,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aggiunge una riga di cifre sopra la QWERTY. Quando è attiva, la tastiera diventa più alta di una riga, così i tasti esistenti mantengono le stesse dimensioni."
+          }
+        }
+      }
+    },
+    "スペースをスライドしてカーソルを移動" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slide space to move the cursor"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scorri sullo spazio per spostare il cursore"
+          }
+        }
+      }
+    },
+    "英語・イタリア語とローマ字日本語のQWERTYでスペースキーを左右にスライドすると、カーソルを1文字ずつ移動します。英語・イタリア語ではタップで通常どおりスペースを入力し、ローマ字日本語のタップ・変換動作も変わりません。日本語フリックには影響しません。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On English, Italian, and Japanese Romaji QWERTY keyboards, slide the space bar left or right to move the cursor one character at a time. On English and Italian, a tap still inserts a space; Japanese Romaji keeps its existing tap and conversion behavior. Japanese flick keyboards are unchanged."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sulle tastiere QWERTY inglese, italiana e giapponese romaji, scorri sulla barra spaziatrice verso sinistra o destra per spostare il cursore di un carattere alla volta. In inglese e italiano, un tocco inserisce ancora uno spazio; il giapponese romaji mantiene il comportamento attuale del tocco e della conversione. Le tastiere flick giapponesi non cambiano."
           }
         }
       }
@@ -3302,18 +3334,18 @@
         }
       }
     },
-    "イタリア語の予測変換を使うには、設定 ▸ 「イタリア語を使う」をオンにしてください。" : {
+    "設定の「使用する言語」は編集可能な一覧です。日本語は先頭に固定され、英語は常に有効です。イタリア語を有効にすると、英語との順番を並べ替えられます。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "For Italian predictions, turn on “Use Italian” in Settings."
+            "value" : "“Active languages” in Settings is an editable list. Japanese is pinned first, and English is always active. Enable Italian to reorder it relative to English."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Per i suggerimenti in italiano, attiva Impostazioni ▸ «Usa l'italiano»."
+            "value" : "«Lingue attive» nelle Impostazioni è un elenco modificabile. Il giapponese è fissato in cima e l'inglese è sempre attivo. Attiva l'italiano per riordinarlo rispetto all'inglese."
           }
         }
       }
@@ -5720,18 +5752,18 @@
         }
       }
     },
-    "タイプミスはまだ自動修正されません。数字・記号タブは選択中のラテン文字言語に合わせて表示されます。" : {
+    "任意の実験的な設定「ラテン文字の自動修正」は既定ではオフです。有効にすると、イタリア語・英語のよくあるタイプミスをスペース入力時に自動修正できます。数字・記号タブは選択中のラテン文字言語に合わせて表示されます。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Typos are not corrected automatically yet. The numbers and symbols tabs follow the active Latin language."
+            "value" : "The optional experimental “Autocorrect typos (Latin keyboards)” setting is off by default. When enabled, it can correct common Italian and English typos automatically on space. The numbers and symbols tabs follow the active Latin language."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gli errori di battitura non vengono ancora corretti automaticamente. Le schede dei numeri e dei simboli seguono la lingua latina attiva."
+            "value" : "L'impostazione sperimentale opzionale «Correzione automatica dei refusi (tastiere latine)» è disattivata per impostazione predefinita. Se la attivi, può correggere automaticamente i refusi comuni in italiano e inglese quando premi lo spazio. Le schede dei numeri e dei simboli seguono la lingua latina attiva."
           }
         }
       }
@@ -8874,18 +8906,18 @@
         }
       }
     },
-    "初回の既定は日本語タブです。QWERTYの言語キーは「使用する言語」の順に切り替わり、長押しですべての有効な言語から直接選べます。" : {
+    "初回の既定は日本語タブです。設定の「使用する言語」は編集可能な一覧で、日本語は先頭に固定され、英語は常に有効です。イタリア語を有効にすると英語との順番を並べ替えられます。QWERTYの地球儀キーは一覧の順に切り替わり、長押しで直接選べます。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The Japanese tab is the initial default. The QWERTY language key cycles in the order shown under “Active languages”; long-press it to choose directly from every active language."
+            "value" : "The Japanese tab is the initial default. “Active languages” in Settings is an editable list: Japanese is pinned first and English is always active. Enable Italian to reorder it relative to English. The QWERTY globe key cycles through the active list; long-press it to choose a language directly."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "La scheda giapponese è quella iniziale predefinita. Il tasto lingua QWERTY segue l'ordine di «Lingue attive»; tienilo premuto per scegliere direttamente una lingua attiva."
+            "value" : "La scheda giapponese è quella iniziale predefinita. «Lingue attive» nelle Impostazioni è un elenco modificabile: il giapponese è fissato in cima e l'inglese è sempre attivo. Attiva l'italiano per riordinarlo rispetto all'inglese. Il tasto globo QWERTY scorre l'elenco attivo; tienilo premuto per scegliere direttamente una lingua."
           }
         }
       }
@@ -13295,18 +13327,18 @@
         }
       }
     },
-    "言語キーは「使用する言語」の順に切り替わります。長押しすると、すべての有効な言語から直接選べます。" : {
+    "QWERTYの地球儀キーは有効な言語を一覧の順に切り替えます。長押しすると直接選択メニューを開きます。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The language key cycles in the order shown under “Active languages”. Long-press it to choose directly from every active language."
+            "value" : "The QWERTY globe key cycles through the active languages in list order. Long-press it to open the direct-selection menu."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Il tasto lingua segue l'ordine di «Lingue attive». Tienilo premuto per scegliere direttamente una lingua attiva."
+            "value" : "Il tasto globo QWERTY scorre le lingue attive nell'ordine dell'elenco. Tienilo premuto per aprire il menu di selezione diretta."
           }
         }
       }
@@ -13391,18 +13423,18 @@
         }
       }
     },
-    "設定 ▸ 「イタリア語を使う」をオンにし、QWERTYの言語キーで「IT」を選びます。第一優先言語がイタリア語の端末では初期設定がオンです。" : {
+    "設定の「使用する言語」でイタリア語を有効にし、必要なら英語との順番を並べ替えます。日本語は先頭に固定され、英語は常に有効です。QWERTYの地球儀キーで有効な一覧を切り替え、長押しで「IT」を直接選べます。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Turn on Settings ▸ “Use Italian”, then choose IT with the QWERTY language key. It is on by default when Italian is the device’s first preferred language."
+            "value" : "Enable Italian under “Active languages” in Settings, then reorder it relative to English if you wish. Japanese is pinned first and English is always active. Use the QWERTY globe key to cycle through the active list, or long-press it to choose IT directly."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Attiva l'opzione Impostazioni ▸ «Usa l'italiano», quindi scegli IT con il tasto lingua QWERTY. È attiva per impostazione predefinita quando l'italiano è la prima lingua preferita del dispositivo."
+            "value" : "Attiva l'italiano in «Lingue attive» nelle Impostazioni e, se vuoi, riordinalo rispetto all'inglese. Il giapponese è fissato in cima e l'inglese è sempre attivo. Usa il tasto globo QWERTY per scorrere l'elenco attivo, oppure tienilo premuto per scegliere direttamente IT."
           }
         }
       }

@@ -25,7 +25,7 @@ private information; sexualised language or imagery; and sustained disruption of
 
 ## Reporting
 
-Report a problem privately to **vittoriovillani@gmail.com** with `[copaky-conduct]` in the subject.
+Report a problem privately to **support@copaky.app** with `[copaky-conduct]` in the subject.
 Reports are read by the maintainer alone and kept confidential. You will get a reply within 7 days.
 
 Because there is only one maintainer, there is no committee and no appeal to a wider body — that is
@@ -57,7 +57,7 @@ conversation — and when someone represents the project in public.
 **認められないこと**：ハラスメント、侮辱、見下す発言、個人攻撃、私的情報の公開、性的な言動、
 議論の継続的な妨害。
 
-**報告**：件名に `[copaky-conduct]` を入れて **vittoriovillani@gmail.com** へ非公開でご連絡ください。
+**報告**：件名に `[copaky-conduct]` を入れて **support@copaky.app** へ非公開でご連絡ください。
 メンテナ本人のみが読み、秘密として扱います。7日以内に返信します。メンテナが一人であるため
 委員会や上位機関への申し立ての仕組みはありません（規模ゆえの正直な限界です）。報告内容が
 メンテナ自身に関わる場合は、公に指摘していただいて構いませんし、GitHub 自体の
