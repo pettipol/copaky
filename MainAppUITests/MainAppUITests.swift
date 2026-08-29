@@ -302,7 +302,17 @@ final class CopakyCampaignTests: XCTestCase {
         // 「あA」「あIT」はローマ字入力ユーザーの日本語QWERTYタブの言語キー（実機で実測）。
         let markers = ["写", "☆123", "小ﾞﾟ", "Aあ", "あA", "AIT", "ITA", "ITあ", "あIT", "あいう", "逆順", "お知らせ"]
             + clipboardMarkers
-        let predicate = NSPredicate(format: "label IN %@ OR identifier IN %@", markers, markers)
+        // The A-04 language key does not always put the composite in the LABEL: on the sim build
+        // (29/08, 21ª — tree at test05 failure) it exposes identifier
+        // 'keyboard-language-switch-A-IT' with label just 'A' (correctly NOT a marker: Apple has
+        // plain-A keys too). The identifier namespace is ours alone, so the prefix is a
+        // Copaky-specific marker robust to any active-list pair; the composite labels above stay
+        // for the real-phone shape measured in the 20th session.
+        // 言語キーの複合表記はlabelではなくidentifier側に出ることがある（実測）。接頭辞で掴む。
+        let predicate = NSPredicate(
+            format: "label IN %@ OR identifier IN %@ OR identifier BEGINSWITH %@",
+            markers, markers, "keyboard-language-switch-"
+        )
         let keyboardRoot = keyboard(of: app)
         if keyboardRoot.exists {
             return keyboardRoot.descendants(matching: .any).matching(predicate).firstMatch.exists
@@ -2102,15 +2112,18 @@ final class CopakyCampaignTests: XCTestCase {
         }
         XCTAssertTrue(jpSpace.exists, "the Japanese tab must cap its space key 空白 whatever the UI language")
 
-        // Latin tab: localized caps.
+        // Latin tab: localized caps. Use the shared list: the it-IT catalog caps the key
+        // lowercase «spazio» (空白 → en "space" / it "spazio"), which the old inline
+        // ["space", "Spazio"] list missed — measured 29/08 (21ª) on the it-IT Pro Max.
+        // ラテンタブのキャップは端末言語に従う（it-ITは小文字「spazio」）。共有リストで照合する。
         switchToEnglishTab(in: safari)
         let latinSpace = safari.descendants(matching: .any)
-            .matching(NSPredicate(format: "label IN %@", ["space", "Spazio"])).firstMatch
+            .matching(NSPredicate(format: "label IN %@", L.spaceKey.filter { $0 != "空白" })).firstMatch
         if !latinSpace.waitForExistence(timeout: 4) {
             dump(safari, "36-no-latin-space")
             shot("36-no-latin-space")
         }
-        XCTAssertTrue(latinSpace.exists, "the Latin tab must localize its space cap on an English simulator")
+        XCTAssertTrue(latinSpace.exists, "the Latin tab must cap its space key in the device language, not in Japanese")
         shot("36-done")
     }
 
