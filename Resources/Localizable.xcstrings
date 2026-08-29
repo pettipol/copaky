@@ -8906,18 +8906,18 @@
         }
       }
     },
-    "初回の既定は日本語タブです。設定の「使用する言語」は編集可能な一覧で、日本語は先頭に固定され、英語は常に有効です。イタリア語を有効にすると英語との順番を並べ替えられます。QWERTYの地球儀キーは一覧の順に切り替わり、長押しで直接選べます。" : {
+    "初回の既定は日本語タブです。設定の「使用する言語」は編集可能な一覧で、日本語は先頭に固定され、英語は常に有効です。イタリア語を有効にすると英語との順番を並べ替えられます。QWERTYの言語キーは一覧の順に切り替わり、長押しで直接選べます。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The Japanese tab is the initial default. “Active languages” in Settings is an editable list: Japanese is pinned first and English is always active. Enable Italian to reorder it relative to English. The QWERTY globe key cycles through the active list; long-press it to choose a language directly."
+            "value" : "The Japanese tab is the initial default. “Active languages” in Settings is an editable list: Japanese is pinned first and English is always active. Enable Italian to reorder it relative to English. The QWERTY language key cycles through the active list; long-press it to choose a language directly."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "La scheda giapponese è quella iniziale predefinita. «Lingue attive» nelle Impostazioni è un elenco modificabile: il giapponese è fissato in cima e l'inglese è sempre attivo. Attiva l'italiano per riordinarlo rispetto all'inglese. Il tasto globo QWERTY scorre l'elenco attivo; tienilo premuto per scegliere direttamente una lingua."
+            "value" : "La scheda giapponese è quella iniziale predefinita. «Lingue attive» nelle Impostazioni è un elenco modificabile: il giapponese è fissato in cima e l'inglese è sempre attivo. Attiva l'italiano per riordinarlo rispetto all'inglese. Il tasto della lingua sulla QWERTY scorre l'elenco attivo; tienilo premuto per scegliere direttamente una lingua."
           }
         }
       }
@@ -13327,18 +13327,18 @@
         }
       }
     },
-    "QWERTYの地球儀キーは有効な言語を一覧の順に切り替えます。長押しすると直接選択メニューを開きます。" : {
+    "QWERTYの言語キーは有効な言語を一覧の順に切り替えます。長押しすると直接選択メニューを開きます。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The QWERTY globe key cycles through the active languages in list order. Long-press it to open the direct-selection menu."
+            "value" : "The QWERTY language key cycles through the active languages in list order. Long-press it to open the direct-selection menu."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Il tasto globo QWERTY scorre le lingue attive nell'ordine dell'elenco. Tienilo premuto per aprire il menu di selezione diretta."
+            "value" : "Il tasto della lingua sulla QWERTY scorre le lingue attive nell'ordine dell'elenco. Tienilo premuto per aprire il menu di selezione diretta."
           }
         }
       }
@@ -13423,18 +13423,18 @@
         }
       }
     },
-    "設定の「使用する言語」でイタリア語を有効にし、必要なら英語との順番を並べ替えます。日本語は先頭に固定され、英語は常に有効です。QWERTYの地球儀キーで有効な一覧を切り替え、長押しで「IT」を直接選べます。" : {
+    "設定の「使用する言語」でイタリア語を有効にし、必要なら英語との順番を並べ替えます。日本語は先頭に固定され、英語は常に有効です。QWERTYの言語キーで有効な一覧を切り替え、長押しで「IT」を直接選べます。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Enable Italian under “Active languages” in Settings, then reorder it relative to English if you wish. Japanese is pinned first and English is always active. Use the QWERTY globe key to cycle through the active list, or long-press it to choose IT directly."
+            "value" : "Enable Italian under “Active languages” in Settings, then reorder it relative to English if you wish. Japanese is pinned first and English is always active. Use the QWERTY language key to cycle through the active list, or long-press it to choose IT directly."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Attiva l'italiano in «Lingue attive» nelle Impostazioni e, se vuoi, riordinalo rispetto all'inglese. Il giapponese è fissato in cima e l'inglese è sempre attivo. Usa il tasto globo QWERTY per scorrere l'elenco attivo, oppure tienilo premuto per scegliere direttamente IT."
+            "value" : "Attiva l'italiano in «Lingue attive» nelle Impostazioni e, se vuoi, riordinalo rispetto all'inglese. Il giapponese è fissato in cima e l'inglese è sempre attivo. Usa il tasto della lingua sulla QWERTY per scorrere l'elenco attivo, oppure tienilo premuto per scegliere direttamente IT."
           }
         }
       }
