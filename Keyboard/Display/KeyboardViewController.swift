@@ -354,6 +354,7 @@ final class KeyboardViewController: UIInputViewController {
         // CC-09 endpoint: the first viewDidAppear callback, before state/geometry refresh work below.
         self.endLaunchInstrumentationIfNeeded()
         self.updateStates()
+        self.armLatinAutoCapitalizationIfNeeded()
 
         // Floating Keyboardなどの一部の処理に限り、このタイミングにならないとウィンドウ幅が不明なケースが存在する
         if #available(iOS 26, *) {
@@ -490,6 +491,50 @@ final class KeyboardViewController: UIInputViewController {
         }
     }
 
+    /// Arms only the next Latin letter. Field traits are checked here so the pure policy stays in
+    /// KeyboardViews without a dependency cycle. / 入力欄属性を確認し、次のラテン文字だけ大文字化。
+    @MainActor func armLatinAutoCapitalizationIfNeeded() {
+        let proxy = self.textDocumentProxy
+        let variableStates = KeyboardViewController.variableStates
+        let tab = variableStates.tabManager.existentialTab()
+        let ownsShift = variableStates.autoCapitalizationOwnsShift
+        // UIKit may return nil at a genuinely empty field. Admit only that provable start state;
+        // nil with existing host text remains fail-closed. / 空欄と確認できるnilだけ文頭として扱う。
+        let documentContextBeforeInput: String? = proxy.documentContextBeforeInput
+            ?? (proxy.hasText ? nil : "")
+        let capitalizationType = proxy.autocapitalizationType
+        let hostUsesSentenceCapitalization = capitalizationType == nil || capitalizationType == .sentences
+        let fieldAllowsAutoCapitalization = !Self.isSecureField(proxy)
+            && ItalianAutoAccentPolicy.allowsKeyboardType(proxy.keyboardType ?? .default)
+            && ItalianAutoAccentPolicy.allowsTextContentType(proxy.textContentType)
+        let shouldArm = LatinAutoCapitalizationDecision.shouldArmShift(
+            documentContextBeforeInput: documentContextBeforeInput,
+            isEnabled: EnableLatinAutoCapitalization.value,
+            isLatinQwertyTab: tab == .qwerty_abc,
+            languageUsesLatinScript: variableStates.keyboardLanguage.usesLatinScript,
+            // Re-evaluate owned Shift against the field/context gates instead of treating it as a
+            // manual Shift request. / 自動 Shift は入力欄・文脈ガードで再評価する。
+            isShifted: ownsShift ? false : variableStates.boolStates.isShifted,
+            isCapsLocked: variableStates.boolStates.isCapsLocked,
+            isComposing: !KeyboardViewController.action.inputManager.composingText.isEmpty,
+            fieldAllowsAutoCapitalization: fieldAllowsAutoCapitalization,
+            hostUsesSentenceCapitalization: hostUsesSentenceCapitalization
+        )
+        if shouldArm {
+            if !variableStates.boolStates.isShifted {
+                variableStates.boolStates[VariableStates.BoolStates.isShiftedKey] = true
+                variableStates.autoCapitalizationOwnsShift = true
+            }
+            return
+        }
+        // Fail closed on focus/tab/trait/context changes, but never cancel a manual Shift.
+        // フォーカス・タブ・属性・文脈が変わった場合、自動 Shift だけを解除する。
+        if ownsShift {
+            variableStates.boolStates[VariableStates.BoolStates.isShiftedKey] = false
+            variableStates.autoCapitalizationOwnsShift = false
+        }
+    }
+
     func updateResultView(_ candidates: [any ResultViewItemData]) {
         KeyboardViewController.variableStates.resultModel.setResults(candidates)
     }
@@ -569,6 +614,13 @@ final class KeyboardViewController: UIInputViewController {
     }
 
     private func setKeyboardHeight(to height: CGFloat) {
+        if let keyboardHeightConstraint,
+           keyboardHeightConstraint.isActive,
+           abs(keyboardHeightConstraint.constant - height) < 0.5 {
+            // E-12: merged publishers may emit the same height repeatedly; do not re-announce it.
+            // 同じ高さの再通知では制約更新とレイアウトを繰り返さない。
+            return
+        }
         self.keyboardHeightConstraint?.isActive = true
         self.keyboardHeightConstraint?.constant = height
         if self.view.window != nil {
@@ -593,6 +645,11 @@ final class KeyboardViewController: UIInputViewController {
      debug("selectionDidChange")
      }
      */
+    override func selectionDidChange(_ textInput: (any UITextInput)?) {
+        super.selectionDidChange(textInput)
+        self.armLatinAutoCapitalizationIfNeeded()
+    }
+
     /// 引数の`textInput`は常に`nil`
     override func textWillChange(_ textInput: (any UITextInput)?) {
         super.textWillChange(textInput)
@@ -621,6 +678,7 @@ final class KeyboardViewController: UIInputViewController {
         KeyboardViewController.variableStates.setUIReturnKeyType(type: self.textDocumentProxy.returnKeyType ?? .default)
         KeyboardViewController.variableStates.setTextContentType(self.textDocumentProxy.textContentType)
         KeyboardViewController.variableStates.setSecureEntry(Self.isSecureField(self.textDocumentProxy))
+        self.armLatinAutoCapitalizationIfNeeded()
     }
 
     /// Reference: https://stackoverflow.com/questions/79077018/unable-to-open-main-app-from-action-extension-in-ios-18-previously-working-met

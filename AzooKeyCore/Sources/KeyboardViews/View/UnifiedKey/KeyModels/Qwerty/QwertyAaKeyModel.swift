@@ -19,7 +19,7 @@ struct QwertyAaKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: Un
 
     func label<ThemeExtension>(width: CGFloat, theme _: ThemeData<ThemeExtension>, states: VariableStates, color: Color?) -> KeyLabel<Extension> where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         if states.boolStates.isCapsLocked {
-            KeyLabel(.image("capslock.fill"), width: width, textColor: color)
+            KeyLabel(.image("capslock.fill", accessibilityLabel: "大文字に固定する"), width: width, textColor: color)
         } else {
             KeyLabel(.text("Aa"), width: width, textColor: color)
         }

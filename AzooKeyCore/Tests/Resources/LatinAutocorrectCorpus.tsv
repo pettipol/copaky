@@ -1,4 +1,6 @@
-# kind	language	typed	expected	context_before_word	misspelled	guesses
+# Campaign 4 v2: fields 8-9 are optional pipe-separated subsets of `guesses`.
+# Seven-field v1 rows remain valid; omitted oracle_rejected_guesses means all guesses revalidate.
+# kind	language	typed	expected	context_before_word	misspelled	guesses	learned_guesses	oracle_rejected_guesses
 typo	it-IT	qundo	quando	Scrivo\s	1	quando|zzzzzzzz
 typo	it-IT	anhce	anche	Scrivo\s	1	anche|zzzzzzzz
 typo	it-IT	qusto	questo	Scrivo\s	1	questo|zzzzzzzz
@@ -67,6 +69,13 @@ typo	it-IT	probelma	problema	Scrivo\s	1	problema|zzzzzzzz
 typo	it-IT	insime	insieme	Scrivo\s	1	insieme|zzzzzzzz
 typo	it-IT	scuoloa	scuola	Scrivo\s	1	scuola|zzzzzzzz
 typo	it-IT	macchian	macchina	Scrivo\s	1	macchina|zzzzzzzz
+control	it-IT	meccanico		Scrivo\s	1	mecranico	mecranico
+typo	it-IT	mecanico	meccanico	Scrivo\s	1	mecranico|meccanico	mecranico
+control	it-IT	casa		Scrivo\s	1	cassa	cassa
+control	it-IT	lavoro		Scrivo\s	1	lavro	lavro
+control	it-IT	tecnico		Scrivo\s	1	tecnivo	tecnivo
+typo	it-IT	caas	casa	Scrivo\s	1	caos|casa	casa
+typo	it-IT	qundo	quando	Scrivo\s	1	fundo|quando	fundo
 typo	en-US	teh	the	I\ssaw\s	1	the|zzzzzzzz
 typo	en-US	adn	and	This\s	1	and|zzzzzzzz
 typo	en-US	hte	the	Read\s	1	the|zzzzzzzz
@@ -115,6 +124,12 @@ typo	en-US	accomodate	accommodate	I\swrote\s	1	accommodate|zzzzzzzz
 typo	en-US	commited	committed	I\swrote\s	1	committed|zzzzzzzz
 typo	en-US	succesful	successful	I\swrote\s	1	successful|zzzzzzzz
 typo	en-US	responsability	responsibility	I\swrote\s	1	responsibility|zzzzzzzz
+control	en-US	teh		I\ssaw\s	1	the	the
+typo	en-US	teh	the	I\ssaw\s	1	ten|the	ten
+control	en-US	recieve		I\swrote\s	1	receive	receive
+typo	en-US	adn	and	I\swrote\s	1	add|and	add
+control	en-US	freind		I\swrote\s	1	friend	friend
+control	en-US	teh		I\ssaw\s	1	the		the
 control	it-IT	Sara		Ciao\s	1	Sarà
 control	it-IT	Sara		<nil>	0	
 control	it-IT	Marco		Ciao\s	1	marzo

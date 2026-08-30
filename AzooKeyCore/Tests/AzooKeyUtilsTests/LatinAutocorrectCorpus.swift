@@ -37,8 +37,10 @@ enum LatinAutocorrectCorpus {
             }
             let lineNumber = offset + 1
             let fields = rawLine.split(separator: "\t", omittingEmptySubsequences: false).map(String.init)
-            guard fields.count == 7 else {
-                throw LoadError.invalidRow(line: lineNumber, reason: "expected 7 TSV fields, got \(fields.count)")
+            // Campaign 4 v1 has seven fields. V2 appends learned guesses and optionally candidates
+            // rejected by the same-language revalidation oracle; old rows remain valid verbatim.
+            guard (7...9).contains(fields.count) else {
+                throw LoadError.invalidRow(line: lineNumber, reason: "expected 7...9 TSV fields, got \(fields.count)")
             }
             guard let kind = Kind(rawValue: fields[0]) else {
                 throw LoadError.invalidRow(line: lineNumber, reason: "unknown kind \(fields[0])")
@@ -59,6 +61,19 @@ enum LatinAutocorrectCorpus {
             let guesses = fields[6].isEmpty
                 ? []
                 : fields[6].split(separator: "|", omittingEmptySubsequences: false).map(String.init)
+            let learnedGuesses = fields.count < 8 || fields[7].isEmpty
+                ? Set<String>()
+                : Set(fields[7].split(separator: "|", omittingEmptySubsequences: false).map(String.init))
+            let oracleRejectedGuesses = fields.count < 9 || fields[8].isEmpty
+                ? Set<String>()
+                : Set(fields[8].split(separator: "|", omittingEmptySubsequences: false).map(String.init))
+            let guessSet = Set(guesses)
+            guard learnedGuesses.isSubset(of: guessSet) else {
+                throw LoadError.invalidRow(line: lineNumber, reason: "learned guess is absent from guesses")
+            }
+            guard oracleRejectedGuesses.isSubset(of: guessSet) else {
+                throw LoadError.invalidRow(line: lineNumber, reason: "rejected guess is absent from guesses")
+            }
 
             entries.append(Entry(
                 kind: kind,
@@ -66,7 +81,12 @@ enum LatinAutocorrectCorpus {
                 typed: fields[2],
                 expected: expected,
                 contextBeforeWord: context,
-                spellCheckResult: .init(isMisspelled: fields[5] == "1", guesses: guesses)
+                spellCheckResult: .init(
+                    isMisspelled: fields[5] == "1",
+                    guesses: guesses,
+                    learnedGuesses: learnedGuesses,
+                    oracleAcceptedGuesses: guessSet.subtracting(oracleRejectedGuesses)
+                )
             ))
         }
         return entries

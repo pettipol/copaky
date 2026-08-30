@@ -49,7 +49,7 @@ public final class VariableStates: ObservableObject {
         public var isCapsLocked = false
         public var isShifted = false
 
-        static let isCapsLockedKey = "isCapsLocked"
+        public static let isCapsLockedKey = "isCapsLocked"
         public static let isShiftedKey = "isShifted"
         static let hasUpsideComponentKey = "is_screen_expanded"
         static let hasFullAccessKey = "has_full_access"
@@ -140,6 +140,9 @@ public final class VariableStates: ObservableObject {
 
     // Bool値の変数はここにまとめる
     @Published public var boolStates = BoolStates()
+    /// True only while F-04b owns the one-shot Shift. Manual Shift/Caps actions clear ownership.
+    /// F-04b が自動で有効にした Shift のみを識別し、手動操作は所有権を解除する。
+    public var autoCapitalizationOwnsShift = false
 
     // 片手モードの実行時、キーボードの幅はinterfaceSizeによって決定できる。
     @Published public var interfaceSize: CGSize = .zero
@@ -287,6 +290,10 @@ public final class VariableStates: ObservableObject {
     }
 
     @MainActor public func closeKeyboard() {
+        if self.autoCapitalizationOwnsShift {
+            self.boolStates[BoolStates.isShiftedKey] = false
+            self.autoCapitalizationOwnsShift = false
+        }
         self.tabManager.closeKeyboard()
         self.upsideComponent = nil
         // 変更する

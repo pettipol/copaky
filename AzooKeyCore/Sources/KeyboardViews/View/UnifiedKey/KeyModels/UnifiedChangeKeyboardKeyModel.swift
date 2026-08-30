@@ -23,7 +23,7 @@ struct UnifiedChangeKeyboardKeyModel<Extension: ApplicationSpecificKeyboardViewE
     }
     func variationSpace(variableStates: VariableStates) -> UnifiedVariationSpace {
         if usePasteButton {
-            return .fourWay([.top: UnifiedVariation(label: .image("doc.on.clipboard"), pressActions: [.paste])])
+            return .fourWay([.top: UnifiedVariation(label: .image("doc.on.clipboard", accessibilityLabel: "ペースト"), pressActions: [.paste])])
         }
         return .none
     }
@@ -36,7 +36,7 @@ struct UnifiedChangeKeyboardKeyModel<Extension: ApplicationSpecificKeyboardViewE
         case true:
             return KeyLabel(.changeKeyboard, width: width)
         case false:
-            return KeyLabel(.image("arrowtriangle.left.and.line.vertical.and.arrowtriangle.right"), width: width)
+            return KeyLabel(.image("arrowtriangle.left.and.line.vertical.and.arrowtriangle.right", accessibilityLabel: "カーソルバーの切り替え"), width: width)
         }
     }
     func backgroundStyleWhenUnpressed<ThemeExtension>(states _: VariableStates, theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {

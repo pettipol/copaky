@@ -33,13 +33,21 @@ final class LatinAutocorrectPolicyTests: XCTestCase {
         _ expectedGuess: String,
         language: LatinAutocorrectPolicy.Language,
         context: LatinAutocorrectPolicy.Context? = nil,
-        guesses: [String]? = nil
+        guesses: [String]? = nil,
+        learnedGuesses: Set<String> = [],
+        oracleAcceptedGuesses: Set<String>? = nil
     ) -> String? {
-        LatinAutocorrectPolicy.correction(
+        let guesses = guesses ?? [expectedGuess]
+        return LatinAutocorrectPolicy.correction(
             forTypedWord: typed,
             language: language,
             context: context ?? self.context(),
-            spellCheckResult: .init(isMisspelled: true, guesses: guesses ?? [expectedGuess])
+            spellCheckResult: .init(
+                isMisspelled: true,
+                guesses: guesses,
+                learnedGuesses: learnedGuesses,
+                oracleAcceptedGuesses: oracleAcceptedGuesses
+            )
         )
     }
 
@@ -273,14 +281,138 @@ final class LatinAutocorrectPolicyTests: XCTestCase {
         )
     }
 
+    func testAttestedItalianTypedWordIsNeverSentThroughInjectedOracle() {
+        let injected = LatinAutocorrectPolicy.SpellCheckResult(
+            isMisspelled: true,
+            guesses: ["mecranico"],
+            learnedGuesses: ["mecranico"]
+        )
+        let evaluation = LatinAutocorrectPolicy.evaluate(
+            forTypedWord: "meccanico",
+            language: .italian,
+            context: context(),
+            spellCheckResult: injected
+        )
+
+        XCTAssertNil(evaluation.correction)
+        XCTAssertEqual(evaluation.rejectionReason, .attestedItalianWord)
+        XCTAssertNil(
+            evaluation.spellCheckResult,
+            "the positive frequency guard must run before consuming the oracle snapshot"
+        )
+        XCTAssertNil(evaluation.selectedCandidate)
+    }
+
+    func testLearnedGuessFilteringIsLanguageAndFrequencyBound() {
+        XCTAssertNil(
+            correction(
+                "teh",
+                "the",
+                language: .english,
+                learnedGuesses: ["the"]
+            ),
+            "English learned words are never trusted as corrections"
+        )
+        XCTAssertNil(
+            correction(
+                "mecanico",
+                "mecranico",
+                language: .italian,
+                learnedGuesses: ["mecranico"]
+            ),
+            "an unattested learned Italian word must be excluded"
+        )
+        XCTAssertEqual(
+            correction(
+                "caas",
+                "casa",
+                language: .italian,
+                learnedGuesses: ["casa"]
+            ),
+            "casa",
+            "Italian alone may accept a learned guess independently attested by frequency"
+        )
+        XCTAssertEqual(
+            correction(
+                "mecanico",
+                "meccanico",
+                language: .italian,
+                guesses: ["mecranico", "meccanico"],
+                learnedGuesses: ["mecranico"]
+            ),
+            "meccanico",
+            "the polluted learned guess must not displace the attested correction"
+        )
+        XCTAssertEqual(
+            correction(
+                "teh",
+                "the",
+                language: .english,
+                guesses: ["ten", "the"],
+                learnedGuesses: ["ten"]
+            ),
+            "the",
+            "an unlearned eligible English candidate remains available"
+        )
+    }
+
+    func testSelectedWinnerMustPassInjectedSameLanguageRevalidation() {
+        let rejectedResult = LatinAutocorrectPolicy.SpellCheckResult(
+            isMisspelled: true,
+            guesses: ["the", "ten"],
+            oracleAcceptedGuesses: ["ten"]
+        )
+        let rejected = LatinAutocorrectPolicy.evaluate(
+            forTypedWord: "teh",
+            language: .english,
+            context: context(),
+            spellCheckResult: rejectedResult
+        )
+        XCTAssertNil(rejected.correction)
+        XCTAssertEqual(rejected.rejectionReason, .candidateRejectedByOracle)
+        XCTAssertEqual(rejected.selectedCandidate, "the")
+        XCTAssertEqual(rejected.spellCheckResult, rejectedResult)
+
+        let acceptedResult = LatinAutocorrectPolicy.SpellCheckResult(
+            isMisspelled: true,
+            guesses: ["the"],
+            oracleAcceptedGuesses: ["the"]
+        )
+        let accepted = LatinAutocorrectPolicy.evaluate(
+            forTypedWord: "teh",
+            language: .english,
+            context: context(),
+            spellCheckResult: acceptedResult
+        )
+        XCTAssertEqual(accepted.correction, "the")
+        XCTAssertNil(accepted.rejectionReason)
+        XCTAssertEqual(accepted.selectedCandidate, "the")
+    }
+
     func testPermanentCorpusInventoryTargetsAndNegativeControls() throws {
         let entries = try LatinAutocorrectCorpus.load()
         let italianTypos = entries.filter { $0.kind == .typo && $0.language == .italian }
         let englishTypos = entries.filter { $0.kind == .typo && $0.language == .english }
         let controls = entries.filter { $0.kind == .control }
+        let learnedCases = entries.filter { !$0.spellCheckResult.learnedGuesses.isEmpty }
+        let revalidationRejections = entries.filter {
+            $0.spellCheckResult.oracleAcceptedGuesses != Set($0.spellCheckResult.guesses)
+        }
         XCTAssertGreaterThanOrEqual(italianTypos.count, 60)
         XCTAssertGreaterThanOrEqual(englishTypos.count, 40)
         XCTAssertGreaterThanOrEqual(controls.count, 40)
+        XCTAssertGreaterThanOrEqual(learnedCases.count, 12)
+        XCTAssertGreaterThanOrEqual(revalidationRejections.count, 1)
+        XCTAssertTrue(entries.contains {
+            $0.typed == "meccanico"
+                && $0.expected == nil
+                && $0.spellCheckResult.learnedGuesses == ["mecranico"]
+        })
+        XCTAssertTrue(entries.contains {
+            $0.typed == "mecanico"
+                && $0.expected == "meccanico"
+                && $0.spellCheckResult.learnedGuesses == ["mecranico"]
+        })
 
         for (language, typoEntries) in [
             (LatinAutocorrectPolicy.Language.italian, italianTypos),
@@ -324,7 +456,13 @@ final class LatinAutocorrectPolicyTests: XCTestCase {
             "exact it-IT and en-US spell-check dictionaries are both required"
         )
 
-        let entries = try LatinAutocorrectCorpus.load()
+        // Learned-word state cannot be safely seeded without mutating the process-wide UIKit
+        // dictionary. V2 metadata cases run through the deterministic seam above; this live gate
+        // retains only rows that do not depend on injected learned/revalidation state.
+        let entries = try LatinAutocorrectCorpus.load().filter {
+            $0.spellCheckResult.learnedGuesses.isEmpty
+                && $0.spellCheckResult.oracleAcceptedGuesses == Set($0.spellCheckResult.guesses)
+        }
         let controls = entries.filter { $0.kind == .control }
         for language in LatinAutocorrectPolicy.Language.allCases {
             let typoEntries = entries.filter { $0.kind == .typo && $0.language == language }

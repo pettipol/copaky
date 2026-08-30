@@ -13,11 +13,18 @@ import FoundationModels
 import KanaKanjiConverterModule
 import KeyboardExtensionUtils
 import KeyboardViews
+import os
 import OrderedCollections
 import SwiftUtils
 import UIKit
 
 final class InputManager {
+#if DEBUG
+    private static let autocorrectLog = OSLog(
+        subsystem: "com.pettipol.copaky.keyboard",
+        category: "Autocorrect"
+    )
+#endif
     // 入力中の文字列を管理する構造体
     private(set) var composingText = ComposingText()
     // 表示される文字列を管理するクラス
@@ -26,6 +33,7 @@ final class InputManager {
     // DisplayedTextManager temporarily prefers an in-keyboard text field.
     // Copaky: キーボード内入力欄への切替中もホスト側の入力属性を確認できるよう保持する。
     private var mainTextDocumentProxy: (any UITextDocumentProxy)?
+    private var activeTextDocumentProxyPreference: AnyTextDocumentProxy.Preference = .main
     private struct LatinSpaceCorrection {
         let original: String
         let corrected: String
@@ -37,9 +45,22 @@ final class InputManager {
         let leftContextAfterCorrection: String
         let rightContextAfterCorrection: String
     }
+    private struct LastDoubleSpacePeriod {
+        let documentIdentifier: UUID
+        let leftContextAfterReplacement: String
+        let rightContextAfterReplacement: String
+    }
+    private struct LastLatinSpaceTap {
+        let documentIdentifier: UUID
+        let uptime: TimeInterval
+        let leftContext: String
+        let rightContext: String
+    }
     // Copaky: one-shot stock-keyboard-style undo. It never survives another key or cursor move.
     // Copaky: 直後の削除キー1回だけで元の語へ戻す一時状態。他の操作では必ず破棄する。
     private var lastLatinAutocorrection: LastLatinAutocorrection?
+    private var lastDoubleSpacePeriod: LastDoubleSpacePeriod?
+    private var lastLatinSpaceTap: LastLatinSpaceTap?
     // TODO: displayedTextManagerとliveConversionManagerを何らかの形で統合したい
     // ライブ変換を管理するクラス
     var liveConversionManager: LiveConversionManager
@@ -263,8 +284,17 @@ final class InputManager {
         switch proxy {
         case .mainProxy, .ikTextFieldProxy:
             self.clearLastLatinAutocorrection()
-        case .preference:
-            break
+            self.clearLastLatinSpaceTap()
+        case let .preference(preference):
+            let changed = switch (self.activeTextDocumentProxyPreference, preference) {
+            case (.main, .ikTextField), (.ikTextField, .main): true
+            default: false
+            }
+            if changed {
+                self.clearLastLatinAutocorrection()
+                self.clearLastLatinSpaceTap()
+            }
+            self.activeTextDocumentProxyPreference = preference
         }
         if case let .mainProxy(mainProxy) = proxy {
             self.mainTextDocumentProxy = mainProxy
@@ -417,6 +447,7 @@ final class InputManager {
     /// 入力を停止する。DisplayedTextには特に何もしない。
     @MainActor func stopComposition() {
         self.clearLastLatinAutocorrection()
+        self.clearLastLatinSpaceTap()
         self.composingText.stopComposition()
         self.displayedTextManager.stopComposition()
         self.liveConversionManager.stopComposition()
@@ -439,6 +470,9 @@ final class InputManager {
     @MainActor func closeKeyboard() {
         debug("closeKeyboard: キーボードが閉じます")
         self.clearLastLatinAutocorrection()
+        self.clearLastLatinSpaceTap()
+        self.activeTextDocumentProxyPreference = .main
+        self.displayedTextManager.setTextDocumentProxy(.preference(.main))
         self.kanaKanjiConverter.commitUpdateLearningData()
         self.kanaKanjiConverter.updateUserDictionaryURL(Self.sharedContainerURL, forceReload: true)
         self.displayedTextManager.closeKeyboard()
@@ -520,8 +554,24 @@ final class InputManager {
     ///   - requireSetResult: `View`のアップデートを、この呼び出しで実施するべきか。この後さらに別の呼び出しを行う場合は、`false`にする。
     ///   - simpleInsert: `ComposingText`を作るのではなく、直接文字を入力し、変換候補を表示しない。
     ///   - inputStyle: 入力スタイル
-    @MainActor func input(text: String, requireSetResult: Bool = true, simpleInsert: Bool = false, inputStyle: InputStyle) {
+    @MainActor func input(
+        text: String,
+        requireSetResult: Bool = true,
+        simpleInsert: Bool = false,
+        inputStyle: InputStyle,
+        isLatinQwertyTab: Bool = false
+    ) {
+        let inputUptime = ProcessInfo.processInfo.systemUptime
+        if text == " ", self.replaceSecondLatinSpaceWithPeriodIfNeeded(
+            at: inputUptime,
+            isLatinQwertyTab: isLatinQwertyTab
+        ) {
+            return
+        }
         self.clearLastLatinAutocorrection()
+        if text != " " {
+            self.clearLastLatinSpaceTap()
+        }
         // 直接入力の条件
         if self.shouldDirectInsert(text: text, simpleInsert: simpleInsert) {
             // 必要に応じて確定する
@@ -539,6 +589,11 @@ final class InputManager {
             if let correction, correction.undoEligible {
                 self.rememberLatinAutocorrection(correction)
             }
+            self.rememberLatinSpaceTapIfEligible(
+                text: text,
+                at: inputUptime,
+                isLatinQwertyTab: isLatinQwertyTab
+            )
             return
         }
         // 直接入力にならない場合はまず選択部分を削除する
@@ -552,6 +607,99 @@ final class InputManager {
             // 変換を実施する
             self.setResult()
         }
+    }
+
+    @MainActor private func latinSmartPunctuationFieldIsAllowed() -> Bool {
+        guard case .main = self.activeTextDocumentProxyPreference,
+              let proxy = self.mainTextDocumentProxy else {
+            return false
+        }
+        return !KeyboardViewController.isSecureField(proxy)
+            && ItalianAutoAccentPolicy.allowsKeyboardType(proxy.keyboardType ?? .default)
+            && ItalianAutoAccentPolicy.allowsTextContentType(proxy.textContentType)
+    }
+
+    @MainActor private func replaceSecondLatinSpaceWithPeriodIfNeeded(
+        at uptime: TimeInterval,
+        isLatinQwertyTab: Bool
+    ) -> Bool {
+        let elapsed = self.lastLatinSpaceTap.map { uptime - $0.uptime }
+        let context = self.displayedTextManager.documentContextBeforeInput()
+        guard self.composingText.isEmpty,
+              !self.isSelected,
+              (self.displayedTextManager.selectedText ?? "").isEmpty,
+              DoubleSpacePeriodDecision.shouldReplace(
+                  documentContextBeforeInput: context,
+                  elapsedSincePreviousSpace: elapsed,
+                  isEnabled: EnableDoubleSpacePeriod.value,
+                  isLatinQwertyTab: isLatinQwertyTab,
+                  languageUsesLatinScript: self.keyboardLanguage.usesLatinScript,
+                  fieldAllowsReplacement: self.latinSmartPunctuationFieldIsAllowed()
+              ),
+              let context,
+              let previousTap = self.lastLatinSpaceTap,
+              previousTap.documentIdentifier == self.mainTextDocumentProxy?.documentIdentifier,
+              context == previousTap.leftContext,
+              (self.displayedTextManager.documentContextAfterInput ?? "") == previousTap.rightContext else {
+            return false
+        }
+
+        self.clearLastLatinAutocorrection()
+        self.clearLastLatinSpaceTap()
+        let rightContext = self.displayedTextManager.documentContextAfterInput ?? ""
+        let expectedLeftContext = String(context.dropLast()) + ". "
+        self.displayedTextManager.deleteBackward(count: 1)
+        self.displayedTextManager.insertText(". ")
+        let observedLeftContext = self.displayedTextManager.documentContextBeforeInput()
+        let observedRightContext = self.displayedTextManager.documentContextAfterInput ?? ""
+        if observedLeftContext == expectedLeftContext,
+           observedRightContext == rightContext {
+            self.lastDoubleSpacePeriod = LastDoubleSpacePeriod(
+                documentIdentifier: previousTap.documentIdentifier,
+                leftContextAfterReplacement: expectedLeftContext,
+                rightContextAfterReplacement: rightContext
+            )
+        } else if observedLeftContext == context,
+                  observedRightContext == rightContext {
+            // The host rejected the replacement: fall through so the ordinary second space is inserted.
+            // ホストが置換を拒否した場合は、通常の2つ目の空白入力へ戻す。
+            self.resetPostCompositionPredictionCandidates()
+            return false
+        } else if observedLeftContext == String(context.dropLast()),
+                  observedRightContext == rightContext {
+            // Only deletion was accepted: restore the user's two spaces without smart punctuation.
+            // 削除だけ反映された場合は、スマート句読点を使わず空白2つへ復元する。
+            self.displayedTextManager.insertText("  ")
+        }
+        self.resetPostCompositionPredictionCandidates()
+        return true
+    }
+
+    @MainActor private func rememberLatinSpaceTapIfEligible(
+        text: String,
+        at uptime: TimeInterval,
+        isLatinQwertyTab: Bool
+    ) {
+        guard text == " ",
+              EnableDoubleSpacePeriod.value,
+              isLatinQwertyTab,
+              self.keyboardLanguage.usesLatinScript,
+              self.latinSmartPunctuationFieldIsAllowed() else {
+            self.lastLatinSpaceTap = nil
+            return
+        }
+        guard case .main = self.activeTextDocumentProxyPreference,
+              let documentIdentifier = self.mainTextDocumentProxy?.documentIdentifier,
+              let leftContext = self.displayedTextManager.documentContextBeforeInput() else {
+            self.lastLatinSpaceTap = nil
+            return
+        }
+        self.lastLatinSpaceTap = LastLatinSpaceTap(
+            documentIdentifier: documentIdentifier,
+            uptime: uptime,
+            leftContext: leftContext,
+            rightContext: self.displayedTextManager.documentContextAfterInput ?? ""
+        )
     }
 
     private func shouldDirectInsert(text: String, simpleInsert: Bool) -> Bool {
@@ -629,11 +777,31 @@ final class InputManager {
             preferredItalianAutoAccentCorrection: preferredItalianAutoAccentCorrection,
             italianAutoAccentCandidateExists: italianAutoAccentCandidateExists
         )
-        guard let correction = LatinAutocorrectPolicy.correction(
+        let evaluation = LatinAutocorrectPolicy.evaluate(
             forTypedWord: typed,
             language: language,
             context: policyContext
-        ) else {
+        )
+#if DEBUG
+        let spellCheck = evaluation.spellCheckResult
+        let learned = spellCheck?.learnedGuesses ?? []
+        let guessDiagnostics = spellCheck?.guesses.map { guess in
+            "\(guess)[learned=\(learned.contains(guess))]"
+        }.joined(separator: ",") ?? ""
+        os_log(
+            "typed=%{public}@ language=%{public}@ isMisspelled=%{public}@ guesses=%{public}d learnedByGuess=%{public}@ candidate=%{public}@ result=%{public}@",
+            log: Self.autocorrectLog,
+            type: .debug,
+            typed,
+            language.rawValue,
+            spellCheck.map { String($0.isMisspelled) } ?? "unavailable",
+            spellCheck?.guesses.count ?? 0,
+            guessDiagnostics,
+            evaluation.correction ?? evaluation.selectedCandidate ?? "none",
+            evaluation.rejectionReason?.rawValue ?? "accepted"
+        )
+#endif
+        guard let correction = evaluation.correction else {
             return nil
         }
         return LatinSpaceCorrection(original: typed, corrected: correction, undoEligible: true)
@@ -641,6 +809,11 @@ final class InputManager {
 
     @MainActor func clearLastLatinAutocorrection() {
         self.lastLatinAutocorrection = nil
+        self.lastDoubleSpacePeriod = nil
+    }
+
+    @MainActor func clearLastLatinSpaceTap() {
+        self.lastLatinSpaceTap = nil
     }
 
     /// Keeps the one-shot undo across host no-op callbacks, while still invalidating it when the
@@ -651,13 +824,21 @@ final class InputManager {
         center: String,
         right: String
     ) {
-        guard let correction = self.lastLatinAutocorrection else {
-            return
-        }
-        if left != correction.leftContextAfterCorrection
-            || !center.isEmpty
-            || right != correction.rightContextAfterCorrection {
+        if let correction = self.lastLatinAutocorrection,
+           left != correction.leftContextAfterCorrection
+               || !center.isEmpty
+               || right != correction.rightContextAfterCorrection {
             self.lastLatinAutocorrection = nil
+        }
+        if let replacement = self.lastDoubleSpacePeriod,
+           left != replacement.leftContextAfterReplacement
+               || !center.isEmpty
+               || right != replacement.rightContextAfterReplacement {
+            self.lastDoubleSpacePeriod = nil
+        }
+        if let tap = self.lastLatinSpaceTap,
+           left != tap.leftContext || !center.isEmpty || right != tap.rightContext {
+            self.lastLatinSpaceTap = nil
         }
     }
 
@@ -694,6 +875,30 @@ final class InputManager {
 
         self.displayedTextManager.deleteBackward(count: correction.corrected.count + 1)
         self.displayedTextManager.insertText(correction.original)
+        self.resetPostCompositionPredictionCandidates()
+        return true
+    }
+
+    /// Restores the two literal spaces and consumes the one-shot token. Exact context matching keeps
+    /// host edits and cursor moves fail-closed. / 2つの空白を戻し、文脈不一致時は何もしない。
+    @MainActor func undoLastDoubleSpacePeriodIfPossible() -> Bool {
+        guard let replacement = self.lastDoubleSpacePeriod else {
+            return false
+        }
+        self.lastDoubleSpacePeriod = nil
+        guard self.composingText.isEmpty,
+              !self.isSelected,
+              case .main = self.activeTextDocumentProxyPreference,
+              replacement.documentIdentifier == self.mainTextDocumentProxy?.documentIdentifier,
+              (self.displayedTextManager.selectedText ?? "").isEmpty,
+              self.displayedTextManager.documentContextBeforeInput() == replacement.leftContextAfterReplacement,
+              (self.displayedTextManager.documentContextAfterInput ?? "") == replacement.rightContextAfterReplacement,
+              replacement.leftContextAfterReplacement.hasSuffix(". ") else {
+            return false
+        }
+
+        self.displayedTextManager.deleteBackward(count: 2)
+        self.displayedTextManager.insertText("  ")
         self.resetPostCompositionPredictionCandidates()
         return true
     }

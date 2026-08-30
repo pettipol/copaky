@@ -104,6 +104,75 @@ enum ClipboardHistoryKeyHintDecision {
     }
 }
 
+// Copaky [F-07]: pure gate for replacing a second Latin-space tap with ". ". Host traits are
+// resolved by the keyboard extension and passed as one fail-closed boolean to avoid module cycles.
+// Copaky [F-07]: 2回目の空白を「. 」へ置換する純粋判定。入力欄の安全判定は呼出側で閉じる。
+public enum DoubleSpacePeriodDecision {
+    public static let maximumInterval: TimeInterval = 0.6
+
+    public static func shouldReplace(
+        documentContextBeforeInput context: String?,
+        elapsedSincePreviousSpace: TimeInterval?,
+        isEnabled: Bool,
+        isLatinQwertyTab: Bool,
+        languageUsesLatinScript: Bool,
+        fieldAllowsReplacement: Bool
+    ) -> Bool {
+        guard isEnabled,
+              isLatinQwertyTab,
+              languageUsesLatinScript,
+              fieldAllowsReplacement,
+              let elapsedSincePreviousSpace,
+              (0 ... maximumInterval).contains(elapsedSincePreviousSpace),
+              let context,
+              context.last == " " else {
+            return false
+        }
+        let characterBeforeFirstSpace = context.dropLast().last
+        return characterBeforeFirstSpace?.isLetter == true || characterBeforeFirstSpace?.isNumber == true
+    }
+}
+
+// Copaky [F-04b]: lexical/state-only auto-capitalization policy. Structured host fields are
+// rejected before this helper is called, and nil document context remains fail-closed.
+// Copaky [F-04b]: 文脈と状態だけで文頭シフトを判定する。取得不能な文脈は fail-closed。
+public enum LatinAutoCapitalizationDecision {
+    public static func shouldArmShift(
+        documentContextBeforeInput context: String?,
+        isEnabled: Bool,
+        isLatinQwertyTab: Bool,
+        languageUsesLatinScript: Bool,
+        isShifted: Bool,
+        isCapsLocked: Bool,
+        isComposing: Bool,
+        fieldAllowsAutoCapitalization: Bool,
+        hostUsesSentenceCapitalization: Bool
+    ) -> Bool {
+        guard isEnabled,
+              isLatinQwertyTab,
+              languageUsesLatinScript,
+              !isShifted,
+              !isCapsLocked,
+              !isComposing,
+              fieldAllowsAutoCapitalization,
+              hostUsesSentenceCapitalization,
+              let context else {
+            return false
+        }
+        if context.isEmpty {
+            return true
+        }
+        var sentenceTail = context[...]
+        while sentenceTail.last?.isWhitespace == true {
+            sentenceTail.removeLast()
+        }
+        if sentenceTail.isEmpty {
+            return true
+        }
+        return sentenceTail.last.map { ".!?".contains($0) } ?? false
+    }
+}
+
 // Copaky [E-09]: pure, width-derived quantization for space-bar cursor sliding.
 // Copaky [E-09]: 通常QWERTYキー幅からカーソル移動量を量子化する純粋判定。
 public enum SpaceSlideCursorSensitivity: String, CaseIterable, Sendable {

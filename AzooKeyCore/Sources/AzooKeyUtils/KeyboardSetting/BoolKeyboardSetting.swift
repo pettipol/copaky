@@ -326,6 +326,32 @@ public extension KeyboardSettingKey where Self == EnableLatinAutocorrect {
     static var enableLatinAutocorrect: Self { .init() }
 }
 
+// Copaky [F-07]: Apple-style period shortcut for safe Latin prose fields.
+// Copaky [F-07]: 安全なラテン文字の文章欄で、空白2回をピリオドへ置換する。
+public struct EnableDoubleSpacePeriod: BoolKeyboardSettingKey {
+    public static let title: LocalizedStringKey = "スペース2回でピリオド"
+    public static let explanation: LocalizedStringKey = "ラテン文字キーボードでスペースを素早く2回押すと、「. 」を入力します。URL・メール・パスワードなどの保護された入力欄では動作しません。"
+    public static let defaultValue = true
+    public static let key: String = "double_space_period"
+}
+
+public extension KeyboardSettingKey where Self == EnableDoubleSpacePeriod {
+    static var enableDoubleSpacePeriod: Self { .init() }
+}
+
+// Copaky [F-04b]: one-shot Shift at the start of safe Latin prose sentences.
+// Copaky [F-04b]: 安全なラテン文字の文章欄で、文頭だけ Shift を1回有効にする。
+public struct EnableLatinAutoCapitalization: BoolKeyboardSettingKey {
+    public static let title: LocalizedStringKey = "文頭を自動で大文字に"
+    public static let explanation: LocalizedStringKey = "ラテン文字キーボードで、入力欄の先頭や文末記号の後を自動的に大文字で始めます。URL・メール・パスワードなどの保護された入力欄では動作しません。"
+    public static let defaultValue = true
+    public static let key: String = "enable_latin_auto_capitalization"
+}
+
+public extension KeyboardSettingKey where Self == EnableLatinAutoCapitalization {
+    static var enableLatinAutoCapitalization: Self { .init() }
+}
+
 /// クリップボード履歴の取り込みにシステムのペーストボタンを使う設定（試験的） / Experimental: use Apple's
 /// system paste button (`UIPasteControl`) to add to the clipboard history. iOS treats a tap on its own
 /// control as consent, so the text is handed over without us reading the pasteboard and no
@@ -406,7 +432,7 @@ public extension KeyboardSettingKey where Self == EnableClipboardHistoryManagerT
 /// Copaky: 候補バーのショートカットは任意表示で、既定ではオフ。
 public struct DisplayTabBarButton: BoolKeyboardSettingKey {
     public static let title: LocalizedStringKey = "Copaky ボタンを候補バーに表示"
-    public static let explanation: LocalizedStringKey = "オンにすると候補バーに Copaky ボタンを表示します。123 / #+= / ☆123 キーの長押しでタブバーまたは履歴タブを開けます（クリップボード履歴がオンのときは、設定したキーから履歴タブが直接開きます）"
+    public static let explanation: LocalizedStringKey = "オンにすると候補バーに Copaky ボタンを表示します。長押しは既定で文字タブの123キーを使い、設定で #+= / ☆123 キーも追加できます。クリップボード履歴がオンなら、設定したキーから履歴を直接開きます。"
     public static let defaultValue = false
     public static let key: String = "display_tab_bar_button"
 }
@@ -419,8 +445,8 @@ public extension KeyboardSettingKey where Self == DisplayTabBarButton {
 /// Copaky: 英語・イタリア語のQWERTYに限り、空の候補バーを折りたたむ。
 public struct HideEmptyCandidateBarOnLatin: BoolKeyboardSettingKey {
     public static let title: LocalizedStringKey = "候補がないとき候補バーを隠す（ラテン文字キーボード）"
-    public static let explanation: LocalizedStringKey = "英語・イタリア語のQWERTYで、候補・予測・お知らせがなく、Copaky ボタンも非表示のときに候補バーを隠して、キーボードを低くします。日本語キーボードには影響しません。"
-    public static let defaultValue = false
+    public static let explanation: LocalizedStringKey = "既定でオンです。英語・イタリア語のQWERTYで、候補・予測・お知らせがなく、Copaky ボタンも非表示のときに候補バーを隠して、キーボードを低くします。日本語キーボードには影響しません。"
+    public static let defaultValue = true
     public static let key: String = "hide_empty_candidate_bar_on_latin"
 }
 

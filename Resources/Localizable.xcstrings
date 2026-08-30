@@ -3616,19 +3616,19 @@
         }
       }
     },
-    "オンにすると候補バーに Copaky ボタンを表示します。123 / #+= / ☆123 キーの長押しでタブバーまたは履歴タブを開けます（クリップボード履歴がオンのときは、設定したキーから履歴タブが直接開きます）" : {
+    "オンにすると候補バーに Copaky ボタンを表示します。長押しは既定で文字タブの123キーを使い、設定で #+= / ☆123 キーも追加できます。クリップボード履歴がオンなら、設定したキーから履歴を直接開きます。" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Turn on to show the Copaky button in the candidate bar. Long-press the 123 / #+= / ☆123 key to open the tab bar or history tab (when Clipboard history is on, configured keys open the history tab directly)."
+            "value" : "Turn on to show the Copaky button in the candidate bar. By default, long-press the 123 key on the letters tab; you can also enable #+= and ☆123 in Settings. When Clipboard history is on, configured keys open it directly."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Attiva per mostrare il pulsante Copaky nella barra dei suggerimenti. Tieni premuto il tasto 123 / #+= / ☆123 per aprire la barra schede o il tab della cronologia (quando la Cronologia appunti è attiva, i tasti configurati aprono direttamente la cronologia)."
+            "value" : "Attiva per mostrare il pulsante Copaky nella barra dei suggerimenti. Per impostazione predefinita, tieni premuto 123 nel tab delle lettere; nelle Impostazioni puoi abilitare anche #+= e ☆123. Quando la Cronologia appunti è attiva, i tasti configurati la aprono direttamente."
           }
         }
       }
@@ -7043,18 +7043,18 @@
         }
       }
     },
-    "フリック入力では左上の「☆123」・ローマ字入力では左下の「123」「#+=」キーを長押ししても表示されます。" : {
+    "既定ではローマ字入力の文字タブ左下にある「123」キーを長押ししても表示されます。設定で「#+=」やフリック入力の「☆123」も追加できます。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Using flick input style, you can also show it by longpressing ☆123 key at the left top edge of the keyboard. Using qwerty input style, you can show it by longpressing #+= key or 123 key at the left bottom edge of the keyboard."
+            "value" : "By default, you can also show it by long-pressing the 123 key at the lower left of the QWERTY letters tab. In Settings, you can also enable #+= and the flick keyboard's ☆123 key."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Con l'input a flick puoi visualizzarlo anche tenendo premuto il tasto \"☆123\" in alto a sinistra sulla tastiera. Con l'input romaji puoi visualizzarlo tenendo premuto il tasto \"123\" o \"#+=\" in basso a sinistra."
+            "value" : "Per impostazione predefinita, puoi visualizzarlo anche tenendo premuto 123 in basso a sinistra nel tab delle lettere QWERTY. Nelle Impostazioni puoi abilitare anche #+= e il tasto ☆123 della tastiera flick."
           }
         }
       }
@@ -9183,7 +9183,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Elimina"
+            "value" : "Cancella"
           }
         }
       }
@@ -13206,19 +13206,19 @@
         }
       }
     },
-    "英語・イタリア語のQWERTYで、候補・予測・お知らせがなく、Copaky ボタンも非表示のときに候補バーを隠して、キーボードを低くします。日本語キーボードには影響しません。" : {
+    "既定でオンです。英語・イタリア語のQWERTYで、候補・予測・お知らせがなく、Copaky ボタンも非表示のときに候補バーを隠して、キーボードを低くします。日本語キーボードには影響しません。" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "On English and Italian QWERTY keyboards, hides the suggestion bar when there are no candidates, predictions, or notices and the Copaky button is hidden, making the keyboard shorter. Japanese keyboards are not affected."
+            "value" : "On by default. On English and Italian QWERTY keyboards, hides the suggestion bar when there are no candidates, predictions, or notices and the Copaky button is hidden, making the keyboard shorter. Japanese keyboards are not affected."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sulle tastiere QWERTY inglese e italiana, nasconde la barra dei suggerimenti quando non ci sono candidati, previsioni o avvisi e il pulsante Copaky è nascosto, rendendo la tastiera più bassa. Le tastiere giapponesi non sono interessate."
+            "value" : "Attiva per impostazione predefinita. Sulle tastiere QWERTY inglese e italiana, nasconde la barra dei suggerimenti quando non ci sono candidati, previsioni o avvisi e il pulsante Copaky è nascosto, rendendo la tastiera più bassa. Le tastiere giapponesi non sono interessate."
           }
         }
       }
@@ -14652,6 +14652,134 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sulle tastiere latine, premendo spazio dopo una parola vengono corretti automaticamente i refusi comuni in italiano e inglese. Premi backspace subito dopo una correzione per ripristinare la parola originale."
+          }
+        }
+      }
+    },
+    "スペース2回でピリオド" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Double-space for period"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doppio spazio per il punto"
+          }
+        }
+      }
+    },
+    "ラテン文字キーボードでスペースを素早く2回押すと、「. 」を入力します。URL・メール・パスワードなどの保護された入力欄では動作しません。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On Latin keyboards, quickly press space twice to insert “. ”. It does not run in URL, email, or protected fields."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sulle tastiere latine, premi rapidamente due volte lo spazio per inserire «. ». Non funziona nei campi URL, email o protetti."
+          }
+        }
+      }
+    },
+    "文頭を自動で大文字に" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auto-capitalization"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maiuscole automatiche"
+          }
+        }
+      }
+    },
+    "ラテン文字キーボードで、入力欄の先頭や文末記号の後を自動的に大文字で始めます。URL・メール・パスワードなどの保護された入力欄では動作しません。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On Latin keyboards, automatically starts with an uppercase letter at the beginning of a field and after sentence-ending punctuation. It does not run in URL, email, or protected fields."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sulle tastiere latine, inizia automaticamente con una maiuscola all'inizio del campo e dopo la punteggiatura di fine frase. Non funziona nei campi URL, email o protetti."
+          }
+        }
+      }
+    },
+    "数字" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Numbers"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Numeri"
+          }
+        }
+      }
+    },
+    "絵文字の表示サイズを変更" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change emoji size"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cambia dimensione emoji"
+          }
+        }
+      }
+    },
+    "ラテン文字キーボードでは、空の候補バーは既定で隠れます。候補・予測・お知らせがあるときは表示されます。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On Latin keyboards, an empty suggestion bar is hidden by default. It appears when candidates, predictions, or notices are available."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sulle tastiere latine, la barra dei suggerimenti vuota è nascosta per impostazione predefinita. Ricompare quando ci sono candidati, previsioni o avvisi."
+          }
+        }
+      }
+    },
+    "ピリオドはスペースを素早く2回押して入力できます。設定でオフにもできます。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quickly press space twice to enter a period. You can turn this off in Settings."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Premi rapidamente due volte lo spazio per inserire il punto. Puoi disattivare questa funzione nelle Impostazioni."
           }
         }
       }

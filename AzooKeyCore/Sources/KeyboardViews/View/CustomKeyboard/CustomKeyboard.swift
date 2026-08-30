@@ -21,7 +21,15 @@ public extension CustardKeyLabelStyle {
             // カスタードのラベルは作者が書いた文字列なので常にそのまま。組み込み分は生成時に解決する。
             return .text(value)
         case let .systemImage(value):
-            return .image(value)
+            // Built-in custard symbols get stable localized semantics. Arbitrary user-authored
+            // symbols retain the system fallback because their action cannot be inferred here.
+            // 組み込み記号だけ意味を確定し、ユーザー指定記号は操作を推測しない。
+            let accessibilityLabel: String? = switch value {
+            case "delete.left", "delete.backward": "削除"
+            case "list.bullet": "タブバーの切り替え"
+            default: nil
+            }
+            return .image(value, accessibilityLabel: accessibilityLabel)
         case let .mainAndSub(main, sub):
             return .symbols([main, sub])
         case let .mainAndDirections(main, directions):

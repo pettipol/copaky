@@ -21,7 +21,7 @@ struct FlickAaKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: Uni
             .none
         } else {
             .fourWay([
-                .top: UnifiedVariation(label: .image("capslock"), pressActions: [.setBoolState(VariableStates.BoolStates.isCapsLockedKey, .on)])
+                .top: UnifiedVariation(label: .image("capslock", accessibilityLabel: "大文字に固定する"), pressActions: [.setBoolState(VariableStates.BoolStates.isCapsLockedKey, .on)])
             ])
         }
     }
@@ -32,7 +32,7 @@ struct FlickAaKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: Uni
 
     func label<ThemeExtension>(width: CGFloat, theme _: ThemeData<ThemeExtension>, states: VariableStates, color _: Color?) -> KeyLabel<Extension> where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         if states.boolStates.isCapsLocked {
-            KeyLabel(.image("capslock.fill"), width: width)
+            KeyLabel(.image("capslock.fill", accessibilityLabel: "大文字に固定する"), width: width)
         } else {
             KeyLabel(.text("a/A"), width: width)
         }

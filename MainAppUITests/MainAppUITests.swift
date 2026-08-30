@@ -61,6 +61,11 @@ private enum L {
     static let numberHintsToggle = ["Show numbers on the top row", "上段に数字を表示", "Mostra i numeri nella riga superiore"]
     static let realNumberRowToggle = ["Add a number row to QWERTY", "QWERTYに数字行を追加", "Aggiungi una riga numerica alla QWERTY"]
     static let spaceSlideCursorToggle = ["Slide space to move the cursor", "スペースをスライドしてカーソルを移動", "Scorri sullo spazio per spostare il cursore"]
+    static let hideEmptyCandidateBarToggle = [
+        "候補がないとき候補バーを隠す（ラテン文字キーボード）",
+        "Hide the suggestion bar when it is empty (Latin keyboards)",
+        "Nascondi la barra dei suggerimenti quando è vuota (tastiere latine)",
+    ]
     static let italianToggle = ["Use Italian", "イタリア語を使う", "Usa l'italiano"]
     static let activeLanguages = ["Active languages", "使用する言語", "Lingue attive"]
     static let japaneseLanguage = ["Japanese", "日本語", "Giapponese"]
@@ -83,12 +88,13 @@ private enum L {
     /// Lowercase variants included: the catalog ships them lowercase ("space"/"spazio", seen on
     /// the phone 2026-08-14) and XCUI label matching is case-sensitive.
     static let spaceKey = ["空白", "Space", "space", "Spazio", "spazio"]
-    // The delete key renders as a bare SF-Symbol Image: its LABEL is the OS-derived localized
-    // symbol name (it-IT 26.5 exposes "Ritorno Unitario" — measured 29/08, tree at failure), so
-    // the stable handle is the symbol IDENTIFIER. Labels kept for other device languages.
-    // 削除キーはSFシンボルのImageで、labelはOS派生の翻訳名（不安定）。identifierで掴む。
-    static let deleteKey = ["delete", "削除", "Elimina", "⌫"]
+    // E-18 gives every image key an explicit product-localized label while retaining its SF-Symbol
+    // identifier. Keep legacy labels only in broad lookup helpers; exact gates use the arrays below.
+    // E-18: 画像キーは明示的な製品翻訳labelを持ち、SF Symbolのidentifierは維持する。
+    static let deleteKey = ["delete", "削除", "Delete", "Cancella", "Elimina", "⌫"]
     static let deleteKeyIdentifiers = ["delete.left", "delete.backward"]
+    static let deleteKeyA11y = ["削除", "Delete", "Cancella"]
+    static let numbersKeyA11y = ["数字", "Numbers", "Numeri"]
     /// Back key of the clipboard and emoji tabs — localized since the key-label fix.
     static let backKey = ["戻る", "Back", "Indietro"]
     /// Master switch that reveals every settings section (the paste-control row lives behind it).
@@ -264,6 +270,84 @@ final class CopakyCampaignTests: XCTestCase {
     /// The software keyboard element of the host app.
     private func keyboard(of app: XCUIApplication) -> XCUIElement {
         app.keyboards.firstMatch
+    }
+
+    /// Custom keyboards vend NO XCUI `Keyboard` element on this project (tree dump, 30/08): the
+    /// honest measurable container is UIKit's UIInputView, exposed as `identifier == "inputView"`.
+    /// Mid-transition more than one window can carry a copy, so re-query and take the tallest
+    /// existing frame each sample.
+    /// カスタムキーボードはXCUIのKeyboard要素を持たない（30/08実測）。UIKitのinputView識別子を
+    /// 使い、遷移中は複製があるため毎回最も高いフレームを選ぶ。
+    private func keyboardInputViewFrame(of app: XCUIApplication) -> CGRect? {
+        let query = app.descendants(matching: .other)
+            .matching(NSPredicate(format: "identifier == 'inputView'"))
+        var best: CGRect?
+        for index in 0..<min(query.count, 6) {
+            let element = query.element(boundBy: index)
+            guard element.exists else { continue }
+            let frame = element.frame
+            guard frame.width > 1, frame.height > 1 else { continue }
+            if best == nil || frame.height > best!.height {
+                best = frame
+            }
+        }
+        return best
+    }
+
+    /// Waits until the keyboard inputView frame is available (any non-degenerate sample).
+    private func waitForKeyboardInputViewFrame(of app: XCUIApplication, timeout: TimeInterval) -> CGRect? {
+        let deadline = Date().addingTimeInterval(timeout)
+        repeat {
+            if let frame = keyboardInputViewFrame(of: app) {
+                return frame
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+        } while Date() < deadline
+        return nil
+    }
+
+    /// Resolve an SF-Symbol-backed key by its stable identifier, restricted to the visual keyboard.
+    /// E-18 changes the spoken label, never these identifiers.
+    /// SF Symbolの安定identifierで画像キーを探す。E-18で変えるのはlabelだけ。
+    private func keyboardImageKey(identifier: String, in app: XCUIApplication, timeout: TimeInterval = 4) -> XCUIElement? {
+        let predicate = NSPredicate(format: "identifier == %@", identifier)
+        let deadline = Date().addingTimeInterval(timeout)
+        repeat {
+            let root = keyboard(of: app)
+            let matches = root.exists
+                ? root.descendants(matching: .any).matching(predicate)
+                : app.descendants(matching: .any).matching(predicate)
+            for index in 0..<min(matches.count, 12) {
+                let element = matches.element(boundBy: index)
+                if element.exists, element.frame.minY >= app.frame.height * 0.45 {
+                    return element
+                }
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.25))
+        } while Date() < deadline
+        return nil
+    }
+
+    /// Regression gate for E-18's three always-visible Latin image keys. The exact labels are ours,
+    /// not the OS-localized SF Symbol names; identifiers remain unchanged for the existing harness.
+    /// E-18の回帰ゲート：labelは製品翻訳、identifierは既存値を維持する。
+    private func assertLatinImageKeyAccessibility(in app: XCUIApplication,
+                                                  file: StaticString = #filePath, line: UInt = #line) {
+        let contracts: [(identifier: String, labels: [String], role: String)] = [
+            ("delete.left", L.deleteKeyA11y, "delete"),
+            ("textformat.123", L.numbersKeyA11y, "numbers"),
+            ("arrow.turn.down.left", L.enterKeyReturn, "newline"),
+        ]
+        for contract in contracts {
+            guard let key = keyboardImageKey(identifier: contract.identifier, in: app) else {
+                XCTFail("E-18: \(contract.role) image key is missing stable identifier '\(contract.identifier)'", file: file, line: line)
+                continue
+            }
+            XCTAssertEqual(key.identifier, contract.identifier,
+                           "E-18 must preserve the \(contract.role) key identifier", file: file, line: line)
+            XCTAssertTrue(contract.labels.contains(key.label),
+                          "E-18: \(contract.role) must use an explicit ja/en/it label, got '\(key.label)'", file: file, line: line)
+        }
     }
 
     /// Heuristic: Copaky (azooKey) is the active keyboard when its Japanese special keys exist,
@@ -1281,15 +1365,19 @@ final class CopakyCampaignTests: XCTestCase {
         }
     }
 
-    /// True only when Copaky's Latin QWERTY letters and Latin space key are both on screen.
-    /// Copaky: ラテン文字とラテン空白キーの両方が表示されている時だけ true。
+    /// True only when QWERTY letters/Space are visible and the stable language-switch identifier says
+    /// the current script is Latin. Space itself localizes to 空白 under ja-JP on every tab, so its
+    /// label cannot distinguish Japanese Roman input. / 言語キー識別子でラテン文字タブを判定する。
     private func latinQwertyVisible(in app: XCUIApplication, timeout: TimeInterval) -> Bool {
-        let latinSpaceLabels = L.spaceKey.filter { $0 != "空白" }
         let letter = app.descendants(matching: .any)
             .matching(NSPredicate(format: "label IN %@", ["q", "Q"])).firstMatch
         let space = app.descendants(matching: .any)
-            .matching(NSPredicate(format: "label IN %@", latinSpaceLabels)).firstMatch
-        return letter.waitForExistence(timeout: timeout) && space.exists
+            .matching(NSPredicate(format: "label IN %@", L.spaceKey)).firstMatch
+        guard letter.waitForExistence(timeout: timeout), space.exists,
+              let languageState = currentLanguageSwitchState(in: app, timeout: timeout) else {
+            return false
+        }
+        return languageState.current == "A" || languageState.current == "IT"
     }
 
     private func languageSwitchElement(
@@ -2266,8 +2354,9 @@ final class CopakyCampaignTests: XCTestCase {
     // MARK: - 39 · One-gesture Clipboard history from the Latin 123 slot
 
     /// Copaky: with Clipboard history enabled, one long press on the Latin 123 key opens its tab.
-    /// Simulator seed: `keyboard_type_en=roman`, `enable_clipboard_history_manager_tab=true`, and
-    /// `display_tab_bar_button=true` (the optional button is used only to prove the prerequisite);
+    /// Simulator seed: `keyboard_type_en=roman`, `enable_clipboard_history_manager_tab=true`,
+    /// `display_tab_bar_button=true`, and `use_shift_key=false` (the optional button is used only to
+    /// prove the prerequisite; no-shift keeps the 123 slot present);
     /// the clipboard tab also needs Full Access and the signed App Group container. An unavailable
     /// Simulator is skipped with the same prerequisite wording used by test14.
     /// Copaky: クリップボード履歴ON時、ラテン123キーの長押し1回で履歴タブを開く。
@@ -2276,26 +2365,7 @@ final class CopakyCampaignTests: XCTestCase {
         switchToCopaky(in: safari)
         dismissCopakyNotice(in: safari)
 
-        let latinSpaceLabels = L.spaceKey.filter { $0 != "空白" }
-        func latinQwertyVisible(timeout: TimeInterval) -> Bool {
-            let letter = safari.descendants(matching: .any)
-                .matching(NSPredicate(format: "label IN %@", ["q", "Q"])).firstMatch
-            let space = safari.descendants(matching: .any)
-                .matching(NSPredicate(format: "label IN %@", latinSpaceLabels)).firstMatch
-            return letter.waitForExistence(timeout: timeout) && space.exists
-        }
-
-        switchToEnglishTab(in: safari)
-        if !latinQwertyVisible(timeout: 2),
-           let back = firstMatch(in: safari, labels: ["ABC", "ITA", "あいう"], timeout: 2),
-           back.isHittable {
-            back.tap()
-            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
-        }
-        if !latinQwertyVisible(timeout: 2) {
-            switchToEnglishTab(in: safari)
-        }
-        guard latinQwertyVisible(timeout: 4) else {
+        guard switchToLatinQwertyTab(in: safari) else {
             dump(safari, "39-no-initial-latin-qwerty")
             shot("39-no-initial-latin-qwerty")
             XCTFail("Latin QWERTY not reached; seed keyboard_type_en=roman")
@@ -2363,7 +2433,7 @@ final class CopakyCampaignTests: XCTestCase {
         clipboardBack.tap()
         RunLoop.current.run(until: Date().addingTimeInterval(0.8))
 
-        guard latinQwertyVisible(timeout: 4) else {
+        guard latinQwertyVisible(in: safari, timeout: 4) else {
             dump(safari, "39-latin-qwerty-did-not-return")
             shot("39-latin-qwerty-did-not-return")
             XCTFail("Clipboard history back key did not return to Latin QWERTY")
@@ -3882,6 +3952,185 @@ final class CopakyCampaignTests: XCTestCase {
         shot("47-space-slide-cursor")
     }
 
+    // MARK: - 48 · Empty Latin candidate bar shortens the keyboard by default
+
+    /// F-05 height gate. Run through `scripts/run_ui_test.sh --fresh-install`: the orchestrator pins
+    /// the new TRUE default first, then this test changes the real shared setting to FALSE and
+    /// re-enters the same fixture field / Latin layout. A signed App Group is required so the second
+    /// phase reaches the extension; failure to observe the height change is a failure, never a skip.
+    /// F-05高さゲート。新しいTRUE既定値とFALSEを同じフィールド／ラテン配列で比較する。
+    func test48_hiddenCandidateBarReducesHeight() throws {
+        mainApp.launch()
+        if let close = firstMatch(in: mainApp, labels: L.closeOnboarding, timeout: 4) {
+            close.tap()
+        }
+        openSettingsTab()
+        guard driveSwitch(L.hideEmptyCandidateBarToggle, to: true) else {
+            dump(mainApp, "48-hide-empty-setting-not-on")
+            XCTFail("Could not establish F-05's TRUE default; run test48 through scripts/run_ui_test.sh --fresh-install")
+            return
+        }
+
+        /// Wait for a non-zero, stable keyboard inputView frame. The container is required here:
+        /// inferring height from a key would silently omit the candidate-bar region under test.
+        /// Custom keyboards vend no XCUI `Keyboard` element (30/08) — measure UIKit's inputView.
+        /// 候補バー自体を含むため、キー位置からは推定せずinputViewのframeを必須とする。
+        func stableKeyboardHeight(evidence: String, greaterThan baseline: CGFloat? = nil) -> CGFloat? {
+            guard waitForKeyboardInputViewFrame(of: safari, timeout: 6) != nil else {
+                dump(safari, "48-\(evidence)-keyboard-root-missing")
+                shot("48-\(evidence)-keyboard-root-missing")
+                XCTFail("F-05 height gate cannot measure the total keyboard: no inputView frame is exposed")
+                return nil
+            }
+            var previous = CGFloat.nan
+            var stableSamples = 0
+            for _ in 0..<24 {
+                let height = keyboardInputViewFrame(of: safari)?.height ?? 0
+                let clearedThreshold = baseline.map { height > $0 + 1 } ?? true
+                if height > 1, clearedThreshold {
+                    if previous.isFinite, abs(height - previous) < 0.5 {
+                        stableSamples += 1
+                        if stableSamples >= 2 { return height }
+                    } else {
+                        stableSamples = 0
+                    }
+                    previous = height
+                } else {
+                    stableSamples = 0
+                    previous = CGFloat.nan
+                }
+                RunLoop.current.run(until: Date().addingTimeInterval(0.35))
+            }
+            dump(safari, "48-\(evidence)-height-not-stable")
+            shot("48-\(evidence)-height-not-stable")
+            if let baseline {
+                XCTFail("F-05 setting changed but keyboard height never grew beyond the hidden baseline \(baseline)")
+            } else {
+                XCTFail("F-05 keyboard height did not settle to a measurable non-zero value")
+            }
+            return nil
+        }
+
+        func enterEmptyLatinField(evidence: String) -> XCUIElement? {
+            let field = activatePreNavigatedField("plain-text")
+            switchToCopaky(in: safari)
+            dismissCopakyNotice(in: safari)
+            guard switchToLatinQwertyTab(in: safari) else {
+                dump(safari, "48-\(evidence)-latin-tab-missing")
+                shot("48-\(evidence)-latin-tab-missing")
+                XCTFail("Could not establish an empty Latin QWERTY for the F-05 \(evidence) phase")
+                return nil
+            }
+            clearFocusedField(field, placeholder: "plain-text", in: safari)
+            RunLoop.current.run(until: Date().addingTimeInterval(1.0))
+            return field
+        }
+
+        guard enterEmptyLatinField(evidence: "hidden") != nil,
+              let hiddenHeight = stableKeyboardHeight(evidence: "hidden") else { return }
+        shot("48-hidden-empty-candidate-bar")
+
+        // Use a fresh Safari/extension presentation after the shared setting changes. Re-tapping an
+        // already-focused field after a MainApp round-trip is unreliable on iOS 26 (see test46).
+        safari.terminate()
+        mainApp.activate()
+        RunLoop.current.run(until: Date().addingTimeInterval(1.0))
+        openSettingsTab()
+        guard driveSwitch(L.hideEmptyCandidateBarToggle, to: false) else {
+            dump(mainApp, "48-hide-empty-setting-not-off")
+            XCTFail("Could not switch hide_empty_candidate_bar_on_latin to FALSE for the visible baseline")
+            return
+        }
+        RunLoop.current.run(until: Date().addingTimeInterval(1.0))
+
+        guard enterEmptyLatinField(evidence: "visible") != nil,
+              let visibleHeight = stableKeyboardHeight(evidence: "visible", greaterThan: hiddenHeight) else { return }
+        XCTAssertGreaterThan(visibleHeight, hiddenHeight + 1,
+                             "F-05: reserving the empty candidate bar must make the same Latin keyboard taller")
+        note("48-height-comparison", "hidden=\(hiddenHeight) visible=\(visibleHeight) delta=\(visibleHeight - hiddenHeight)")
+        shot("48-visible-empty-candidate-bar")
+    }
+
+    // MARK: - 49 · Apple-proportioned Latin bottom row + image-key accessibility
+
+    /// F-07 geometric gate on the new-default Latin layout: Space occupies at least 45% of the
+    /// keyboard width and no period key remains immediately to its right. E-18 is checked on the
+    /// same stable tree: explicit localized labels plus unchanged SF-Symbol identifiers.
+    /// F-07の幅とピリオド除去、E-18のlabel/identifier契約を同じラテンタブで検証する。
+    func test49_appleLatinBottomRowGeometryAndImageAccessibility() throws {
+        let field = activatePreNavigatedField("plain-text")
+        switchToCopaky(in: safari)
+        dismissCopakyNotice(in: safari)
+        guard switchToLatinQwertyTab(in: safari) else {
+            dump(safari, "49-latin-tab-missing")
+            shot("49-latin-tab-missing")
+            XCTFail("Could not establish Latin QWERTY; seed keyboard_type_en=roman")
+            return
+        }
+        clearFocusedField(field, placeholder: "plain-text", in: safari)
+        RunLoop.current.run(until: Date().addingTimeInterval(1.0))
+
+        // Custom keyboards vend no XCUI `Keyboard` element on this project (30/08): measure the
+        // UIKit inputView container frame and scope every query by frame containment instead.
+        // カスタムキーボードはKeyboard要素を持たないため、inputViewのframeで包含判定する。
+        guard let keyboardFrame = waitForKeyboardInputViewFrame(of: safari, timeout: 6),
+              keyboardFrame.width > 1 else {
+            dump(safari, "49-keyboard-root-missing")
+            shot("49-keyboard-root-missing")
+            XCTFail("F-07 geometry gate requires the keyboard inputView frame to measure total width")
+            return
+        }
+
+        let spaces = safari.descendants(matching: .any)
+            .matching(NSPredicate(format: "label IN %@", L.spaceKey))
+        var space: XCUIElement?
+        var widest = CGFloat.zero
+        for index in 0..<min(spaces.count, 12) {
+            let candidate = spaces.element(boundBy: index)
+            guard candidate.exists, candidate.isHittable else { continue }
+            let frame = candidate.frame
+            guard keyboardFrame.intersection(frame).height >= frame.height * 0.5,
+                  frame.width > widest else { continue }
+            space = candidate
+            widest = frame.width
+        }
+        guard let space else {
+            dump(safari, "49-space-missing")
+            shot("49-space-missing")
+            XCTFail("F-07 Latin space key is missing")
+            return
+        }
+        XCTAssertGreaterThanOrEqual(
+            space.frame.width,
+            keyboardFrame.width * 0.45,
+            "F-07: Latin Space must occupy at least 45% of the keyboard width"
+        )
+
+        // A page may contain punctuation, so admit only dots inside the keyboard frame and
+        // overlapping Space's row. The old base-row dot abutted Space (zero horizontal gap).
+        // ページ文字は除外し、キーボード内でSpace行と重なるドットキーだけを検査する。
+        let dots = safari.descendants(matching: .any)
+            .matching(NSPredicate(format: "label == %@ OR identifier == %@ OR title == %@", ".", ".", "."))
+        var adjacentDots: [CGRect] = []
+        for index in 0..<min(dots.count, 20) {
+            let dot = dots.element(boundBy: index)
+            guard dot.exists else { continue }
+            let frame = dot.frame
+            guard keyboardFrame.intersection(frame).height >= frame.height * 0.5 else { continue }
+            let verticalOverlap = frame.intersection(space.frame).height
+            let isSameRow = verticalOverlap >= min(frame.height, space.frame.height) * 0.5
+            let gap = frame.minX - space.frame.maxX
+            let isAdjacentOnRight = frame.midX > space.frame.midX && gap >= -1 && gap <= keyboardFrame.width * 0.12
+            if isSameRow, isAdjacentOnRight { adjacentDots.append(frame) }
+        }
+        XCTAssertTrue(adjacentDots.isEmpty,
+                      "F-07: no '.' key may remain adjacent to Space's right edge; found frames \(adjacentDots)")
+
+        assertLatinImageKeyAccessibility(in: safari)
+        note("49-bottom-row-geometry", "keyboardWidth=\(keyboardFrame.width) spaceWidth=\(space.frame.width) ratio=\(space.frame.width / keyboardFrame.width)")
+        shot("49-apple-latin-bottom-row")
+    }
+
     // MARK: - 50 · Accessibility audit inventory across the Settings screens
 
     /// One collected accessibility-audit issue, flattened to plain strings so it can be JSON-encoded
@@ -3982,13 +4231,11 @@ final class CopakyCampaignTests: XCTestCase {
 
     /// Accessibility-audit inventory (playbook §4.2) over every principal screen reachable from the tab
     /// bar / Settings root: Tips, Settings in its short "Essenziali" form, Settings with every section
-    /// shown, the OSS-license screen, the Contact screen, and the Themes tab. Every issue found is
-    /// RECORDED, never failed on — the closure always returns `true` — because this is a census for a
-    /// human to triage (reports/a11y_audit_*.md), not a regression gate. The only thing this test can
-    /// fail on is the harness throwing before any screen is reached; a screen that cannot be navigated
-    /// to is logged as `A11Y-SKIP` and the sweep continues to the next one.
-    /// 各画面の監査結果を収集するだけの一覧作成テスト。個々のissueでは失敗させない
-    /// （画面遷移の失敗のみSKIPとして記録し、次の画面へ続行する）。
+    /// shown, the OSS-license screen, the Contact screen, the Themes tab, and the Latin keyboard.
+    /// Audit issues are RECORDED, never failed on — the closure always returns `true` — because that
+    /// part is a census for human triage (reports/a11y_audit_*.md). E-18's explicit image-key labels
+    /// are a separate exact regression contract and do fail when missing or OS-derived.
+    /// 監査issueは一覧として収集するだけだが、E-18の画像キーlabelは厳密な回帰ゲートとする。
     func test50_accessibilityAudit_settingsScreens() throws {
         guard #available(iOS 17.0, *) else {
             throw XCTSkip("performAccessibilityAudit (XCUIAccessibilityAuditType) needs iOS 17+, this run is older")
@@ -4050,7 +4297,25 @@ final class CopakyCampaignTests: XCTestCase {
             print("A11Y-SKIP|Temi|tab bar item not found")
         }
 
-        // 7 · "Appunti" (clipboard) — there is no such MainApp screen: clipboard history lives INSIDE
+        // 7 · Latin keyboard image keys (E-18). The audit inventory is supplemented by exact product-
+        // label assertions because the OS-derived SF Symbol name is non-empty and can therefore evade
+        // `.sufficientElementDescription` despite being wrong (e.g. it-IT "Ritorno Unitario").
+        // E-18: OS派生名も空ではないため、監査に加えて製品翻訳labelを厳密検証する。
+        let a11yField = activatePreNavigatedField("plain-text")
+        switchToCopaky(in: safari)
+        dismissCopakyNotice(in: safari)
+        if switchToLatinQwertyTab(in: safari) {
+            clearFocusedField(a11yField, placeholder: "plain-text", in: safari)
+            RunLoop.current.run(until: Date().addingTimeInterval(1.0))
+            shot("50-latin-keyboard")
+            issues += auditScreen("Tastiera latina", in: safari)
+            assertLatinImageKeyAccessibility(in: safari)
+        } else {
+            dump(safari, "50-latin-keyboard-missing")
+            XCTFail("E-18 accessibility gate could not establish the Latin QWERTY keyboard")
+        }
+
+        // 8 · "Appunti" (clipboard) — there is no such MainApp screen: clipboard history lives INSIDE
         // the keyboard extension's own tab bar (openClipboardTab), which needs a signed build /
         // provisioned App Group (playbook §5) — an unsigned-sim UI test cannot reach it from here.
         // 「Appunti」画面はMainApp側に存在しない（キーボード拡張のタブとしてのみ存在し、署名ビルドが必要）。

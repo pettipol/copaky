@@ -92,6 +92,8 @@ struct SettingTabView: View {
                         // Copaky: アクセント自動補正を対象となるイタリア語設定の直後に置く。
                         BoolSettingView(.italianAutoAccentOnSpace)
                         BoolSettingView(.enableLatinAutocorrect)
+                        BoolSettingView(.enableDoubleSpacePeriod)
+                        BoolSettingView(.enableLatinAutoCapitalization)
                         ClipboardHistorySettingRows()
                         BoolSettingView(.displayTabBarButton)
                         BoolSettingView(.hideEmptyCandidateBarOnLatin)
@@ -229,6 +231,10 @@ struct SettingTabView: View {
                         .searchKeys("イタリア語", "アクセント", "自動補正", "スペース", "italiano", "accento", "automatico", "spazio", "italian", "accent", "automatic", "space")
                     BoolSettingView(.enableLatinAutocorrect)
                         .searchKeys("自動修正", "誤字", "ラテン文字", "refusi", "correzione", "automatica", "tastiere", "latine", "typos", "autocorrect", "latin", "keyboards")
+                    BoolSettingView(.enableDoubleSpacePeriod)
+                        .searchKeys("スペース", "2回", "ピリオド", "punto", "doppio", "spazio", "period", "double", "space")
+                    BoolSettingView(.enableLatinAutoCapitalization)
+                        .searchKeys("文頭", "大文字", "自動", "maiuscole", "automatiche", "auto-capitalization", "capitalization", "sentence")
                 }
                 .inheritSearchKeys()
 

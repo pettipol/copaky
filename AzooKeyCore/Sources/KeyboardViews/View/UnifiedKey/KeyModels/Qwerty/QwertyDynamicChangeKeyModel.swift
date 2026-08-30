@@ -81,7 +81,7 @@ struct QwertyDynamicChangeKeyModel<Extension: ApplicationSpecificKeyboardViewExt
                 if QwertyLayoutProvider<Extension>.shiftBehaviorPreference() != .leftbottom || states.boolStates.isShifted || states.boolStates.isCapsLocked {
                     KeyLabel(.changeKeyboard, width: width, textColor: color)
                 } else {
-                    KeyLabel(.image("textformat.123"), width: width, textColor: color)
+                    KeyLabel(.image("textformat.123", accessibilityLabel: "数字"), width: width, textColor: color)
                 }
             default:
                 KeyLabel(.changeKeyboard, width: width, textColor: color)
@@ -94,12 +94,12 @@ struct QwertyDynamicChangeKeyModel<Extension: ApplicationSpecificKeyboardViewExt
                 if QwertyLayoutProvider<Extension>.shiftBehaviorPreference() != .leftbottom || states.boolStates.isShifted || states.boolStates.isCapsLocked {
                     KeyLabel(.text("#+="), width: width, textColor: color)
                 } else {
-                    KeyLabel(.image("textformat.123"), width: width, textColor: color)
+                    KeyLabel(.image("textformat.123", accessibilityLabel: "数字"), width: width, textColor: color)
                 }
             case .qwerty_numbers, .qwerty_symbols:
                 KeyLabel(.text(KeyboardLanguage.en_US.symbol), width: width, textColor: color)
             default:
-                KeyLabel(.image("arrowtriangle.left.and.line.vertical.and.arrowtriangle.right"), width: width, textColor: color)
+                KeyLabel(.image("arrowtriangle.left.and.line.vertical.and.arrowtriangle.right", accessibilityLabel: "カーソルバーの切り替え"), width: width, textColor: color)
             }
         }
     }

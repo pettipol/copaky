@@ -82,7 +82,7 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
             }
         }
 
-        var title: LocalizedStringKey {
+        var titleKey: String {
             switch self {
             case .smileys:
                 return "顔と感情"
@@ -103,6 +103,10 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
             case .recent:
                 return "よく使う絵文字"
             }
+        }
+
+        var title: LocalizedStringKey {
+            LocalizedStringKey(titleKey)
         }
 
         var next: Genre? {
@@ -267,7 +271,7 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
     }
 
     private func deleteKey() -> SimpleKeyView<Extension> {
-        SimpleKeyView(model: SimpleKeyModel<Extension>(keyLabelType: .image("delete.left"), unpressedKeyColorType: .special, pressActions: [.delete(1)], longPressActions: .init(repeat: [.delete(1)])), width: functionKeyWidth, height: footerHeight)
+        SimpleKeyView(model: SimpleKeyModel<Extension>(keyLabelType: .image("delete.left", accessibilityLabel: "削除"), unpressedKeyColorType: .special, pressActions: [.delete(1)], longPressActions: .init(repeat: [.delete(1)])), width: functionKeyWidth, height: footerHeight)
     }
 
     private func expandKey() -> SimpleKeyView<Extension> {
@@ -285,7 +289,7 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
     }
 
     private func genreKey(_ genre: Genre) -> some View {
-        SimpleKeyView<Extension>(model: GenreKeyModel<Extension>(systemImage: genre.icon, unpressedKeyColorType: genre == selectedGenre ? .selected : .unimportant, action: { self.selectedGenre = genre }), width: functionKeyWidth, height: footerHeight)
+        SimpleKeyView<Extension>(model: GenreKeyModel<Extension>(systemImage: genre.icon, accessibilityLabel: genre.titleKey, unpressedKeyColorType: genre == selectedGenre ? .selected : .unimportant, action: { self.selectedGenre = genre }), width: functionKeyWidth, height: footerHeight)
     }
 
     private func switchGenreButton(genre: Genre, systemImage: String) -> some View {
@@ -313,7 +317,7 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
                         LazyHGrid(rows: Array(repeating: gridItem, count: verticalCount), spacing: 0) {
                             let models = self.emojis[selectedGenre, default: []]
                             if !models.isEmpty {
-                                SimpleKeyView<Extension>(model: SimpleKeyModel<Extension>(keyLabelType: .image(selectedGenre.icon), unpressedKeyColorType: .selected, pressActions: []), width: keySize, height: keySize)
+                                SimpleKeyView<Extension>(model: SimpleKeyModel<Extension>(keyLabelType: .image(selectedGenre.icon, accessibilityLabel: selectedGenre.titleKey), unpressedKeyColorType: .selected, pressActions: []), width: keySize, height: keySize)
                                     .id(0)
                                 ForEach(models) { model in
                                     SimpleKeyView<Extension>(model: EmojiKeyModel<Extension>(model.emoji, base: model.base), width: keySize, height: keySize)
@@ -375,7 +379,7 @@ private struct ExpandKeyModel<Extension: ApplicationSpecificKeyboardViewExtensio
     private var currentLevel: EmojiTabExpandModePreference.Level
     private var action: () -> Void
     func label(width: CGFloat, states: VariableStates) -> KeyLabel<Extension> {
-        KeyLabel(.image(self.currentLevel.icon), width: width, textSize: .max)
+        KeyLabel(.image(self.currentLevel.icon, accessibilityLabel: "絵文字の表示サイズを変更"), width: width, textSize: .max)
     }
 
     init(currentLevel: EmojiTabExpandModePreference.Level, action: @escaping () -> Void) {
@@ -401,13 +405,15 @@ private struct ExpandKeyModel<Extension: ApplicationSpecificKeyboardViewExtensio
 private struct GenreKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: SimpleKeyModelProtocol {
     private var action: () -> Void
     private var systemImage: String
+    private var accessibilityLabel: String
     func label(width: CGFloat, states: VariableStates) -> KeyLabel<Extension> {
-        KeyLabel(.image(systemImage), width: width, textSize: .max)
+        KeyLabel(.image(systemImage, accessibilityLabel: accessibilityLabel), width: width, textSize: .max)
     }
 
-    init(systemImage: String, unpressedKeyColorType: SimpleUnpressedKeyColorType, action: @escaping () -> Void) {
+    init(systemImage: String, accessibilityLabel: String, unpressedKeyColorType: SimpleUnpressedKeyColorType, action: @escaping () -> Void) {
         self.action = action
         self.systemImage = systemImage
+        self.accessibilityLabel = accessibilityLabel
         self.unpressedKeyColorType = unpressedKeyColorType
     }
     let unpressedKeyColorType: SimpleUnpressedKeyColorType

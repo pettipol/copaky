@@ -23,7 +23,9 @@ public enum KeyLabelType: Sendable, Equatable {
     case localizedText(String)
     case symbols([String])
     case mainAndDirections(String, CustardKeyDirectionalLabel)
-    case image(String)
+    /// SF Symbol with an optional string-catalog key used as its explicit VoiceOver label.
+    /// SF Symbol と、VoiceOver が読み上げる文字列カタログのキー（任意）。
+    case image(String, accessibilityLabel: String? = nil)
     case customImage(String)
     case changeKeyboard
     case selectable(String, String)
@@ -151,11 +153,20 @@ public struct KeyLabel<Extension: ApplicationSpecificKeyboardViewExtension>: Vie
             DirectionalKeyLabel(main: mainText, directions: directions, font: font, subFont: subFont)
                 .foregroundStyle(mainKeyColor)
                 .allowsHitTesting(false)
-        case let .image(imageName):
-            Image(systemName: imageName)
-                .font(Design.fonts.iconImageFont(keyViewFontSizePreference: Extension.SettingProvider.keyViewFontSize, theme: theme))
-                .foregroundStyle(mainKeyColor)
-                .allowsHitTesting(false)
+        case let .image(imageName, accessibilityLabel):
+            if let accessibilityLabel {
+                let localizedLabel = String(localized: String.LocalizationValue(accessibilityLabel), bundle: .main)
+                Image(systemName: imageName)
+                    .font(Design.fonts.iconImageFont(keyViewFontSizePreference: Extension.SettingProvider.keyViewFontSize, theme: theme))
+                    .foregroundStyle(mainKeyColor)
+                    .accessibilityLabel(Text(verbatim: localizedLabel))
+                    .allowsHitTesting(false)
+            } else {
+                Image(systemName: imageName)
+                    .font(Design.fonts.iconImageFont(keyViewFontSizePreference: Extension.SettingProvider.keyViewFontSize, theme: theme))
+                    .foregroundStyle(mainKeyColor)
+                    .allowsHitTesting(false)
+            }
 
         case let .customImage(imageName):
             Image(imageName)

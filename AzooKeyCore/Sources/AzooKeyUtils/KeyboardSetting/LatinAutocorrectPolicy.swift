@@ -54,10 +54,83 @@ public enum LatinAutocorrectPolicy {
     public struct SpellCheckResult: Equatable, Sendable {
         public let isMisspelled: Bool
         public let guesses: [String]
+        /// Exact guesses that UIKit reports as user-learned words. Learned English guesses and
+        /// unattested learned Italian guesses are never eligible for correction.
+        public let learnedGuesses: Set<String>
+        /// Guesses known to pass a same-language second oracle query. Production populates this
+        /// only for the selected winner; deterministic callers may inject validity for every guess.
+        public let oracleAcceptedGuesses: Set<String>
 
-        public init(isMisspelled: Bool, guesses: [String]) {
+        public init(
+            isMisspelled: Bool,
+            guesses: [String],
+            learnedGuesses: Set<String> = [],
+            oracleAcceptedGuesses: Set<String>? = nil
+        ) {
             self.isMisspelled = isMisspelled
             self.guesses = guesses
+            self.learnedGuesses = learnedGuesses
+            // Backwards-compatible deterministic seam: an omitted validity set means that the
+            // injected oracle accepts its own guesses. Production always passes an explicit set.
+            self.oracleAcceptedGuesses = oracleAcceptedGuesses ?? Set(guesses)
+        }
+    }
+
+    /// Stable fail-closed reasons intended for DEBUG diagnostics and deterministic tests.
+    public enum RejectionReason: String, Equatable, Sendable {
+        case preflightRejected
+        case attestedItalianWord
+        case spellCheckUnavailable
+        case typedWordAccepted
+        case noEligibleGuess
+        case candidateRejectedByOracle
+    }
+
+    /// A single policy pass, including only the typed-word spell-check snapshot needed for DEBUG
+    /// diagnostics. It intentionally carries no surrounding host text.
+    public struct Evaluation: Equatable, Sendable {
+        public let correction: String?
+        public let rejectionReason: RejectionReason?
+        public let spellCheckResult: SpellCheckResult?
+        /// Winner before case adaptation. Present even when the second oracle query rejects it.
+        public let selectedCandidate: String?
+
+        private init(
+            correction: String?,
+            rejectionReason: RejectionReason?,
+            spellCheckResult: SpellCheckResult?,
+            selectedCandidate: String?
+        ) {
+            self.correction = correction
+            self.rejectionReason = rejectionReason
+            self.spellCheckResult = spellCheckResult
+            self.selectedCandidate = selectedCandidate
+        }
+
+        fileprivate static func accepted(
+            _ correction: String,
+            spellCheckResult: SpellCheckResult?,
+            selectedCandidate: String
+        ) -> Self {
+            .init(
+                correction: correction,
+                rejectionReason: nil,
+                spellCheckResult: spellCheckResult,
+                selectedCandidate: selectedCandidate
+            )
+        }
+
+        fileprivate static func rejected(
+            _ reason: RejectionReason,
+            spellCheckResult: SpellCheckResult? = nil,
+            selectedCandidate: String? = nil
+        ) -> Self {
+            .init(
+                correction: nil,
+                rejectionReason: reason,
+                spellCheckResult: spellCheckResult,
+                selectedCandidate: selectedCandidate
+            )
         }
     }
 
@@ -74,6 +147,11 @@ public enum LatinAutocorrectPolicy {
         let lengthDelta: Int
         let length: Int
         let oracleIndex: Int
+    }
+
+    private struct SystemSpellCheckSnapshot {
+        let result: SpellCheckResult
+        let languageIdentifier: String
     }
 
     // Long identifier-like runs are not prose words and must never create unbounded work inside
@@ -93,16 +171,62 @@ public enum LatinAutocorrectPolicy {
         language: Language,
         context: Context
     ) -> String? {
+        evaluate(forTypedWord: typed, language: language, context: context).correction
+    }
+
+    /// Production evaluation performs one typed-word oracle path, then revalidates only its winner.
+    @MainActor public static func evaluate(
+        forTypedWord typed: String,
+        language: Language,
+        context: Context
+    ) -> Evaluation {
         switch preflight(forTypedWord: typed, language: language, context: context) {
         case .reject:
-            return nil
+            return .rejected(.preflightRejected)
         case let .preferred(correction):
-            return correction
+            return .accepted(correction, spellCheckResult: nil, selectedCandidate: correction)
         case .requiresSpellCheck:
-            guard let result = systemSpellCheck(forTypedWord: typed, language: language) else {
-                return nil
+            // A frequency-attested Italian word is positive evidence and must never reach a
+            // potentially polluted dynamic UIKit lexicon. / 頻度辞書にある入力語は照会前に保持する。
+            guard !isAttestedItalianWord(typed, language: language) else {
+                return .rejected(.attestedItalianWord)
             }
-            return rankedCorrection(forTypedWord: typed, language: language, result: result)
+            guard let snapshot = systemSpellCheck(forTypedWord: typed, language: language) else {
+                return .rejected(.spellCheckUnavailable)
+            }
+            guard snapshot.result.isMisspelled else {
+                return .rejected(.typedWordAccepted, spellCheckResult: snapshot.result)
+            }
+            guard let candidate = rankedCandidate(
+                forTypedWord: typed,
+                language: language,
+                result: snapshot.result
+            ) else {
+                return .rejected(.noEligibleGuess, spellCheckResult: snapshot.result)
+            }
+
+            let candidateIsAccepted = systemOracleAccepts(
+                candidate.text,
+                languageIdentifier: snapshot.languageIdentifier
+            )
+            let diagnosedResult = SpellCheckResult(
+                isMisspelled: snapshot.result.isMisspelled,
+                guesses: snapshot.result.guesses,
+                learnedGuesses: snapshot.result.learnedGuesses,
+                oracleAcceptedGuesses: candidateIsAccepted ? [candidate.text] : []
+            )
+            guard candidateIsAccepted else {
+                return .rejected(
+                    .candidateRejectedByOracle,
+                    spellCheckResult: diagnosedResult,
+                    selectedCandidate: candidate.text
+                )
+            }
+            return .accepted(
+                adaptCase(of: candidate.text, to: typed),
+                spellCheckResult: diagnosedResult,
+                selectedCandidate: candidate.text
+            )
         }
     }
 
@@ -113,17 +237,61 @@ public enum LatinAutocorrectPolicy {
         context: Context,
         spellCheckResult: SpellCheckResult?
     ) -> String? {
+        evaluate(
+            forTypedWord: typed,
+            language: language,
+            context: context,
+            spellCheckResult: spellCheckResult
+        ).correction
+    }
+
+    /// Deterministic seam: learned status and same-language candidate validity are injectable.
+    public static func evaluate(
+        forTypedWord typed: String,
+        language: Language,
+        context: Context,
+        spellCheckResult: SpellCheckResult?
+    ) -> Evaluation {
         switch preflight(forTypedWord: typed, language: language, context: context) {
         case .reject:
-            return nil
+            return .rejected(.preflightRejected)
         case let .preferred(correction):
-            return correction
+            return .accepted(correction, spellCheckResult: nil, selectedCandidate: correction)
         case .requiresSpellCheck:
-            guard let spellCheckResult else {
-                return nil
+            guard !isAttestedItalianWord(typed, language: language) else {
+                return .rejected(.attestedItalianWord)
             }
-            return rankedCorrection(forTypedWord: typed, language: language, result: spellCheckResult)
+            guard let spellCheckResult else {
+                return .rejected(.spellCheckUnavailable)
+            }
+            guard spellCheckResult.isMisspelled else {
+                return .rejected(.typedWordAccepted, spellCheckResult: spellCheckResult)
+            }
+            guard let candidate = rankedCandidate(
+                forTypedWord: typed,
+                language: language,
+                result: spellCheckResult
+            ) else {
+                return .rejected(.noEligibleGuess, spellCheckResult: spellCheckResult)
+            }
+            guard spellCheckResult.oracleAcceptedGuesses.contains(candidate.text) else {
+                return .rejected(
+                    .candidateRejectedByOracle,
+                    spellCheckResult: spellCheckResult,
+                    selectedCandidate: candidate.text
+                )
+            }
+            return .accepted(
+                adaptCase(of: candidate.text, to: typed),
+                spellCheckResult: spellCheckResult,
+                selectedCandidate: candidate.text
+            )
         }
+    }
+
+    private static func isAttestedItalianWord(_ typed: String, language: Language) -> Bool {
+        language == .italian
+            && ItalianAutocorrectFrequencyLexicon.rank(ofLowercased: typed.lowercased()) != nil
     }
 
     private static func preflight(
@@ -181,7 +349,7 @@ public enum LatinAutocorrectPolicy {
     @MainActor private static func systemSpellCheck(
         forTypedWord typed: String,
         language: Language
-    ) -> SpellCheckResult? {
+    ) -> SystemSpellCheckSnapshot? {
         let available = UITextChecker.availableLanguages
         let requiredIdentifier = normalizedLanguageIdentifier(language.rawValue)
         let identifier = available.first {
@@ -200,7 +368,14 @@ public enum LatinAutocorrectPolicy {
             language: identifier
         )
         guard misspelledRange.location != NSNotFound else {
-            return SpellCheckResult(isMisspelled: false, guesses: [])
+            return SystemSpellCheckSnapshot(
+                result: SpellCheckResult(
+                    isMisspelled: false,
+                    guesses: [],
+                    oracleAcceptedGuesses: []
+                ),
+                languageIdentifier: identifier
+            )
         }
         // The input is one composing word. A partial-range diagnosis is ambiguous, so do not ask
         // for or apply guesses unless the checker rejected that whole word.
@@ -208,25 +383,48 @@ public enum LatinAutocorrectPolicy {
         guard misspelledRange == range else {
             return nil
         }
-        return SpellCheckResult(
-            isMisspelled: true,
-            guesses: checker.guesses(forWordRange: misspelledRange, in: typed, language: identifier) ?? []
+        let guesses = checker.guesses(
+            forWordRange: misspelledRange,
+            in: typed,
+            language: identifier
+        ) ?? []
+        let learnedGuesses = Set(guesses.filter { UITextChecker.hasLearnedWord($0) })
+        return SystemSpellCheckSnapshot(
+            result: SpellCheckResult(
+                isMisspelled: true,
+                guesses: guesses,
+                learnedGuesses: learnedGuesses,
+                // Unknown until the selected winner receives its same-language second query.
+                oracleAcceptedGuesses: []
+            ),
+            languageIdentifier: identifier
         )
+    }
+
+    @MainActor private static func systemOracleAccepts(
+        _ candidate: String,
+        languageIdentifier: String
+    ) -> Bool {
+        let range = NSRange(location: 0, length: (candidate as NSString).length)
+        let misspelledRange = checker.rangeOfMisspelledWord(
+            in: candidate,
+            range: range,
+            startingAt: 0,
+            wrap: false,
+            language: languageIdentifier
+        )
+        return misspelledRange.location == NSNotFound
     }
 
     private static func normalizedLanguageIdentifier(_ identifier: String) -> String {
         identifier.replacingOccurrences(of: "_", with: "-").lowercased()
     }
 
-    private static func rankedCorrection(
+    private static func rankedCandidate(
         forTypedWord typed: String,
         language: Language,
         result: SpellCheckResult
-    ) -> String? {
-        guard result.isMisspelled else {
-            return nil
-        }
-
+    ) -> RankedCandidate? {
         let threshold = typed.count <= 4 ? 1 : 2
         let typedLowercased = typed.lowercased()
         let ranked = result.guesses.enumerated().compactMap { index, guess -> RankedCandidate? in
@@ -244,12 +442,21 @@ public enum LatinAutocorrectPolicy {
             guard distance <= threshold else {
                 return nil
             }
+            let italianFrequencyRank = language == .italian
+                ? ItalianAutocorrectFrequencyLexicon.rank(ofLowercased: guessLowercased)
+                : nil
+            if result.learnedGuesses.contains(guess) {
+                // Dynamic learned words are untrusted. Italian makes the sole exception when the
+                // pinned frequency lexicon independently attests the candidate; English has no
+                // equivalent embedded oracle. / 学習語は伊語頻度辞書に載る場合だけ許可する。
+                guard language == .italian, italianFrequencyRank != nil else {
+                    return nil
+                }
+            }
             return RankedCandidate(
                 text: guess,
                 distance: distance,
-                italianFrequencyRank: language == .italian
-                    ? ItalianAutocorrectFrequencyLexicon.rank(ofLowercased: guessLowercased)
-                    : nil,
+                italianFrequencyRank: italianFrequencyRank,
                 lengthDelta: lengthDelta,
                 length: guess.count,
                 oracleIndex: index
@@ -278,7 +485,7 @@ public enum LatinAutocorrectPolicy {
             // Preserve the system oracle order as the final deterministic tie-break.
             return lhs.oracleIndex < rhs.oracleIndex
         }
-        return best.map { adaptCase(of: $0.text, to: typed) }
+        return best
     }
 
     private static func adaptCase(of candidate: String, to typed: String) -> String {

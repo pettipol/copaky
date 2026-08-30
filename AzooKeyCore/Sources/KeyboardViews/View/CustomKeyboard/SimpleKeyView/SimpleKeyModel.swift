@@ -195,7 +195,7 @@ struct SimpleChangeKeyboardKeyModel<Extension: ApplicationSpecificKeyboardViewEx
         if SemiStaticStates.shared.needsInputModeSwitchKey {
             return KeyLabel(.changeKeyboard, width: width)
         } else {
-            return KeyLabel(.image("arrowtriangle.left.and.line.vertical.and.arrowtriangle.right"), width: width)
+            return KeyLabel(.image("arrowtriangle.left.and.line.vertical.and.arrowtriangle.right", accessibilityLabel: "カーソルバーの切り替え"), width: width)
         }
     }
 

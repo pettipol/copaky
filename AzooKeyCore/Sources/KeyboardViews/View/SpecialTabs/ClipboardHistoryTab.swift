@@ -224,8 +224,7 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
         SimpleKeyView<Extension>(model: SimpleEnterKeyModel<Extension>(), tabDesign: design)
     }
     private func deleteKey(_ design: TabDependentDesign) -> some View {
-        SimpleKeyView<Extension>(model: SimpleKeyModel<Extension>(keyLabelType: .image("delete.left"), unpressedKeyColorType: .special, pressActions: [.delete(1)], longPressActions: .init(repeat: [.delete(1)])), tabDesign: design)
-            .accessibilityLabel(Text("削除キー"))
+        SimpleKeyView<Extension>(model: SimpleKeyModel<Extension>(keyLabelType: .image("delete.left", accessibilityLabel: "削除"), unpressedKeyColorType: .special, pressActions: [.delete(1)], longPressActions: .init(repeat: [.delete(1)])), tabDesign: design)
     }
     private func backTabKey(_ design: TabDependentDesign) -> some View {
         SimpleKeyView<Extension>(model: SimpleKeyModel<Extension>(keyLabelType: .localizedText("戻る"), unpressedKeyColorType: .special, pressActions: [.moveTab(.system(.last_tab))], longPressActions: .init(start: [.setTabBar(.toggle)])), tabDesign: design)

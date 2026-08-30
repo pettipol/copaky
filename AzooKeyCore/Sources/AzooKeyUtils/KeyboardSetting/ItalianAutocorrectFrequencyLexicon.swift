@@ -16,10 +16,15 @@
 // ITALIAN_LEXICON_LICENSE.md.
 enum ItalianAutocorrectFrequencyLexicon {
     private static let ranks: [String: UInt16] = {
-        var result = [String: UInt16](minimumCapacity: 2_833)
+        var result = [String: UInt16](minimumCapacity: 2_834)
         for (index, word) in words.split(separator: "\n").enumerated() {
             result[String(word)] = UInt16(index)
         }
+        // F-04 safety admission generated from the same pinned source: it_words.txt line 7,182
+        // (zero-based rank 7,181). Keeping the targeted admission here avoids reaching through
+        // AzooKeyUtils into the converter module's internal Bundle.module resource at runtime.
+        // 同一固定辞書の7182行目。モジュール境界を越える実行時リソース探索は行わない。
+        result["meccanico"] = 7_181
         return result
     }()
 

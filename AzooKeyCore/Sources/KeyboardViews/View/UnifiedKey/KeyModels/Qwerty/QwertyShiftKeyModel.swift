@@ -31,11 +31,11 @@ struct QwertyShiftKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>:
 
     func label<ThemeExtension>(width: CGFloat, theme _: ThemeData<ThemeExtension>, states: VariableStates, color: Color?) -> KeyLabel<Extension> where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         if states.boolStates.isCapsLocked {
-            return KeyLabel(.image("capslock.fill"), width: width, textColor: color)
+            return KeyLabel(.image("capslock.fill", accessibilityLabel: "大文字に固定する"), width: width, textColor: color)
         } else if states.boolStates.isShifted {
-            return KeyLabel(.image("shift.fill"), width: width, textColor: color)
+            return KeyLabel(.image("shift.fill", accessibilityLabel: "大文字"), width: width, textColor: color)
         } else {
-            return KeyLabel(.image("shift"), width: width, textColor: color)
+            return KeyLabel(.image("shift", accessibilityLabel: "大文字"), width: width, textColor: color)
         }
     }
 

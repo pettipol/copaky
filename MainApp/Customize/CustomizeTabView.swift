@@ -53,7 +53,7 @@ struct CustomizeTabView: View {
                         Text("カスタムタブを使うにはタブバーを利用します。")
                         DisclosureGroup("使い方") {
                             Text("候補バーに Copaky ボタンを表示している場合は、そのボタンからも開けます。")
-                            Text("フリック入力では左上の「☆123」・ローマ字入力では左下の「123」「#+=」キーを長押ししても表示されます。")
+                            Text("既定ではローマ字入力の文字タブ左下にある「123」キーを長押ししても表示されます。設定で「#+=」やフリック入力の「☆123」も追加できます。")
                         }
                         NavigationLink("タブバーを編集") {
                             EditingTabBarView(manager: $appStates.custardManager)

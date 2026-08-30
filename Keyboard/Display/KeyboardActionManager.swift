@@ -132,6 +132,7 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
 
     @MainActor private func shiftStateOff(variableStates: VariableStates) {
         variableStates.boolStates[VariableStates.BoolStates.isShiftedKey] = false
+        variableStates.autoCapitalizationOwnsShift = false
     }
 
     @MainActor private func doAction(_ action: ActionType, requireSetResult: Bool = true, variableStates: VariableStates) {
@@ -146,6 +147,13 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
             // 同じ入力操作に伴うバインディング更新であり、別のキー入力ではない。
         } else {
             self.inputManager.clearLastLatinAutocorrection()
+        }
+        if case let .input(text, _) = action, text == " " {
+            // Preserve the first tap until InputManager evaluates the possible second space.
+        } else if case .setSearchQuery = action {
+            // Ancillary binding update emitted by the same key action.
+        } else {
+            self.inputManager.clearLastLatinSpaceTap()
         }
         var undoAction: ActionType?
         switch action {
@@ -173,10 +181,24 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
                     variableStates.setEnterKeyState(self.inputManager.getEnterKeyState())
                 } else {
                     self.notifyComplete(candidate, variableStates: variableStates)
-                    self.inputManager.input(text: input, requireSetResult: requireSetResult, simpleInsert: simpleInsert, inputStyle: variableStates.inputStyle)
+                    self.inputManager.input(
+                        text: input,
+                        requireSetResult: requireSetResult,
+                        simpleInsert: simpleInsert,
+                        inputStyle: variableStates.inputStyle,
+                        isLatinQwertyTab: variableStates.tabManager.existentialTab() == .qwerty_abc
+                            && variableStates.keyboardLanguage.usesLatinScript
+                    )
                 }
             } else {
-                self.inputManager.input(text: input, requireSetResult: requireSetResult, simpleInsert: simpleInsert, inputStyle: variableStates.inputStyle)
+                self.inputManager.input(
+                    text: input,
+                    requireSetResult: requireSetResult,
+                    simpleInsert: simpleInsert,
+                    inputStyle: variableStates.inputStyle,
+                    isLatinQwertyTab: variableStates.tabManager.existentialTab() == .qwerty_abc
+                        && variableStates.keyboardLanguage.usesLatinScript
+                )
             }
             self.shiftStateOff(variableStates: variableStates)
         case let .insertMainDisplay(text):
@@ -185,7 +207,10 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
         case let .delete(count):
             self.textEditingActionDidBegin(variableStates: variableStates)
             self.shiftStateOff(variableStates: variableStates)
-            if count != 1 || !self.inputManager.undoLastLatinAutocorrectionIfPossible() {
+            let restoredOneShotSpaceEdit = count == 1
+                && (self.inputManager.undoLastDoubleSpacePeriodIfPossible()
+                    || self.inputManager.undoLastLatinAutocorrectionIfPossible())
+            if !restoredOneShotSpaceEdit {
                 self.inputManager.clearLastLatinAutocorrection()
                 self.inputManager.deleteBackward(convertTargetCount: count, requireSetResult: requireSetResult)
             }
@@ -219,6 +244,7 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
         case let .moveCursor(count):
             // カーソル移動ではシフトを解除しない
             self.inputManager.moveCursor(count: count, requireSetResult: requireSetResult)
+            self.delegate?.armLatinAutoCapitalizationIfNeeded()
 
         case let .smartMoveCursor(item):
             switch item.direction {
@@ -227,6 +253,7 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
             case .backward:
                 self.inputManager.smartMoveCursorBackward(to: item.targets.map {Character($0)}, requireSetResult: requireSetResult)
             }
+            self.delegate?.armLatinAutoCapitalizationIfNeeded()
 
         case let .setCursorBar(operation):
             let (left, center, right) = self.inputManager.getSurroundingText()
@@ -273,6 +300,7 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
         case let .moveTab(type):
             // タブ移動ではシフトを解除しない
             variableStates.setTab(type)
+            self.delegate?.armLatinAutoCapitalizationIfNeeded()
 
         case let .setLatinKeyboardLanguage(language):
             // Copaky: English and Italian share the Latin tab, so switching between them is a change
@@ -312,6 +340,12 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
             delegate?.openApp(scheme: scheme)
 
         case let .setBoolState(key, operation):
+            if key == VariableStates.BoolStates.isShiftedKey
+                || key == VariableStates.BoolStates.isCapsLockedKey {
+                // A direct Shift/Caps key action is user-owned from this point onward.
+                // Shift/Caps の直接操作後は自動大文字化の所有権を残さない。
+                variableStates.autoCapitalizationOwnsShift = false
+            }
             switch operation {
             case .on:
                 variableStates.boolStates[key] = true

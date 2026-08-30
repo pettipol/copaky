@@ -45,7 +45,7 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
         let languageKey: any UnifiedKeyModelProtocol<Extension> = QwertyLanguageSwitchKeyModel<Extension>()
         // numbers key
         let numbersKey: any UnifiedKeyModelProtocol<Extension> = QwertyGeneralKeyModel(
-            labelType: .image("textformat.123"),
+            labelType: .image("textformat.123", accessibilityLabel: "数字"),
             pressActions: { _ in [.moveTab(.system(.qwerty_numbers))] },
             longPressActions: { states in
                 .init(start: NumbersSlotLongPressDecision.longPressActionsForNumbersSlot(
@@ -129,7 +129,7 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
 
     @MainActor private static func latinDeleteKey() -> any UnifiedKeyModelProtocol<Extension> {
         QwertyGeneralKeyModel(
-            labelType: .image("delete.left"),
+            labelType: .image("delete.left", accessibilityLabel: "削除"),
             pressActions: { _ in [.delete(1)] },
             longPressActions: { _ in .init(repeat: [.delete(1)]) },
             variations: [], direction: .right, showsTapBubble: false, role: .special
@@ -163,10 +163,12 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
         enterKey: any UnifiedKeyModelProtocol<Extension>
     ) {
         let tabs = tabKeys()
-        dict[.init(x: 0, y: 3, width: 1.4)] = tabs.languageKey
-        dict[.init(x: 1.4, y: 3, width: 1.4)] = tabs.changeKeyboardKey
-        dict[.init(x: 2.8, y: 3, width: 4.4)] = spaceKey()
-        dict[.init(x: 7.2, y: 3, width: 2.8)] = enterKey
+        // Copaky [F-07]: Apple-like 1.25 / 1.25 / 5 / 2.5 bottom-row proportions.
+        // Copaky [F-07]: Apple準拠の下段比率 1.25 / 1.25 / 5 / 2.5。
+        dict[.init(x: 0, y: 3, width: 1.25)] = tabs.languageKey
+        dict[.init(x: 1.25, y: 3, width: 1.25)] = tabs.changeKeyboardKey
+        dict[.init(x: 2.5, y: 3, width: 5)] = spaceKey()
+        dict[.init(x: 7.5, y: 3, width: 2.5)] = enterKey
     }
 
     // Copaky: Build language-less number tabs on demand from the preserved typing language.
@@ -261,18 +263,21 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
             }
         }
         dict[.init(x: 8.6, y: 2, width: 1.4, height: 1)] = QwertyGeneralKeyModel<Extension>(
-            labelType: .image("delete.left"),
+            labelType: .image("delete.left", accessibilityLabel: "削除"),
             pressActions: { _ in [.delete(1)] },
             longPressActions: { _ in .init(repeat: [.delete(1)]) },
             variations: [], direction: .right, showsTapBubble: false, role: .special
         )
 
         // 4th row: bottom controls (language and dynamic change)
+        // Copaky [F-07]: keep the Japanese-side tabs on the same Apple-like bottom-row
+        // proportions as qwerty_hira, so switching tabs never shifts the space/enter edges.
+        // Copaky [F-07]: 日本語側のタブも同じ下段比率にし、タブ切替で境界が動かないようにする。
         let tabs = tabKeys()
-        dict[.init(x: 0, y: 3, width: 1.4)] = tabs.languageKey
-        dict[.init(x: 1.4, y: 3, width: 1.4)] = tabs.changeKeyboardKey
-        dict[.init(x: 2.8, y: 3, width: 4.4)] = spaceKey()
-        dict[.init(x: 7.2, y: 3, width: 2.8)] = UnifiedEnterKeyModel<Extension>(textSize: .small)
+        dict[.init(x: 0, y: 3, width: 1.25)] = tabs.languageKey
+        dict[.init(x: 1.25, y: 3, width: 1.25)] = tabs.changeKeyboardKey
+        dict[.init(x: 2.5, y: 3, width: 5)] = spaceKey()
+        dict[.init(x: 7.5, y: 3, width: 2.5)] = UnifiedEnterKeyModel<Extension>(textSize: .small)
 
         return dict
     }
@@ -374,14 +379,14 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
             dict[pos] = mdl
         }
         dict[.init(x: 8.6, y: 2, width: 1.4)] = QwertyGeneralKeyModel(
-            labelType: .image("delete.left"), pressActions: { _ in [.delete(1)] }, longPressActions: { _ in .init(repeat: [.delete(1)]) }, variations: [], direction: .right, showsTapBubble: false, role: .special
+            labelType: .image("delete.left", accessibilityLabel: "削除"), pressActions: { _ in [.delete(1)] }, longPressActions: { _ in .init(repeat: [.delete(1)]) }, variations: [], direction: .right, showsTapBubble: false, role: .special
         )
 
         // Row 3: hiragana layout never shows Shift; always numbers key at left
-        dict[.init(x: 0, y: 3, width: 1.4)] = tabs.numbersKey
-        dict[.init(x: 1.4, y: 3, width: 1.4)] = tabs.changeKeyboardKey
-        dict[.init(x: 2.8, y: 3, width: 4.4)] = spaceKey(supportsSpaceSlideCursor: true)
-        dict[.init(x: 7.2, y: 3, width: 2.8)] = UnifiedEnterKeyModel<Extension>(textSize: .small)
+        dict[.init(x: 0, y: 3, width: 1.25)] = tabs.numbersKey
+        dict[.init(x: 1.25, y: 3, width: 1.25)] = tabs.changeKeyboardKey
+        dict[.init(x: 2.5, y: 3, width: 5)] = spaceKey(supportsSpaceSlideCursor: true)
+        dict[.init(x: 7.5, y: 3, width: 2.5)] = UnifiedEnterKeyModel<Extension>(textSize: .small)
         return applyingNumberRow(to: dict)
     }
 
@@ -476,29 +481,23 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
             dict[pos] = mdl
         }
         dict[.init(x: 8.6, y: 2, width: 1.4)] = QwertyGeneralKeyModel(
-            labelType: .image("delete.left"),
+            labelType: .image("delete.left", accessibilityLabel: "削除"),
             pressActions: { _ in [.delete(1)] },
             longPressActions: { _ in .init(repeat: [.delete(1)]) },
             variations: [], direction: .right, showsTapBubble: false, role: .special
         )
-        // Row 3: numbers or shift at left, and dynamic change key next
+        // Row 3: numbers or shift at left, and dynamic change key next.
+        // Copaky [F-07]: the period is intentionally absent; double-space supplies ". ".
+        // Copaky [F-07]: ピリオドキーを置かず、スペース2回で「. 」を入力する。
         switch shiftBehavior {
         case .leftbottom:
-            dict[.init(x: 0, y: 3, width: 1.4)] = QwertyShiftKeyModel<Extension>()
+            dict[.init(x: 0, y: 3, width: 1.25)] = QwertyShiftKeyModel<Extension>()
         default:
-            dict[.init(x: 0, y: 3, width: 1.4)] = tabsAbc.numbersKey
+            dict[.init(x: 0, y: 3, width: 1.25)] = tabsAbc.numbersKey
         }
-        dict[.init(x: 1.4, y: 3, width: 1.4)] = tabsAbc.changeKeyboardKey
-        switch shiftBehavior {
-        case .leftbottom:
-            dict[.init(x: 2.8, y: 3, width: 4.4)] = spaceKey(supportsSpaceSlideCursor: true)
-        case .left, .off:
-            // Copaky: Shift/Aa occupies row 1, so keep punctuation beside Return and narrow Space.
-            // Copaky: Shift/Aa使用時は句点をReturn左に置き、Spaceを狭める。
-            dict[.init(x: 2.8, y: 3, width: 3.4)] = spaceKey(supportsSpaceSlideCursor: true)
-            dict[.init(x: 6.2, y: 3)] = dotKey()
-        }
-        dict[.init(x: 7.2, y: 3, width: 2.8)] = UnifiedEnterKeyModel<Extension>(textSize: .small)
+        dict[.init(x: 1.25, y: 3, width: 1.25)] = tabsAbc.changeKeyboardKey
+        dict[.init(x: 2.5, y: 3, width: 5)] = spaceKey(supportsSpaceSlideCursor: true)
+        dict[.init(x: 7.5, y: 3, width: 2.5)] = UnifiedEnterKeyModel<Extension>(textSize: .small)
         return applyingNumberRow(to: dict)
     }
 
@@ -545,12 +544,14 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
             let vars = spec.1.map { QwertyVariationsModel.VariationElement(label: .text($0), actions: [.input($0)]) }
             dict[.init(x: x, y: 2, width: 7.0 / 5.0)] = QwertyGeneralKeyModel(labelType: .text(spec.0), pressActions: { _ in [.input(spec.0)] }, longPressActions: { _ in .none }, variations: vars, direction: .center, showsTapBubble: !vars.isEmpty, role: .normal)
         }
-        dict[.init(x: 8.6, y: 2, width: 1.4)] = QwertyGeneralKeyModel(labelType: .image("delete.left"), pressActions: { _ in [.delete(1)] }, longPressActions: { _ in .init(repeat: [.delete(1)]) }, variations: [], direction: .right, showsTapBubble: false, role: .special)
+        dict[.init(x: 8.6, y: 2, width: 1.4)] = QwertyGeneralKeyModel(labelType: .image("delete.left", accessibilityLabel: "削除"), pressActions: { _ in [.delete(1)] }, longPressActions: { _ in .init(repeat: [.delete(1)]) }, variations: [], direction: .right, showsTapBubble: false, role: .special)
         // Row 3
-        dict[.init(x: 0, y: 3, width: 1.4)] = tabs.languageKey
-        dict[.init(x: 1.4, y: 3, width: 1.4)] = tabs.changeKeyboardKey
-        dict[.init(x: 2.8, y: 3, width: 4.4)] = spaceKey()
-        dict[.init(x: 7.2, y: 3, width: 2.8)] = UnifiedEnterKeyModel<Extension>()
+        // Copaky [F-07]: same Apple-like bottom-row proportions as the other tabs (no jump).
+        // Copaky [F-07]: 他タブと同じ下段比率（切替時のズレなし）。
+        dict[.init(x: 0, y: 3, width: 1.25)] = tabs.languageKey
+        dict[.init(x: 1.25, y: 3, width: 1.25)] = tabs.changeKeyboardKey
+        dict[.init(x: 2.5, y: 3, width: 5)] = spaceKey()
+        dict[.init(x: 7.5, y: 3, width: 2.5)] = UnifiedEnterKeyModel<Extension>()
         return dict
     }
 

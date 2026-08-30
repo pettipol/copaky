@@ -22,6 +22,11 @@ SEEDS=(
   enable_qwerty_number_row=false
   enable_space_slide_cursor=false
   space_slide_cursor_sensitivity=medium
+  # Copaky [F-04b]: auto-capitalization arms Shift at sentence start, turning key labels
+  # uppercase — every lowercase key lookup in the campaign would break. Pin it OFF for the
+  # harness; the feature is covered by its unit contracts and by the manual device round.
+  # Copaky [F-04b]: 自動大文字化は文頭でShiftを立てラベルが大文字になるため、ハーネスではOFFに固定。
+  enable_latin_auto_capitalization=false
   enable_italian_keyboard_language=true
 )
 
@@ -72,6 +77,28 @@ done
 # 固定する。--seed の明示指定は後勝ちで常に優先される。
 if [[ "$TEST" == "test47_spaceSlideCursorOnLatinQwerty" ]]; then
   SEEDS+=(space_slide_cursor_sensitivity=slow)
+fi
+# Copaky [F-05]: tests 39/46/47 predate the empty-Latin-bar default and either exercise the
+# open tab bar or compare geometry calibrated with that row reserved. Pin their historical baseline;
+# test48 instead pins the new default before changing it through the real MainApp toggle.
+# Copaky [F-05]: test39/46/47は空バーを確保した従来基準で固定し、test48は新しい既定値から開始する。
+case "$TEST" in
+  test39_longPressNumbersKeyOpensClipboardHistory|test46_realQwertyNumberRowPreservesLetterHeights|test47_spaceSlideCursorOnLatinQwerty)
+    SEEDS+=(hide_empty_candidate_bar_on_latin=false)
+    ;;
+  test48_hiddenCandidateBarReducesHeight)
+    SEEDS+=(hide_empty_candidate_bar_on_latin=true display_tab_bar_button=false)
+    ;;
+  test49_appleLatinBottomRowGeometryAndImageAccessibility)
+    SEEDS+=(hide_empty_candidate_bar_on_latin=true display_tab_bar_button=false use_shift_key=false)
+    ;;
+  test50_accessibilityAudit_settingsScreens)
+    SEEDS+=(use_shift_key=false)
+    ;;
+esac
+if [[ "$TEST" == "test39_longPressNumbersKeyOpensClipboardHistory" ]]; then
+  # The historical test explicitly exercises the open tab bar; Copaky's product default is OFF.
+  SEEDS+=(display_tab_bar_button=true use_shift_key=false)
 fi
 SEEDS+=(${USER_SEEDS[@]+"${USER_SEEDS[@]}"})
 [[ -z "$CLIPBOARD_LANG" || "$CLIPBOARD_LANG" == "en" || "$CLIPBOARD_LANG" == "ja" || "$CLIPBOARD_LANG" == "it" ]] \

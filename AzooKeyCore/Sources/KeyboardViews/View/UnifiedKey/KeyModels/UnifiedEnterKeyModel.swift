@@ -45,6 +45,23 @@ struct UnifiedEnterKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>
 
     func label<ThemeExtension>(width: CGFloat, theme: ThemeData<ThemeExtension>, states: VariableStates, color: Color?) -> KeyLabel<Extension> where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         let text = Design.language.getEnterKeyText(states.enterKeyState)
+        let isLatinQwertyTab: Bool = switch states.tabManager.existentialTab() {
+        case .qwerty_abc, .qwerty_numbers, .qwerty_symbols: true
+        default: false
+        }
+        // Copaky [F-07]: only the plain newline state on Latin layouts uses Apple's return icon.
+        // Search/Go/Done/Send and Japanese conversion states remain localized text.
+        // Copaky [F-07]: ラテン配列の通常改行だけApple風アイコンにし、他の状態は文字表示を保つ。
+        if isLatinQwertyTab,
+           states.keyboardLanguage.usesLatinScript,
+           case .return(.default) = states.enterKeyState {
+            return KeyLabel(
+                .image("arrow.turn.down.left", accessibilityLabel: "改行"),
+                width: width,
+                textSize: textSize,
+                textColor: color ?? specialTextColor(states: states, theme: theme)
+            )
+        }
         // Copaky: on the JAPANESE tab the enter cap stays Japanese (確定/改行…) whatever the UI
         // language — Apple does the same on its JP layouts, and it is the one visual cue that
         // tells the Japanese QWERTY apart from the visually identical Latin QWERTY.
