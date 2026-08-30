@@ -318,6 +318,13 @@ public enum LatinAutocorrectPolicy {
             }
             return .preferred(adaptCase(of: correction, to: typed))
         }
+        // Counter-review blocker (30/08): a capitalized word may reach ONLY A-01c's confirmed
+        // accent path above. The general oracle must never touch proper-noun-shaped input — at a
+        // sentence start "Alice" would otherwise be correctable into a nearby dictionary word.
+        // 大文字始まりの語は上のA-01c確定経路のみ許可。一般オラクルには固有名詞形を渡さない。
+        if typed.first?.isUppercase == true {
+            return .reject
+        }
         return .requiresSpellCheck
     }
 

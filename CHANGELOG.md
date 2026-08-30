@@ -9,14 +9,33 @@ All notable changes to **Copaky** (an independent project based on azooKey). For
 ## [Unreleased] — pre-release (v0.1)
 
 ### Added
-- **Clipboard history in one gesture** (A-11): a long press on the existing `123` / `#+=` key (Latin tabs) or
-  `☆123` (Japanese flick) opens the Clipboard-history tab directly when «Save clipboard history» is on;
-  otherwise it keeps toggling the tab bar. The decision is evaluated at press time (`NumbersSlotLongPressDecision`,
+- **Apple-familiar Latin bottom row** (F-07): language 1.25 / access key 1.25 / space 5.0 / return 2.5 —
+  a wide space bar, the return key as the ↵ icon in the plain-newline state, and no period key beside
+  Space. Double-space types ". " (setting «Double-space for period», on by default; Backspace right after
+  restores the two spaces).
+- **Latin auto-capitalization** (F-04b, on by default): a one-shot Shift arms at a provable field start or
+  after sentence-ending punctuation (including after Return), honouring the host field's autocapitalization
+  type; manual Shift/Caps are never touched.
+- **Space-slide sensitivity** (F-09): slow / medium / fast (1.0 / 0.7 / 0.45 key widths per step),
+  default medium, under the existing space-slide switch.
+- **Compact Latin keyboard by default** (F-05/E-12): the empty candidate bar now hides by default on the
+  Latin tabs (Japanese keeps it — conversion lives there).
+- **QWERTY by default for English/Italian** (F-01) on fresh installs; the Japanese layout stays flick and
+  the onboarding picker now configures the Japanese layout only.
+- **Explicit VoiceOver labels for image keys** (E-18): delete, numbers, shift/caps, paste, cursor bar,
+  emoji controls and the new return icon no longer read OS-derived symbol names.
+- **Hardened experimental Latin autocorrect** (F-04, still off by default): device-learned words are
+  filtered out of the candidates, the winner is re-validated by a second oracle query, frequency-attested
+  Italian words are never touched, and capitalized words are excluded from the general path.
+- **Clipboard history in one gesture** (A-11, refined by F-06): with «Save clipboard history» on, a long
+  press opens the Clipboard-history tab directly from the `123` key by default; the `#+=` (Latin tabs) and
+  `☆123` (Japanese flick) keys can be added as long-press openers in Settings. A small badge marks the
+  enabled keys; with the slot (or the history) off the long press keeps toggling the tab bar. The decision is evaluated at press time (`NumbersSlotLongPressDecision`,
   unit-tested), the layout is unchanged; the back key of the history tab returns to the previous tab and its long
   press opens the tab bar. The candidate-bar Copaky button is now hidden by default (Settings ▸ «Show the Copaky
   button in the candidate bar» brings it back); when the long press would open the history, the `123` / `#+=` /
   `☆123` key shows a small clipboard badge in its corner (A-12). A new option «Hide the suggestion bar when it is
-  empty (Latin keyboards)» (E-12, off by default) collapses the bar row on the English/Italian tabs when there is
+  empty (Latin keyboards)» (E-12, now ON by default — F-05) collapses the bar row on the English/Italian tabs when there is
   nothing to show, lowering the keyboard.
 - **Guide images per language** (A-09): the «Getting started» / Tips pictures of the iOS Settings screens now
   have English and Italian variants (light and dark), captured on the iPhone 17 Pro Max and composed with the
@@ -36,7 +55,8 @@ All notable changes to **Copaky** (an independent project based on azooKey). For
   instead of always being Japanese. A new `KeyLabelType.localizedText(String)` keeps the distinction
   explicit between a *label* (translated) and a *typed character* (never translated); the labels of the
   bundled custards are translated at the `CustardKeyLabelStyle` → `KeyLabelType` boundary.
-- **Italian as a keyboard language** (setting "Use Italian", **off by default**): Italian has no tab of its
+- **Italian as a keyboard language** (setting "Use Italian", **on by default when the phone's first
+  preferred system language is Italian, off elsewhere** — locale-aware default): Italian has no tab of its
   own — it shares the Latin tab with English (same layout, its own prediction dictionary) through
   `VariableStates.latinKeyboardLanguage`. With the setting on, the language key cycles ja → en → it; with it
   off, behaviour is exactly as before. Backed by a Copaky fork of the conversion engine that adds `it_IT`

@@ -103,7 +103,8 @@ typo	en-US	restarant	restaurant	I\swrote\s	1	restaurant|zzzzzzzz
 typo	en-US	langauge	language	I\swrote\s	1	language|zzzzzzzz
 typo	en-US	buisness	business	I\swrote\s	1	business|zzzzzzzz
 typo	en-US	remeber	remember	I\swrote\s	1	remember|zzzzzzzz
-typo	en-US	Febuary	February		1	February|zzzzzzzz
+typo	en-US	febuary	february		1	february|zzzzzzzz
+control	en-US	Febuary			1	February		
 typo	en-US	libary	library	I\swrote\s	1	library|zzzzzzzz
 typo	en-US	neccessary	necessary	I\swrote\s	1	necessary|zzzzzzzz
 typo	en-US	occassion	occasion	I\swrote\s	1	occasion|zzzzzzzz

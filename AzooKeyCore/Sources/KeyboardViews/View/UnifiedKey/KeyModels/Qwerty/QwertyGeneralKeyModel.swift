@@ -70,9 +70,12 @@ struct QwertyGeneralKeyModel<Extension: ApplicationSpecificKeyboardViewExtension
     func longPressActions(variableStates: VariableStates) -> LongpressActionType { longpress(variableStates) }
     func variationSpace(variableStates: VariableStates) -> UnifiedVariationSpace {
         // Copaky: 長押しバリエーションのラベルも英語シフト・Caps時は大文字化（actionsはdoAction側で大文字化済み）
+        // Counter-review major (30/08): the INSERTED case follows every Latin-script language
+        // (doAction), so the shown label must too — with Italian active a shifted key otherwise
+        // shows "c" but types "C". / 挿入はラテン文字言語全体が大文字化されるため表示も揃える。
         if shouldUppercaseForEnglish,
            variableStates.boolStates.isCapsLocked || variableStates.boolStates.isShifted,
-           variableStates.keyboardLanguage == .en_US {
+           variableStates.keyboardLanguage.usesLatinScript {
             let uppercased = variations.map { element -> QwertyVariationsModel.VariationElement in
                 if case let .text(text) = element.label {
                     return QwertyVariationsModel.VariationElement(label: .text(text.uppercased()), actions: element.actions)
@@ -89,7 +92,7 @@ struct QwertyGeneralKeyModel<Extension: ApplicationSpecificKeyboardViewExtension
         // Emulate QwertyKeyModel: uppercase for en_US when shifted or caps（必要時のみ）
         if shouldUppercaseForEnglish,
            states.boolStates.isCapsLocked || states.boolStates.isShifted,
-           states.keyboardLanguage == .en_US {
+           states.keyboardLanguage.usesLatinScript {
             switch labelType {
             case let .text(text):
                 return KeyLabel(.text(text.uppercased()), width: width, textColor: color)

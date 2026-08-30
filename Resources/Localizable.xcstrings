@@ -2605,18 +2605,18 @@
         }
       }
     },
-    "Copakyはクリップボードの履歴を保存するため、定期的にクリップボードをチェックします。また、ペーストする際にもクリップボードの情報を利用します。" : {
+    "Copakyが履歴のために自動で確認するのは、クリップボードが更新されたかどうか（メタデータ）だけです。内容を読み取るのは「現在のクリップボードを追加」をタップしたときだけで、ペーストする際にもクリップボードの情報を利用します。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Copaky periodically checks the clipboard to save its history, and also uses its information when pasting."
+            "value" : "For the history, Copaky only checks automatically WHETHER the clipboard changed (metadata). Its content is read only when you tap “Add current clipboard” — and it is also used when you paste."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Copaky controlla periodicamente gli appunti per salvare la cronologia degli appunti; utilizza queste informazioni anche quando incolli il testo."
+            "value" : "Per la cronologia, Copaky controlla automaticamente solo SE gli appunti sono cambiati (metadati). Il contenuto viene letto solo quando tocchi «Aggiungi gli appunti correnti» — e viene usato anche quando incolli."
           }
         }
       }
@@ -6554,18 +6554,18 @@
         }
       }
     },
-    "なお、「クリップボードの履歴」を有効にしていない場合、クリップボードの中身を定期的に取得することはありません。また、取得したクリップボードのテキストはアプリ内でのみ利用されます。" : {
+    "なお、クリップボードの内容が自動で取得されることはありません。取得はあなたのタップ操作のときだけで、取得したテキストはアプリ内でのみ利用されます。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Note that if you have not enabled 'clipboard history,' Copaky will not periodically access the clipboard. Also, the text obtained from the clipboard is only used within the app."
+            "value" : "The clipboard's content is never captured automatically: it is captured only on your tap, and the captured text is used only within the app."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Se la \"cronologia degli appunti\" non è attiva, Copaky non accede periodicamente al contenuto degli appunti. Inoltre, il testo eventualmente ottenuto dagli appunti viene utilizzato solo all'interno dell'app."
+            "value" : "Il contenuto degli appunti non viene mai catturato automaticamente: la cattura avviene solo al tuo tocco, e il testo catturato viene usato solo all'interno dell'app."
           }
         }
       }

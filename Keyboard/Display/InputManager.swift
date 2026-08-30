@@ -40,6 +40,7 @@ final class InputManager {
         let undoEligible: Bool
     }
     private struct LastLatinAutocorrection {
+        let documentIdentifier: UUID
         let original: String
         let corrected: String
         let leftContextAfterCorrection: String
@@ -652,25 +653,46 @@ final class InputManager {
         self.displayedTextManager.insertText(". ")
         let observedLeftContext = self.displayedTextManager.documentContextBeforeInput()
         let observedRightContext = self.displayedTextManager.documentContextAfterInput ?? ""
-        if observedLeftContext == expectedLeftContext,
+        // Hosts expose a BOUNDED context window: after an edit the observed prefix may be
+        // truncated, so snapshots are compared as tails, never as full equality alone
+        // (counter-review major, 30/08). / ホストの文脈窓は有限：末尾一致で比較する。
+        func tailMatches(_ observed: String?, _ expected: String) -> Bool {
+            guard let observed else { return false }
+            if observed == expected { return true }
+            // Below three characters the outcomes stop being distinguishable — fail closed.
+            // 3文字未満の窓では結果を判別できないため不一致として扱う。
+            guard observed.count >= 3 else { return false }
+            return expected.hasSuffix(observed) || observed.hasSuffix(expected)
+        }
+        if tailMatches(observedLeftContext, expectedLeftContext),
+           observedLeftContext?.hasSuffix(". ") == true,
            observedRightContext == rightContext {
             self.lastDoubleSpacePeriod = LastDoubleSpacePeriod(
                 documentIdentifier: previousTap.documentIdentifier,
-                leftContextAfterReplacement: expectedLeftContext,
+                leftContextAfterReplacement: observedLeftContext ?? expectedLeftContext,
                 rightContextAfterReplacement: rightContext
             )
-        } else if observedLeftContext == context,
+        } else if tailMatches(observedLeftContext, context + ". "),
                   observedRightContext == rightContext {
-            // The host rejected the replacement: fall through so the ordinary second space is inserted.
-            // ホストが置換を拒否した場合は、通常の2つ目の空白入力へ戻す。
+            // The deletion was refused but the insertion went through ("ciao " -> "ciao . "):
+            // converge back to the user's plain two spaces (counter-review blocker, 30/08).
+            // 削除が拒否され挿入だけ通った場合：素の空白2つへ収束させる。
+            self.displayedTextManager.deleteBackward(count: 2)
+            self.displayedTextManager.insertText(" ")
+        } else if tailMatches(observedLeftContext, context),
+                  observedRightContext == rightContext {
+            // The host rejected the whole replacement: fall through so the ordinary second space
+            // is inserted. / 置換全体が拒否された場合は通常の2つ目の空白入力へ戻す。
             self.resetPostCompositionPredictionCandidates()
             return false
-        } else if observedLeftContext == String(context.dropLast()),
+        } else if tailMatches(observedLeftContext, String(context.dropLast())),
                   observedRightContext == rightContext {
             // Only deletion was accepted: restore the user's two spaces without smart punctuation.
             // 削除だけ反映された場合は、スマート句読点を使わず空白2つへ復元する。
             self.displayedTextManager.insertText("  ")
         }
+        // Any other observed state is unknown host behaviour: leave the text as the host settled
+        // it and create no undo token — never guess further edits. / 未知の状態では追加編集しない。
         self.resetPostCompositionPredictionCandidates()
         return true
     }
@@ -845,11 +867,14 @@ final class InputManager {
     @MainActor private func rememberLatinAutocorrection(_ correction: LatinSpaceCorrection) {
         guard self.composingText.isEmpty,
               !self.isSelected,
+              case .main = self.activeTextDocumentProxyPreference,
+              let documentIdentifier = self.mainTextDocumentProxy?.documentIdentifier,
               let leftContext = self.displayedTextManager.documentContextBeforeInput(),
               leftContext.hasSuffix(correction.corrected + " ") else {
             return
         }
         self.lastLatinAutocorrection = LastLatinAutocorrection(
+            documentIdentifier: documentIdentifier,
             original: correction.original,
             corrected: correction.corrected,
             leftContextAfterCorrection: leftContext,
@@ -864,8 +889,13 @@ final class InputManager {
             return false
         }
         self.lastLatinAutocorrection = nil
+        // Counter-review blocker (30/08): without the document identity, a focus change onto a
+        // second field with an identical context window could let Backspace rewrite the new field.
+        // 文書IDなしでは、同一文脈の別フィールドへ移った後にBackspaceが誤って書き換え得る。
         guard self.composingText.isEmpty,
               !self.isSelected,
+              case .main = self.activeTextDocumentProxyPreference,
+              correction.documentIdentifier == self.mainTextDocumentProxy?.documentIdentifier,
               (self.displayedTextManager.selectedText ?? "").isEmpty,
               self.displayedTextManager.documentContextBeforeInput() == correction.leftContextAfterCorrection,
               (self.displayedTextManager.documentContextAfterInput ?? "") == correction.rightContextAfterCorrection,

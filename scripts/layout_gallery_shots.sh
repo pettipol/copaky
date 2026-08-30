@@ -15,11 +15,11 @@ mkdir -p "$OUT_DIR"
 
 # name | extra seeds (space-separated k=v) | gallery-type
 STATES=(
-  "l1_base|enable_qwerty_number_row_hints=false enable_clipboard_history_manager_tab=false|"
-  "l2_hints|enable_qwerty_number_row_hints=true enable_clipboard_history_manager_tab=false|"
-  "l3_number_row|enable_qwerty_number_row=true enable_qwerty_number_row_hints=false enable_clipboard_history_manager_tab=false|"
-  "l4_clipboard_badge|enable_clipboard_history_manager_tab=true enable_qwerty_number_row_hints=false|"
-  "l5_predictions|enable_qwerty_number_row_hints=false enable_clipboard_history_manager_tab=false|ciao"
+  "l1_base|enable_qwerty_number_row_hints=false enable_clipboard_history_manager_tab=false display_tab_bar_button=false|"
+  "l2_hints|enable_qwerty_number_row_hints=true enable_clipboard_history_manager_tab=false display_tab_bar_button=false|"
+  "l3_number_row|enable_qwerty_number_row=true enable_qwerty_number_row_hints=false enable_clipboard_history_manager_tab=false display_tab_bar_button=false|"
+  "l4_clipboard_badge|enable_clipboard_history_manager_tab=true enable_qwerty_number_row_hints=false display_tab_bar_button=false|"
+  "l5_predictions|enable_qwerty_number_row_hints=false enable_clipboard_history_manager_tab=false display_tab_bar_button=false|ciao"
 )
 
 first=1

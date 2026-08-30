@@ -14,7 +14,7 @@ struct PasteFromOtherAppsPermissionTipsView: View {
             TipsContentParagraph {
                 Text("「クリップボードの履歴」や「ペーストボタン」の機能を利用している際、頻繁に「ペーストの許可」を求めるダイアログが出ることがあります。")
                 TipsImage(.pasteRequestDialogue)
-                Text("Copakyはクリップボードの履歴を保存するため、定期的にクリップボードをチェックします。また、ペーストする際にもクリップボードの情報を利用します。")
+                Text("Copakyが履歴のために自動で確認するのは、クリップボードが更新されたかどうか（メタデータ）だけです。内容を読み取るのは「現在のクリップボードを追加」をタップしたときだけで、ペーストする際にもクリップボードの情報を利用します。")
             }
             TipsContentParagraph {
                 Text("設定アプリで「ほかのAppからペースト」を「許可」にすることで、ダイアログが出なくなります。")
@@ -31,7 +31,7 @@ struct PasteFromOtherAppsPermissionTipsView: View {
                 TipsImage(.pasteFromOtherAppsSetting)
             }
             TipsContentParagraph {
-                Text("なお、「クリップボードの履歴」を有効にしていない場合、クリップボードの中身を定期的に取得することはありません。また、取得したクリップボードのテキストはアプリ内でのみ利用されます。")
+                Text("なお、クリップボードの内容が自動で取得されることはありません。取得はあなたのタップ操作のときだけで、取得したテキストはアプリ内でのみ利用されます。")
             }
         }
     }

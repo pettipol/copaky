@@ -74,7 +74,7 @@ final class LatinTypingConvenienceDecisionTests: XCTestCase {
     }
 
     func testLatinAutoCapitalizationSentenceBoundaries() {
-        for context in ["", "Fine. ", "Davvero? ", "Sì!", "3."] {
+        for context in ["", "Fine. ", "Davvero? ", "Sì!", "3.", "Riga\n", "A capo\n  ", "«Bene!» ", "Fine\u{2026} "] {
             XCTAssertTrue(shouldArmAutoCapitalization(context), "Expected sentence start for \(context.debugDescription)")
         }
     }

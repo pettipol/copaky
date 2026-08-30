@@ -163,13 +163,23 @@ public enum LatinAutoCapitalizationDecision {
             return true
         }
         var sentenceTail = context[...]
-        while sentenceTail.last?.isWhitespace == true {
+        var sawNewline = false
+        while let last = sentenceTail.last, last.isWhitespace {
+            if last.isNewline {
+                sawNewline = true
+            }
             sentenceTail.removeLast()
         }
-        if sentenceTail.isEmpty {
+        // Counter-review major (30/08): Return starts a new sentence too, and terminators can be
+        // followed by closing quotes/brackets («Ciao!» …). The ellipsis also ends a sentence.
+        // 改行後も文頭。終端記号の後の閉じ引用符・括弧も許容し、三点リーダーも文末扱い。
+        if sentenceTail.isEmpty || sawNewline {
             return true
         }
-        return sentenceTail.last.map { ".!?".contains($0) } ?? false
+        while let last = sentenceTail.last, "\"'»”’』」)]".contains(last) {
+            sentenceTail.removeLast()
+        }
+        return sentenceTail.last.map { ".!?…".contains($0) } ?? false
     }
 }
 

@@ -129,10 +129,12 @@ final class LatinAutocorrectPolicyTests: XCTestCase {
     }
 
     func testCapitalizedTypoIsAllowedOnlyAtSentenceStartAndCaseIsPreserved() {
-        XCTAssertEqual(
-            correction("Teh", "the", language: .english, context: context(beforeWord: "Hello. ")),
-            "The"
-        )
+        // Counter-review blocker (30/08): the GENERAL oracle path never touches capitalized input
+        // any more — at a sentence start a valid proper noun ("Alice") was otherwise correctable
+        // into a nearby dictionary word. Capitalized words remain correctable ONLY through
+        // A-01c's confirmed accent path (covered by the auto-accent tests).
+        XCTAssertNil(correction("Teh", "the", language: .english, context: context(beforeWord: "Hello. ")))
+        XCTAssertNil(correction("Alice", "alive", language: .english, context: context(beforeWord: "")))
         XCTAssertNil(correction("Teh", "the", language: .english, context: context(beforeWord: "Hello ")))
         XCTAssertEqual(
             correction("iphnoe", "iPhone", language: .english),
