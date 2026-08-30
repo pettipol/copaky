@@ -52,18 +52,32 @@ struct QwertyDynamicChangeKeyModel<Extension: ApplicationSpecificKeyboardViewExt
         }
     }
 
+    /// Copaky [F-06]: the dynamic key follows the slot of its CURRENT role — numbers access
+    /// (label 123) → qwertyNumbers, symbols access (label #+=) → qwertySymbols, letters-back on
+    /// the numbers/symbols tabs → qwertyNumbers. Mapping it statically to one slot showed TWO
+    /// badged keys on the base tab with the single-slot default (gallery capture, 30/08).
+    /// Copaky [F-06]: 動的キーは「現在の役割」のスロットに従う（123役→数字、#+=役→記号、
+    /// 戻る役→数字）。固定写像では既定の1スロットでも基本タブに2つのバッジが出てしまう。
+    @MainActor private func clipboardSite(variableStates states: VariableStates) -> ClipboardLongPressSite {
+        let shiftRole = QwertyLayoutProvider<Extension>.shiftBehaviorPreference() != .leftbottom
+            || states.boolStates.isShifted
+            || states.boolStates.isCapsLocked
+        return switch states.tabManager.existentialTab() {
+        case .qwerty_abc: shiftRole ? .qwertySymbols : .qwertyNumbers
+        case .qwerty_hira: .qwertySymbols
+        default: .qwertyNumbers
+        }
+    }
+
     func longPressActions(variableStates: VariableStates) -> LongpressActionType {
         let shiftRole = QwertyLayoutProvider<Extension>.shiftBehaviorPreference() != .leftbottom || variableStates.boolStates.isShifted || variableStates.boolStates.isCapsLocked
-        // Copaky [F-06]: this dynamic numbers-access key follows qwertyNumbers even when its label
-        // becomes #+= or ABC-back. It opens history unless the key currently IS the system globe.
-        // system globe (needsInputModeSwitchKey), which has no Copaky long press. Counter-review fix:
-        // the default «#+=» role (UseShiftKey off) was left without any long press.
-        // Copaky [F-06]: 表示が #+= / ABC 戻るに変わっても数字アクセス用の動的キーは
-        // qwertyNumbers スロットに従う。システムのグローブ役のときだけ対象外。
+        // It opens history unless the key currently IS the system globe (needsInputModeSwitchKey),
+        // which has no Copaky long press. Counter-review fix: the default «#+=» role (UseShiftKey
+        // off) was left without any long press.
         if usesNumbersSlotLongPress(variableStates: variableStates) {
             return .init(start: NumbersSlotLongPressDecision.longPressActionsForNumbersSlot(
                 clipboardHistoryEnabled: ClipboardLongPressSlotDecision.isEnabled(
-                    for: .qwertyDynamicNumbers,
+                    for: clipboardSite(variableStates: variableStates),
                     clipboardHistoryEnabled: variableStates.keyboardLanguage.usesLatinScript
                         && variableStates.clipboardHistoryManager.isEnabled,
                     enabledSlots: Extension.SettingProvider.clipboardLongPressSlots
@@ -108,7 +122,7 @@ struct QwertyDynamicChangeKeyModel<Extension: ApplicationSpecificKeyboardViewExt
         guard usesNumbersSlotLongPress(variableStates: variableStates),
               ClipboardHistoryKeyHintDecision.shouldShow(
                   clipboardHistoryEnabled: ClipboardLongPressSlotDecision.isEnabled(
-                      for: .qwertyDynamicNumbers,
+                      for: clipboardSite(variableStates: variableStates),
                       clipboardHistoryEnabled: variableStates.keyboardLanguage.usesLatinScript
                           && variableStates.clipboardHistoryManager.isEnabled,
                       enabledSlots: Extension.SettingProvider.clipboardLongPressSlots

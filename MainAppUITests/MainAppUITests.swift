@@ -4131,6 +4131,51 @@ final class CopakyCampaignTests: XCTestCase {
         shot("49-apple-latin-bottom-row")
     }
 
+    // MARK: - 51 · Layout gallery capture (site asset pipeline, not a functional gate)
+
+    /// F-08: captures ONLY the keyboard — the UIKit inputView element — for the site's layout
+    /// gallery. The visual state comes entirely from the external seeds
+    /// (scripts/layout_gallery_shots.sh); `TEST_RUNNER_COPAKY_GALLERY_NAME` names the attachment
+    /// and `TEST_RUNNER_COPAKY_GALLERY_TYPE=ciao` first types «ciao» to fill the candidate bar.
+    /// F-08: サイトのレイアウトギャラリー用にキーボード（inputView要素）だけを撮影する。
+    func test51_layoutGalleryShot() throws {
+        let env = ProcessInfo.processInfo.environment
+        let name = env["COPAKY_GALLERY_NAME"] ?? "layout"
+        let field = activatePreNavigatedField("plain-text")
+        switchToCopaky(in: safari)
+        dismissCopakyNotice(in: safari)
+        guard switchToLatinQwertyTab(in: safari) else {
+            dump(safari, "51-latin-tab-missing")
+            XCTFail("Could not establish Latin QWERTY for the gallery shot")
+            return
+        }
+        clearFocusedField(field, placeholder: "plain-text", in: safari)
+        if env["COPAKY_GALLERY_TYPE"] == "ciao" {
+            tapKeys(["c", "i", "a", "o"], in: safari)
+        }
+        RunLoop.current.run(until: Date().addingTimeInterval(1.5))
+
+        let query = safari.descendants(matching: .other)
+            .matching(NSPredicate(format: "identifier == 'inputView'"))
+        var best: XCUIElement?
+        var bestHeight = CGFloat.zero
+        for index in 0..<min(query.count, 6) {
+            let element = query.element(boundBy: index)
+            guard element.exists, element.frame.height > bestHeight, element.frame.width > 1 else { continue }
+            best = element
+            bestHeight = element.frame.height
+        }
+        guard let best else {
+            dump(safari, "51-inputview-missing")
+            XCTFail("F-08 gallery shot needs the keyboard inputView element")
+            return
+        }
+        let attachment = XCTAttachment(screenshot: best.screenshot())
+        attachment.name = "gallery-\(name)"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
     // MARK: - 50 · Accessibility audit inventory across the Settings screens
 
     /// One collected accessibility-audit issue, flattened to plain strings so it can be JSON-encoded
