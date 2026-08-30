@@ -18,14 +18,14 @@ struct FlickTabKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: Un
     private let flickMap: [FlickDirection: UnifiedVariation]
     private let showsBubbleFlag: Bool
     private let colorRole: ColorRole
-    private let usesNumbersSlotLongPressDecision: Bool
+    private let clipboardLongPressSite: ClipboardLongPressSite?
 
     init(labelType: KeyLabelType,
          pressActions: [ActionType],
          longPressActions: LongpressActionType,
          flick: [FlickDirection: UnifiedVariation],
          showsTapBubble: Bool,
-         usesNumbersSlotLongPressDecision: Bool = false,
+         clipboardLongPressSite: ClipboardLongPressSite? = nil,
          colorRole: ColorRole = .special) {
         self.labelType = labelType
         self.centerPress = pressActions
@@ -33,7 +33,7 @@ struct FlickTabKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: Un
         self.flickMap = flick
         self.showsBubbleFlag = showsTapBubble
         self.colorRole = colorRole
-        self.usesNumbersSlotLongPressDecision = usesNumbersSlotLongPressDecision
+        self.clipboardLongPressSite = clipboardLongPressSite
     }
 
     func pressActions(variableStates _: VariableStates) -> [ActionType] { centerPress }
@@ -42,7 +42,12 @@ struct FlickTabKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: Un
         // ☆123 keeps its own actions); with it ON the navigation replaces START and drops any saved REPEAT
         // (a repeating input/delete must never run under a tab change).
         // レビュー対応：履歴オフでは保存済みの長押しをそのまま返す。オンでは START を置き換え REPEAT は捨てる。
-        guard usesNumbersSlotLongPressDecision, variableStates.clipboardHistoryManager.isEnabled else {
+        guard let clipboardLongPressSite,
+              ClipboardLongPressSlotDecision.isEnabled(
+                  for: clipboardLongPressSite,
+                  clipboardHistoryEnabled: variableStates.clipboardHistoryManager.isEnabled,
+                  enabledSlots: Extension.SettingProvider.clipboardLongPressSlots
+              ) else {
             return centerLongpress
         }
         return .init(
@@ -62,9 +67,13 @@ struct FlickTabKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: Un
     }
 
     @MainActor func labelCornerHintSystemImage(variableStates: VariableStates) -> String? {
-        guard usesNumbersSlotLongPressDecision,
+        guard let clipboardLongPressSite,
               ClipboardHistoryKeyHintDecision.shouldShow(
-                  clipboardHistoryEnabled: variableStates.clipboardHistoryManager.isEnabled
+                  clipboardHistoryEnabled: ClipboardLongPressSlotDecision.isEnabled(
+                      for: clipboardLongPressSite,
+                      clipboardHistoryEnabled: variableStates.clipboardHistoryManager.isEnabled,
+                      enabledSlots: Extension.SettingProvider.clipboardLongPressSlots
+                  )
               ) else {
             return nil
         }

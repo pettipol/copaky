@@ -35,6 +35,8 @@ import enum KanaKanjiConverterModule.KeyboardLanguage
     static var enableQwertyNumberRow: Bool { get }
     /// アルファベットQWERTYの空白スライドでカーソルを移動する / Slide alphabetic QWERTY space to move the cursor
     static var enableSpaceSlideCursor: Bool { get }
+    /// 空白スライドの移動閾値 / Movement threshold for space-bar cursor sliding
+    static var spaceSlideCursorSensitivity: SpaceSlideCursorSensitivity { get }
     /// イタリア語をキーボードの言語として使う / Italian as a keyboard language: it joins the language-switch cycle
     /// and the Latin tab predicts from the Italian dictionary instead of the English one.
     static var enableItalianKeyboardLanguage: Bool { get }
@@ -43,6 +45,8 @@ import enum KanaKanjiConverterModule.KeyboardLanguage
     /// クリップボード取り込みにシステムのペーストボタンを使う（試験的） / Experimental: capture through
     /// `UIPasteControl` instead of reading the pasteboard ourselves — no system banner.
     static var useSystemPasteControl: Bool { get }
+    /// 履歴を直接開く長押しスロット / Long-press slots that open Clipboard history directly
+    static var clipboardLongPressSlots: ClipboardLongPressSlots { get }
     static var hideResetButtonInOneHandedMode: Bool { get }
     static var useShiftKey: Bool { get }
     static var keepDeprecatedShiftKeyBehavior: Bool { get }

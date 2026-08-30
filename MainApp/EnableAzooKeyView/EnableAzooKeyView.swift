@@ -92,8 +92,10 @@ struct EnableAzooKeyView: View {
                             EnableAzooKeyViewHeader("最初の設定")
                             Group {
                                 Divider()
-                                EnableAzooKeyViewText("キーボードの種類をお選びください", with: "keyboard")
-                                LanguageLayoutSettingView(.japaneseKeyboardLayout, setTogether: true)
+                                EnableAzooKeyViewText("日本語キーボードの種類をお選びください", with: "keyboard")
+                                // Copaky [F-01]: onboarding configures Japanese only; Latin keeps its QWERTY default.
+                                // Copaky [F-01]: 初期設定では日本語だけを変更し、ラテン文字のQWERTY既定値を保つ。
+                                LanguageLayoutSettingView(.japaneseKeyboardLayout, setTogether: false)
                             }
                             Group {
                                 Divider()

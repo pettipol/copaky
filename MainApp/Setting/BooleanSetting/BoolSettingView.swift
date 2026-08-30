@@ -16,9 +16,14 @@ struct BoolSettingView<SettingKey: BoolKeyboardSettingKey>: View {
     @State private var showOnEnabledMessageAlert = false
     @State private var onEnabledAlertMessage: LocalizedStringKey?
     @State private var setting: SettingUpdater<SettingKey>
+    private let onValueChanged: (Bool) -> Void
 
-    @MainActor init(_ key: SettingKey) {
+    @MainActor init(
+        _ key: SettingKey,
+        onValueChanged: @escaping (Bool) -> Void = { _ in }
+    ) {
         self._setting = .init(initialValue: .init())
+        self.onValueChanged = onValueChanged
     }
 
     private var toggle: some View {
@@ -51,8 +56,10 @@ struct BoolSettingView<SettingKey: BoolKeyboardSettingKey>: View {
         }
         .onAppear {
             setting.reload()
+            onValueChanged(setting.value)
         }
         .onChange(of: setting.value) { (_, newValue) in
+            onValueChanged(newValue)
             if newValue {
                 if let message = SettingKey.onEnabled() {
                     self.onEnabledAlertMessage = message

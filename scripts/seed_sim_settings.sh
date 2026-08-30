@@ -23,6 +23,8 @@
 #   scripts/seed_sim_settings.sh --print            # just show the current device-wide domain
 #
 # Value typing: true/false -> bool, digits -> integer, anything else -> string.
+# `space_slide_cursor_sensitivity` accepts the stable strings slow, medium or fast.
+# `space_slide_cursor_sensitivity` は安定した文字列 slow / medium / fast を使う。
 # `keyboard_type` / `keyboard_type_en` (LanguageLayout) accept the legacy STRING values
 # "flick" and "roman" — see LanguageLayoutKeyboardSetting.swift (StoredInUserDefault.get).
 set -uo pipefail

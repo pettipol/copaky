@@ -17,7 +17,7 @@ struct QwertyGeneralKeyModel<Extension: ApplicationSpecificKeyboardViewExtension
     private let variations: [QwertyVariationsModel.VariationElement]
     private let direction: VariationsViewDirection
     private let role: UnpressedRole
-    private let showsClipboardHistoryHint: Bool
+    private let clipboardLongPressSite: ClipboardLongPressSite?
     // 文字キー等で英語時シフト・Capsで大文字化するか（カスタムキー等では無効にしたい）
     private let shouldUppercaseForEnglish: Bool
 
@@ -29,7 +29,7 @@ struct QwertyGeneralKeyModel<Extension: ApplicationSpecificKeyboardViewExtension
          showsTapBubble: Bool,
          role: UnpressedRole,
          shouldUppercaseForEnglish: Bool = true,
-         showsClipboardHistoryHint: Bool = false
+         clipboardLongPressSite: ClipboardLongPressSite? = nil
     ) {
         self.labelType = labelType
         self.press = pressActions
@@ -39,7 +39,7 @@ struct QwertyGeneralKeyModel<Extension: ApplicationSpecificKeyboardViewExtension
         self.showsBubbleFlag = showsTapBubble
         self.role = role
         self.shouldUppercaseForEnglish = shouldUppercaseForEnglish
-        self.showsClipboardHistoryHint = showsClipboardHistoryHint
+        self.clipboardLongPressSite = clipboardLongPressSite
     }
 
     // 静的アクション版（LinearCustomの置き換え用）
@@ -51,7 +51,7 @@ struct QwertyGeneralKeyModel<Extension: ApplicationSpecificKeyboardViewExtension
          showsTapBubble: Bool,
          role: UnpressedRole,
          shouldUppercaseForEnglish: Bool = true,
-         showsClipboardHistoryHint: Bool = false
+         clipboardLongPressSite: ClipboardLongPressSite? = nil
     ) {
         self.init(
             labelType: labelType,
@@ -62,7 +62,7 @@ struct QwertyGeneralKeyModel<Extension: ApplicationSpecificKeyboardViewExtension
             showsTapBubble: showsTapBubble,
             role: role,
             shouldUppercaseForEnglish: shouldUppercaseForEnglish,
-            showsClipboardHistoryHint: showsClipboardHistoryHint
+            clipboardLongPressSite: clipboardLongPressSite
         )
     }
 
@@ -103,10 +103,14 @@ struct QwertyGeneralKeyModel<Extension: ApplicationSpecificKeyboardViewExtension
     }
 
     @MainActor func labelCornerHintSystemImage(variableStates: VariableStates) -> String? {
-        guard showsClipboardHistoryHint,
+        guard let clipboardLongPressSite,
               ClipboardHistoryKeyHintDecision.shouldShow(
-                  clipboardHistoryEnabled: variableStates.keyboardLanguage.usesLatinScript
-                      && variableStates.clipboardHistoryManager.isEnabled
+                  clipboardHistoryEnabled: ClipboardLongPressSlotDecision.isEnabled(
+                      for: clipboardLongPressSite,
+                      clipboardHistoryEnabled: variableStates.keyboardLanguage.usesLatinScript
+                          && variableStates.clipboardHistoryManager.isEnabled,
+                      enabledSlots: Extension.SettingProvider.clipboardLongPressSlots
+                  )
               ) else {
             return nil
         }

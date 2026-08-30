@@ -51,6 +51,7 @@ struct KeyboardPreview: View {
             .environment(\.showMessage, false)
             .scaleEffect(scale)
             .frame(width: SemiStaticStates.shared.screenWidth * scale, height: Design.keyboardScreenHeight(upsideComponent: nil, orientation: MainAppDesign.keyboardOrientation) * scale)
+            .clipped()
             .onAppear {
                 variableStates.resultModel.setResults([
                     CandidateMock(text: "Copaky"),

@@ -95,6 +95,10 @@ public enum AzooKeyKeyboardViewExtension: ApplicationSpecificKeyboardViewExtensi
         EnableSpaceSlideCursor.value
     }
 
+    public static var spaceSlideCursorSensitivity: SpaceSlideCursorSensitivity {
+        SpaceSlideCursorSensitivitySetting.value
+    }
+
     public static var enableItalianKeyboardLanguage: Bool {
         EnableItalianKeyboardLanguage.value
     }
@@ -105,6 +109,10 @@ public enum AzooKeyKeyboardViewExtension: ApplicationSpecificKeyboardViewExtensi
 
     public static var useSystemPasteControl: Bool {
         UseSystemPasteControl.value
+    }
+
+    public static var clipboardLongPressSlots: ClipboardLongPressSlots {
+        ClipboardLongPressSlotsSetting.value
     }
 
     public static var displayTabBarButton: Bool {

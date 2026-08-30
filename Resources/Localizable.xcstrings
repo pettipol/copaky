@@ -1,6 +1,176 @@
 {
   "sourceLanguage" : "ja",
   "strings" : {
+    "#+=キー（記号）" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "#+= key (symbols)"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tasto #+= (simboli)"
+          }
+        }
+      }
+    },
+    "123キー（文字）" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "123 key (letters)"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tasto 123 (lettere)"
+          }
+        }
+      }
+    },
+    "☆123キー（フリック）" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "☆123 key (flick)"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tasto ☆123 (flick)"
+          }
+        }
+      }
+    },
+    "オンにしたキーを長押しするとクリップボード履歴が開きます。少なくとも1つのキーを選んでください。" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Long-press an enabled key to open Clipboard history. Select at least one key."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tieni premuto un tasto attivo per aprire la Cronologia appunti. Seleziona almeno un tasto."
+          }
+        }
+      }
+    },
+    "スライド感度" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slide sensitivity"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sensibilità scorrimento"
+          }
+        }
+      }
+    },
+    "スペースバーをスライドしたときに、カーソルが1文字動くまでの距離を調整します。" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adjusts how far you slide the space bar before the cursor moves by one character."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Regola la distanza di scorrimento sulla barra spaziatrice necessaria per spostare il cursore di un carattere."
+          }
+        }
+      }
+    },
+    "中くらい" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Medium"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Media"
+          }
+        }
+      }
+    },
+    "遅め" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slow"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lenta"
+          }
+        }
+      }
+    },
+    "速め" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fast"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Veloce"
+          }
+        }
+      }
+    },
+    "長押しで履歴を開くキー" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keys that open history on long press"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tasti che aprono la cronologia con pressione prolungata"
+          }
+        }
+      }
+    },
     "使用する言語" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3446,19 +3616,19 @@
         }
       }
     },
-    "オンにすると候補バーに Copaky ボタンを表示します。タブバーは 123 / #+= / ☆123 キーの長押しから開けます（クリップボード履歴がオンのときは長押しで履歴タブが直接開きます）" : {
+    "オンにすると候補バーに Copaky ボタンを表示します。123 / #+= / ☆123 キーの長押しでタブバーまたは履歴タブを開けます（クリップボード履歴がオンのときは、設定したキーから履歴タブが直接開きます）" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Turn on to show the Copaky button in the candidate bar. The tab bar opens with a long press on the 123 / #+= / ☆123 key (when Clipboard history is on, the long press opens the history tab directly)"
+            "value" : "Turn on to show the Copaky button in the candidate bar. Long-press the 123 / #+= / ☆123 key to open the tab bar or history tab (when Clipboard history is on, configured keys open the history tab directly)."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Attiva per mostrare il pulsante Copaky nella barra dei suggerimenti. La barra schede si apre con un tocco lungo sul tasto 123 / #+= / ☆123 (se la Cronologia appunti è attiva, il tocco lungo apre direttamente la cronologia)"
+            "value" : "Attiva per mostrare il pulsante Copaky nella barra dei suggerimenti. Tieni premuto il tasto 123 / #+= / ☆123 per aprire la barra schede o il tab della cronologia (quando la Cronologia appunti è attiva, i tasti configurati aprono direttamente la cronologia)."
           }
         }
       }
@@ -4285,18 +4455,18 @@
         }
       }
     },
-    "キーボードの種類をお選びください" : {
+    "日本語キーボードの種類をお選びください" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Select input style"
+            "value" : "Choose your Japanese keyboard style"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Seleziona il tipo di tastiera"
+            "value" : "Scegli il tipo di tastiera giapponese"
           }
         }
       }
@@ -4641,34 +4811,34 @@
         }
       }
     },
-    "クリップボードの履歴がオンになりました。123 / #+= / ☆123 キーを長押しすると履歴タブが開きます。「ペーストの許可」を求めるダイアログが繰り返し出る場合は、設定アプリ ▸ Copaky ▸「ほかの App からペースト」を「許可」にしてください。" : {
+    "クリップボードの履歴がオンになりました。既定では文字タブの123キーを長押しすると履歴タブが開きます。設定で #+= / ☆123 キーも追加できます。「ペーストの許可」を求めるダイアログが繰り返し出る場合は、設定アプリ ▸ Copaky ▸「ほかの App からペースト」を「許可」にしてください。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Clipboard history is on. Long-press the 123 / #+= / ☆123 key to open the history tab. If the «Allow Paste» dialog keeps appearing, open the Settings app ▸ Copaky ▸ «Paste from Other Apps» and choose «Allow»."
+            "value" : "Clipboard history is on. By default, long-press the 123 key on the letters tab to open the history tab. You can also enable the #+= and ☆123 keys in Settings. If the «Allow Paste» dialog keeps appearing, open the Settings app ▸ Copaky ▸ «Paste from Other Apps» and choose «Allow»."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "La Cronologia appunti è attiva. Tieni premuto il tasto 123 / #+= / ☆123 per aprire il tab della cronologia. Se la finestra «Consenti incolla» continua a comparire, apri l'app Impostazioni ▸ Copaky ▸ «Incolla da altre app» e scegli «Consenti»."
+            "value" : "La Cronologia appunti è attiva. Per impostazione predefinita, tieni premuto il tasto 123 nel tab delle lettere per aprire la cronologia. Nelle Impostazioni puoi attivare anche i tasti #+= e ☆123. Se la finestra «Consenti incolla» continua a comparire, apri l'app Impostazioni ▸ Copaky ▸ «Incolla da altre app» e scegli «Consenti»."
           }
         }
       }
     },
-    "クリップボードの履歴は 123 / #+= / ☆123 キーの長押しで開きます。" : {
+    "クリップボードの履歴は、既定では文字タブの123キーの長押しで開きます。設定で #+= / ☆123 キーも追加できます。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Open Clipboard history with a long press on the 123 / #+= / ☆123 key."
+            "value" : "By default, open Clipboard history with a long press on the 123 key in the letters tab. You can also enable the #+= and ☆123 keys in Settings."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apri la Cronologia appunti con un tocco lungo sul tasto 123 / #+= / ☆123."
+            "value" : "Per impostazione predefinita, apri la Cronologia appunti tenendo premuto il tasto 123 nel tab delle lettere. Nelle Impostazioni puoi attivare anche i tasti #+= e ☆123."
           }
         }
       }

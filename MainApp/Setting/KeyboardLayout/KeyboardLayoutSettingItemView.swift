@@ -108,7 +108,7 @@ struct LanguageLayoutSettingView<SettingKey: LanguageLayoutKeyboardSetting>: Vie
                         .disabled(true)
                 }
             } else {
-                VStack {
+                VStack(spacing: 12) {
                     Text(labelText)
                     CenterAlignedView {
                         KeyboardPreview(scale: 0.8, defaultTab: tab)

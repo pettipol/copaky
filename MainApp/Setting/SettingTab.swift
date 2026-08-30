@@ -27,6 +27,7 @@ struct SettingTabView: View {
         showAllSections || !searchQuery.isEmpty
     }
     @Environment(\.requestReview) var requestReview
+    @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var appStates: MainAppStates
     private func canFlickLayout(_ layout: LanguageLayout) -> Bool {
         if layout == .flick {
@@ -52,6 +53,25 @@ struct SettingTabView: View {
         return false
     }
 
+    @ViewBuilder
+    private var keyboardActivationSettingsRow: some View {
+        Group {
+            if !appStates.isKeyboardActivated {
+                Text("キーボードを有効化する")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        appStates.requireFirstOpenView = true
+                    }
+            } else if let url = URL(string: UIApplication.openSettingsURLString) {
+                Button("設定アプリを開く") {
+                    UIApplication.shared.open(url, options: [:], completionHandler: nil)
+                }
+            }
+        }
+        .searchKeys("impostazioni", "attiva", "settings", "enable", "設定", "有効化")
+    }
+
     var body: some View {
         NavigationStack(path: $path) {
             Form {
@@ -59,19 +79,20 @@ struct SettingTabView: View {
                     // Copaky: the short list. Same views as below — a row is defined once and shown
                     // here or in its own section, never duplicated in behaviour.
                     Section("基本設定") {
+                        keyboardActivationSettingsRow
                         NavigationLink("キーボードの種類を設定する") {
                             KeyboardLayoutTypeDetailsView()
                         }
                         BoolSettingView(.liveConversion)
                         BoolSettingView(.enableNumberRowHints)
                         BoolSettingView(.enableQwertyNumberRow)
-                        BoolSettingView(.enableSpaceSlideCursor)
+                        SpaceSlideCursorSettingRows()
                         ActiveKeyboardLanguagesSettingRows(editMode: $activeLanguagesEditMode)
                         // Copaky: keep auto-accent next to the Italian-language switch it qualifies.
                         // Copaky: アクセント自動補正を対象となるイタリア語設定の直後に置く。
                         BoolSettingView(.italianAutoAccentOnSpace)
                         BoolSettingView(.enableLatinAutocorrect)
-                        BoolSettingView(.enableClipboardHistoryManagerTab)
+                        ClipboardHistorySettingRows()
                         BoolSettingView(.displayTabBarButton)
                         BoolSettingView(.hideEmptyCandidateBarOnLatin)
                         BoolSettingView(.enableKeySound)
@@ -92,11 +113,13 @@ struct SettingTabView: View {
 
                 if showsEverything {
                 Section("キーボードの種類") {
+                    keyboardActivationSettingsRow
                     NavigationLink("キーボードの種類を設定する") {
                         KeyboardLayoutTypeDetailsView()
                     }
+                    .searchKeys("キーボードの種類", "レイアウト", "フリック", "ローマ字", "tastiera", "layout", "keyboard", "disposizione")
                 }
-                .searchKeys("キーボードの種類", "レイアウト", "フリック", "ローマ字", "tastiera", "layout", "keyboard", "disposizione")
+                .inheritSearchKeys()
 
                 Section("ライブ変換") {
                     BoolSettingView(.liveConversion)
@@ -133,8 +156,8 @@ struct SettingTabView: View {
                 Section("バー") {
                     BoolSettingView(.useReflectStyleCursorBar)
                         .searchKeys("カーソルバー", "バー", "cursore", "barra", "cursor", "bar")
-                    BoolSettingView(.enableClipboardHistoryManagerTab)
-                        .searchKeys("コピー履歴", "クリップボード履歴", "履歴", "appunti", "clipboard", "cronologia")
+                    ClipboardHistorySettingRows()
+                        .searchKeys("コピー履歴", "クリップボード履歴", "履歴", "123", "#+=", "☆123", "appunti", "clipboard", "cronologia", "long press", "pressione prolungata")
                     BoolSettingView(.displayTabBarButton)
                         .searchKeys("Copakyボタン", "候補バー", "barra", "suggerimenti", "candidate", "button")
                     BoolSettingView(.hideEmptyCandidateBarOnLatin)
@@ -196,8 +219,8 @@ struct SettingTabView: View {
                         .searchKeys("数字", "数字キー", "ナンバー", "上段", "number", "numeri", "cifre", "digits")
                     BoolSettingView(.enableQwertyNumberRow)
                         .searchKeys("数字", "数字行", "数字キー", "number", "number row", "digits", "numeri", "cifre", "riga numerica")
-                    BoolSettingView(.enableSpaceSlideCursor)
-                        .searchKeys("スペース", "カーソル", "スライド", "cursor", "swipe", "slide", "cursore", "spazio")
+                    SpaceSlideCursorSettingRows()
+                        .searchKeys("スペース", "カーソル", "スライド", "感度", "cursor", "swipe", "slide", "sensitivity", "cursore", "spazio", "sensibilità")
                     ActiveKeyboardLanguagesSettingRows(editMode: $activeLanguagesEditMode)
                         .searchKeys("イタリア語", "italiano", "italian", "lingua", "language", "言語")
                     // Copaky: the optional space behavior is adjacent and searchable in JA/EN/IT.
@@ -314,8 +337,16 @@ struct SettingTabView: View {
                 }
             }
             .onAppear {
+                // Copaky [F-03]: refresh after returning from iOS Settings; launch state can be stale.
+                // Copaky [F-03]: iOS設定から戻った後に再判定し、起動時の古い状態を残さない。
+                appStates.isKeyboardActivated = SharedStore.checkKeyboardActivation()
                 if appStates.requestReviewManager.shouldTryRequestReview, appStates.requestReviewManager.shouldRequestReview() {
                     requestReview()
+                }
+            }
+            .onChange(of: scenePhase) { (_, phase) in
+                if phase == .active {
+                    appStates.isKeyboardActivated = SharedStore.checkKeyboardActivation()
                 }
             }
         }

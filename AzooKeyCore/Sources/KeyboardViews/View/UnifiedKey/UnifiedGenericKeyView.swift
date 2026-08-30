@@ -208,12 +208,13 @@ public struct UnifiedGenericKeyView<Extension: ApplicationSpecificKeyboardViewEx
     private func linearVariations() -> (arr: [QwertyVariationsModel.VariationElement], direction: VariationsViewDirection) { model.getLinearVariations(variableStates: variableStates) }
 
     private func handleSpaceSlideCursor(horizontalTranslation: CGFloat) {
-        let enabled = self.model.enablesSpaceSlideCursor(variableStates: variableStates)
+        guard self.model.enablesSpaceSlideCursor(variableStates: variableStates) else { return }
         let incrementalSteps = SpaceSlideCursorDecision.incrementalSteps(
             horizontalTranslation: horizontalTranslation,
             keyWidth: tabDesign.keyViewWidth,
+            sensitivity: Extension.SettingProvider.spaceSlideCursorSensitivity,
             emittedSteps: lifecycle.spaceSlideCursorSteps,
-            isEnabled: enabled
+            isEnabled: true
         )
         guard incrementalSteps != 0 else { return }
 

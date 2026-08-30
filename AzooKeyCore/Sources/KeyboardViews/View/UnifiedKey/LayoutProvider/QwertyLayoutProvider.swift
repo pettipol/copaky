@@ -49,12 +49,16 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
             pressActions: { _ in [.moveTab(.system(.qwerty_numbers))] },
             longPressActions: { states in
                 .init(start: NumbersSlotLongPressDecision.longPressActionsForNumbersSlot(
-                    clipboardHistoryEnabled: states.keyboardLanguage.usesLatinScript
-                        && states.clipboardHistoryManager.isEnabled
+                    clipboardHistoryEnabled: ClipboardLongPressSlotDecision.isEnabled(
+                        for: .qwertyNumbers,
+                        clipboardHistoryEnabled: states.keyboardLanguage.usesLatinScript
+                            && states.clipboardHistoryManager.isEnabled,
+                        enabledSlots: Extension.SettingProvider.clipboardLongPressSlots
+                    )
                 ))
             },
             variations: [], direction: .right, showsTapBubble: false, role: .special,
-            showsClipboardHistoryHint: true
+            clipboardLongPressSite: .qwertyNumbers
         )
         // symbols key
         let symbolsKey: any UnifiedKeyModelProtocol<Extension> = QwertyGeneralKeyModel(
@@ -62,12 +66,16 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
             pressActions: { _ in [.moveTab(.system(.qwerty_symbols))] },
             longPressActions: { states in
                 .init(start: NumbersSlotLongPressDecision.longPressActionsForNumbersSlot(
-                    clipboardHistoryEnabled: states.keyboardLanguage.usesLatinScript
-                        && states.clipboardHistoryManager.isEnabled
+                    clipboardHistoryEnabled: ClipboardLongPressSlotDecision.isEnabled(
+                        for: .qwertySymbols,
+                        clipboardHistoryEnabled: states.keyboardLanguage.usesLatinScript
+                            && states.clipboardHistoryManager.isEnabled,
+                        enabledSlots: Extension.SettingProvider.clipboardLongPressSlots
+                    )
                 ))
             },
             variations: [], direction: .right, showsTapBubble: false, role: .special,
-            showsClipboardHistoryHint: true
+            clipboardLongPressSite: .qwertySymbols
         )
         // change keyboard key (dynamic)
         let changeKeyboardKey: any UnifiedKeyModelProtocol<Extension> = QwertyDynamicChangeKeyModel<Extension>()

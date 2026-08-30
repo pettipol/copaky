@@ -9,6 +9,59 @@
 import CustardKit
 import Foundation
 
+public enum ClipboardLongPressSlot: String, CaseIterable, Hashable, Sendable {
+    case qwertyNumbers
+    case qwertySymbols
+    case flickStar123
+}
+
+public struct ClipboardLongPressSlots: Equatable, Sendable {
+    public private(set) var slots: Set<ClipboardLongPressSlot>
+
+    public init(slots: Set<ClipboardLongPressSlot>) {
+        self.slots = slots.isEmpty ? [.qwertyNumbers] : slots
+    }
+
+    public func contains(_ slot: ClipboardLongPressSlot) -> Bool {
+        slots.contains(slot)
+    }
+
+    public mutating func set(_ slot: ClipboardLongPressSlot, enabled: Bool) {
+        if enabled {
+            slots.insert(slot)
+        } else if slots.count > 1 {
+            slots.remove(slot)
+        }
+    }
+}
+
+enum ClipboardLongPressSite: CaseIterable {
+    case qwertyNumbers
+    case qwertySymbols
+    case flickStar123
+    case qwertyDynamicNumbers
+}
+
+// Copaky [F-06]: map four rendered sites onto the three persisted slots before action/hint policy.
+// Copaky [F-06]: 4つの表示位置を3つの保存スロットへ写像してから、動作とヒントを判定する。
+enum ClipboardLongPressSlotDecision {
+    static func slot(for site: ClipboardLongPressSite) -> ClipboardLongPressSlot {
+        switch site {
+        case .qwertyNumbers, .qwertyDynamicNumbers: .qwertyNumbers
+        case .qwertySymbols: .qwertySymbols
+        case .flickStar123: .flickStar123
+        }
+    }
+
+    static func isEnabled(
+        for site: ClipboardLongPressSite,
+        clipboardHistoryEnabled: Bool,
+        enabledSlots: ClipboardLongPressSlots
+    ) -> Bool {
+        clipboardHistoryEnabled && enabledSlots.contains(slot(for: site))
+    }
+}
+
 // Copaky: one-gesture clipboard access from the existing 123 / #+= / ☆123 slot.
 // Copaky: 既存の 123 / #+= / ☆123 スロットから1ジェスチャーで履歴を開く。
 enum NumbersSlotLongPressDecision {
@@ -53,20 +106,39 @@ enum ClipboardHistoryKeyHintDecision {
 
 // Copaky [E-09]: pure, width-derived quantization for space-bar cursor sliding.
 // Copaky [E-09]: 通常QWERTYキー幅からカーソル移動量を量子化する純粋判定。
+public enum SpaceSlideCursorSensitivity: String, CaseIterable, Sendable {
+    case slow
+    case medium
+    case fast
+
+    public var thresholdMultiplier: CGFloat {
+        switch self {
+        case .slow: 1.0
+        case .medium: 0.7
+        case .fast: 0.45
+        }
+    }
+}
+
 enum SpaceSlideCursorDecision {
-    /// One cursor action per rendered ordinary QWERTY key width.
-    static func stepThreshold(keyWidth: CGFloat) -> CGFloat {
+    /// Scale the rendered ordinary QWERTY key width without introducing an absolute device constant.
+    /// 描画済みQWERTYキー幅に倍率を掛け、端末依存の固定値を持ち込まない。
+    static func stepThreshold(
+        keyWidth: CGFloat,
+        sensitivity: SpaceSlideCursorSensitivity
+    ) -> CGFloat {
         guard keyWidth > 0 else { return .infinity }
-        return keyWidth
+        return keyWidth * sensitivity.thresholdMultiplier
     }
 
     static func totalSteps(
         horizontalTranslation: CGFloat,
         keyWidth: CGFloat,
+        sensitivity: SpaceSlideCursorSensitivity,
         isEnabled: Bool
     ) -> Int {
         guard isEnabled else { return 0 }
-        let threshold = stepThreshold(keyWidth: keyWidth)
+        let threshold = stepThreshold(keyWidth: keyWidth, sensitivity: sensitivity)
         guard threshold.isFinite else { return 0 }
         return Int(horizontalTranslation / threshold)
     }
@@ -74,6 +146,7 @@ enum SpaceSlideCursorDecision {
     static func incrementalSteps(
         horizontalTranslation: CGFloat,
         keyWidth: CGFloat,
+        sensitivity: SpaceSlideCursorSensitivity,
         emittedSteps: Int,
         isEnabled: Bool
     ) -> Int {
@@ -81,6 +154,7 @@ enum SpaceSlideCursorDecision {
         return totalSteps(
             horizontalTranslation: horizontalTranslation,
             keyWidth: keyWidth,
+            sensitivity: sensitivity,
             isEnabled: true
         ) - emittedSteps
     }

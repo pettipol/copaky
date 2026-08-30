@@ -45,7 +45,7 @@ public extension CustardInterface {
     @MainActor func unifiedKeyModels<Extension: ApplicationSpecificKeyboardViewExtension>(extension _: Extension.Type) -> [(position: UnifiedPositionSpecifier, model: any UnifiedKeyModelProtocol<Extension>)] {
         func flickTabKeyModel(
             _ data: KeyFlickSetting.SettingData,
-            usesNumbersSlotLongPressDecision: Bool = false
+            clipboardLongPressSite: ClipboardLongPressSite? = nil
         ) -> any UnifiedKeyModelProtocol<Extension> {
             FlickTabKeyModel<Extension>(
                 labelType: data.labelType,
@@ -55,7 +55,7 @@ public extension CustardInterface {
                     UnifiedVariation(label: $0.labelType, pressActions: $0.pressActions, longPressActions: $0.longPressActions)
                 },
                 showsTapBubble: false,
-                usesNumbersSlotLongPressDecision: usesNumbersSlotLongPressDecision,
+                clipboardLongPressSite: clipboardLongPressSite,
                 colorRole: .special
             )
         }
@@ -107,7 +107,7 @@ public extension CustardInterface {
                 case .flickStar123Tab:
                     flickTabKeyModel(
                         Extension.SettingProvider.symbolsTabFlickCustomKey.compiled(),
-                        usesNumbersSlotLongPressDecision: true
+                        clipboardLongPressSite: .flickStar123
                     )
                 }
                 models.append((pos, model))

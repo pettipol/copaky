@@ -54,16 +54,20 @@ struct QwertyDynamicChangeKeyModel<Extension: ApplicationSpecificKeyboardViewExt
 
     func longPressActions(variableStates: VariableStates) -> LongpressActionType {
         let shiftRole = QwertyLayoutProvider<Extension>.shiftBehaviorPreference() != .leftbottom || variableStates.boolStates.isShifted || variableStates.boolStates.isCapsLocked
-        // Copaky [A-11]: on the Latin tabs this slot (123 / #+= / ABC-back, in every Shift mode) opens
-        // Clipboard history on long press when the history is on — unless the key currently IS the
+        // Copaky [F-06]: this dynamic numbers-access key follows qwertyNumbers even when its label
+        // becomes #+= or ABC-back. It opens history unless the key currently IS the system globe.
         // system globe (needsInputModeSwitchKey), which has no Copaky long press. Counter-review fix:
         // the default «#+=» role (UseShiftKey off) was left without any long press.
-        // Copaky [A-11]: ラテン文字タブではこのスロット（123 / #+= / ABC 戻る、全 Shift 状態）が長押しで
-        // 履歴を開く。システムのグローブ役のときだけ対象外。
+        // Copaky [F-06]: 表示が #+= / ABC 戻るに変わっても数字アクセス用の動的キーは
+        // qwertyNumbers スロットに従う。システムのグローブ役のときだけ対象外。
         if usesNumbersSlotLongPress(variableStates: variableStates) {
             return .init(start: NumbersSlotLongPressDecision.longPressActionsForNumbersSlot(
-                clipboardHistoryEnabled: variableStates.keyboardLanguage.usesLatinScript
-                    && variableStates.clipboardHistoryManager.isEnabled
+                clipboardHistoryEnabled: ClipboardLongPressSlotDecision.isEnabled(
+                    for: .qwertyDynamicNumbers,
+                    clipboardHistoryEnabled: variableStates.keyboardLanguage.usesLatinScript
+                        && variableStates.clipboardHistoryManager.isEnabled,
+                    enabledSlots: Extension.SettingProvider.clipboardLongPressSlots
+                )
             ))
         }
         return shiftRole ? .none : .init(start: [.setTabBar(.toggle)])
@@ -103,8 +107,12 @@ struct QwertyDynamicChangeKeyModel<Extension: ApplicationSpecificKeyboardViewExt
     @MainActor func labelCornerHintSystemImage(variableStates: VariableStates) -> String? {
         guard usesNumbersSlotLongPress(variableStates: variableStates),
               ClipboardHistoryKeyHintDecision.shouldShow(
-                  clipboardHistoryEnabled: variableStates.keyboardLanguage.usesLatinScript
-                      && variableStates.clipboardHistoryManager.isEnabled
+                  clipboardHistoryEnabled: ClipboardLongPressSlotDecision.isEnabled(
+                      for: .qwertyDynamicNumbers,
+                      clipboardHistoryEnabled: variableStates.keyboardLanguage.usesLatinScript
+                          && variableStates.clipboardHistoryManager.isEnabled,
+                      enabledSlots: Extension.SettingProvider.clipboardLongPressSlots
+                  )
               ) else {
             return nil
         }

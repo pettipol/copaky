@@ -377,7 +377,7 @@ public struct EnableClipboardHistoryManagerTab: BoolKeyboardSettingKey {
             }
             tabBarData.lastUpdateDate = Date()
             try manager.saveTabBarData(tabBarData: tabBarData)
-            return "クリップボードの履歴がオンになりました。123 / #+= / ☆123 キーを長押しすると履歴タブが開きます。「ペーストの許可」を求めるダイアログが繰り返し出る場合は、設定アプリ ▸ Copaky ▸「ほかの App からペースト」を「許可」にしてください。"
+            return "クリップボードの履歴がオンになりました。既定では文字タブの123キーを長押しすると履歴タブが開きます。設定で #+= / ☆123 キーも追加できます。「ペーストの許可」を求めるダイアログが繰り返し出る場合は、設定アプリ ▸ Copaky ▸「ほかの App からペースト」を「許可」にしてください。"
         } catch {
             debug("EnableClipboardHistoryManagerTab onEnabled", error)
             return nil
@@ -406,7 +406,7 @@ public extension KeyboardSettingKey where Self == EnableClipboardHistoryManagerT
 /// Copaky: 候補バーのショートカットは任意表示で、既定ではオフ。
 public struct DisplayTabBarButton: BoolKeyboardSettingKey {
     public static let title: LocalizedStringKey = "Copaky ボタンを候補バーに表示"
-    public static let explanation: LocalizedStringKey = "オンにすると候補バーに Copaky ボタンを表示します。タブバーは 123 / #+= / ☆123 キーの長押しから開けます（クリップボード履歴がオンのときは長押しで履歴タブが直接開きます）"
+    public static let explanation: LocalizedStringKey = "オンにすると候補バーに Copaky ボタンを表示します。123 / #+= / ☆123 キーの長押しでタブバーまたは履歴タブを開けます（クリップボード履歴がオンのときは、設定したキーから履歴タブが直接開きます）"
     public static let defaultValue = false
     public static let key: String = "display_tab_bar_button"
 }

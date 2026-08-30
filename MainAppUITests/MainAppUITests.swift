@@ -3789,7 +3789,8 @@ final class CopakyCampaignTests: XCTestCase {
 
     /// Requires external App Group seeds because Simulator app/extension preference domains can
     /// diverge: `scripts/run_ui_test.sh --fresh-install --seed enable_space_slide_cursor=true
-    /// --seed live_conversion=true test47_spaceSlideCursorOnLatinQwerty`. A roughly two-letter-key
+    /// --seed space_slide_cursor_sensitivity=slow --seed live_conversion=true
+    /// test47_spaceSlideCursorOnLatinQwerty`. A roughly two-letter-key
     /// drag emits two unit actions:
     /// one commits live composition and one produces the visible cursor step. A later ordinary tap
     /// still inserts Space.

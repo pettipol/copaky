@@ -10,6 +10,14 @@ import class UIKit.UIPasteboard
 import Foundation
 import SwiftUtils
 import UniformTypeIdentifiers
+#if DEBUG
+import os
+
+private let clipboardProbeLog = OSLog(
+    subsystem: "com.pettipol.copaky.keyboard",
+    category: "ClipboardProbe"
+)
+#endif
 
 struct ClipboardHistoryItem: Equatable, Comparable, Hashable, Codable, Identifiable {
     var content: Content
@@ -204,6 +212,25 @@ public struct ClipboardHistoryManager {
     /// ed esegue la pulizia temporale. La cattura del valore avviene solo in `captureCurrentClipboard`,
     /// su intento esplicito dell'utente.
     @MainActor public mutating func detectClipboardChange(now: Date = Date()) {
+        #if DEBUG
+        let b02ProbeEnabled = ProcessInfo.processInfo.environment["COPAKY_B02_PROBE"] == "1"
+        if b02ProbeEnabled {
+            // Copaky [B-02]: measure whether metadata is readable without Full Access; never log content.
+            // Copaky [B-02]: フルアクセスなしでメタデータを読めるか測定し、内容は絶対に記録しない。
+            let pasteboard = UIPasteboard.general
+            os_log(
+                .info,
+                log: clipboardProbeLog,
+                "B-02 metadata changeCount=%{public}ld hasStrings=%{public}d",
+                pasteboard.changeCount,
+                pasteboard.hasStrings ? 1 : 0
+            )
+            guard self.isEnabled else {
+                self.hasPendingClipboard = false
+                return
+            }
+        }
+        #endif
         guard self.isEnabled else {
             self.hasPendingClipboard = false
             return

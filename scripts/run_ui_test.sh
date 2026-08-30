@@ -14,12 +14,14 @@ FRESH_INSTALL=0
 CLIPBOARD_LANG=""
 PBSEED_BYTES=""
 TEST=""
+USER_SEEDS=()
 SEEDS=(
   keyboard_type=flick
   keyboard_type_en=roman
   enable_qwerty_number_row_hints=true
   enable_qwerty_number_row=false
   enable_space_slide_cursor=false
+  space_slide_cursor_sensitivity=medium
   enable_italian_keyboard_language=true
 )
 
@@ -32,7 +34,7 @@ while [[ $# -gt 0 ]]; do
     --seed)
       [[ $# -ge 2 ]] || die "--seed requires key=value"
       [[ "$2" == *=* && -n "${2%%=*}" ]] || die "invalid --seed '$2' (expected key=value)"
-      SEEDS+=("$2")
+      USER_SEEDS+=("$2")
       shift 2
       ;;
     --seed-clipboard)
@@ -62,6 +64,16 @@ done
 
 [[ -n "$TEST" ]] || { usage; exit 2; }
 [[ "$TEST" != */* ]] || die "pass the bare CopakyCampaignTests method name"
+
+# Copaky [F-09]: test47's drag distances are calibrated on the SLOW (1.0x key width) threshold.
+# The product default is now medium (0.7x), so the test pins slow here — an explicit --seed
+# space_slide_cursor_sensitivity=... still wins because user seeds are appended last.
+# Copaky [F-09]: test47のドラッグ距離はslow(1.0倍)前提。既定がmediumになったためここでslowを
+# 固定する。--seed の明示指定は後勝ちで常に優先される。
+if [[ "$TEST" == "test47_spaceSlideCursorOnLatinQwerty" ]]; then
+  SEEDS+=(space_slide_cursor_sensitivity=slow)
+fi
+SEEDS+=(${USER_SEEDS[@]+"${USER_SEEDS[@]}"})
 [[ -z "$CLIPBOARD_LANG" || "$CLIPBOARD_LANG" == "en" || "$CLIPBOARD_LANG" == "ja" || "$CLIPBOARD_LANG" == "it" ]] \
   || die "--seed-clipboard must be en, ja or it"
 [[ -z "$PBSEED_BYTES" || "$PBSEED_BYTES" =~ ^[0-9]+$ ]] \
