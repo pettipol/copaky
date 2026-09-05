@@ -131,6 +131,10 @@ public struct ClipboardHistoryManager {
         case captured
         case rejected
         case rejectedOversized
+        /// Copaky [G-38]: the entry cannot be persisted next to the pinned ones (raw-file budget saturated).
+        case rejectedHistoryFull
+        /// Copaky [G-38]: the history file could not be read (oversized/locked/corrupt): nothing is captured.
+        case rejectedHistoryUnavailable
     }
 
     var items: [ClipboardHistoryItem] = []
@@ -149,8 +153,10 @@ public struct ClipboardHistoryManager {
     /// Cap in byte UTF-8 del singolo elemento: difende dai "bomb" ZWJ/combining (pochi grapheme
     /// cluster ma molti scalari/byte), che il solo cap a caratteri non fermerebbe.
     static let maxItemByteCount = 256 * 1024
-    /// Tetto sui byte grezzi del file di cronologia: non deserializzare blob enormi (anti-tamper)
-    /// nella memoria stretta dell'estensione tastiera.
+    /// Copaky [G-38]: raw-file cap of the history. It stays SMALL on purpose: the keyboard extension
+    /// decodes and re-encodes this file inside a 50 MB memory ceiling (AGENTS §4). Coherence with
+    /// `maxCount × maxItemByteCount` (12.8 MiB) is guaranteed by prune-on-save (`save(_:config:)`),
+    /// never by a larger cap; an oversized file collapses the load instead of being overwritten.
     static let maxRawFileBytes = 4 * 1024 * 1024
     /// Versione corrente dello schema di clipboard_history.json. / Current schema version of clipboard_history.json.
     static let currentSchemaVersion = 1
@@ -186,19 +192,29 @@ public struct ClipboardHistoryManager {
         }
     }
 
-    @MainActor func save() {
+    /// Returns false when nothing could be persisted (collapsed, disabled, write or backup-exclusion
+    /// failure): the capture flow surfaces it instead of pretending the entry is safe on disk.
+    @MainActor @discardableResult mutating func save() -> Bool {
         // 読み込みに失敗している場合は上書きを行わない
         guard !self.collapsed else {
-            return
+            return false
         }
         // 有効化されていなければ上書きしない
         guard self.isEnabled else {
-            return
+            return false
         }
         do {
-            try Self.save(self.items, config: config)
+            // Copaky [G-38]: nil means nothing was written (pinned data alone exceeds the raw budget, the
+            // existing file is preserved) — report it, do not pretend the history is safe on disk.
+            guard let persistedItems = try Self.save(self.items, config: config) else {
+                return false
+            }
+            // Copaky [G-38]: keep memory aligned with the exact pruned state written to disk.
+            self.items = persistedItems
+            return true
         } catch {
             debug("ClipboardHistoryManager.init: save failed", error)
+            return false
         }
     }
 
@@ -250,6 +266,10 @@ public struct ClipboardHistoryManager {
         guard self.isEnabled, !isSecureEntry else {
             return .rejected
         }
+        // Copaky [G-38]: a collapsed manager never persists — do not report a capture that would be volatile.
+        guard !self.collapsed else {
+            return .rejectedHistoryUnavailable
+        }
         let currentCount = self.clipboardSource.changeCount
         guard self.clipboardSource.hasStrings else {
             self.previousChangedCount = currentCount
@@ -278,8 +298,7 @@ public struct ClipboardHistoryManager {
         self.hasPendingClipboard = false
         switch readResult {
         case .text(let string):
-            self.insert(text: string, now: now)
-            return .captured
+            return self.insert(text: string, now: now) ? .captured : .rejectedHistoryFull
         case .unavailable:
             return .rejected
         case .rejectedOversized:
@@ -299,6 +318,9 @@ public struct ClipboardHistoryManager {
         guard self.isEnabled, !isSecureEntry else {
             return .rejected
         }
+        guard !self.collapsed else {
+            return .rejectedHistoryUnavailable
+        }
         // Il testo è già stato consegnato dal sistema: nessuna copia, byte-first e lavoro limitato.
         // システムから受け取った String はコピーせず、byte-first で上限までだけ走査する。
         guard !Self.exceedsItemByteLimit(string), !Self.exceedsItemCharacterLimit(string) else {
@@ -308,8 +330,7 @@ public struct ClipboardHistoryManager {
         }
         // The system handed us this text, so whatever is on the pasteboard is now accounted for.
         self.previousChangedCount = self.clipboardSource.changeCount
-        self.insert(text: string, now: now)
-        return .captured
+        return self.insert(text: string, now: now) ? .captured : .rejectedHistoryFull
     }
 
     /// Bounded byte preflight: unlike `utf8.count`, it never walks beyond cap+1 bytes.
@@ -333,41 +354,256 @@ public struct ClipboardHistoryManager {
     }
 
     /// Shared tail of both capture paths: dedupe, keep pins, order, prune, cap the list.
-    @MainActor private mutating func insert(text string: String, now: Date) {
+    /// Copaky [G-38/G-39]: fully TRANSACTIONAL — every step runs on a copy and `self.items` changes only
+    /// when the new entry survives count AND byte policy; otherwise nothing pre-existing is touched and
+    /// the caller must NOT report `.captured`.
+    /// Copaky: 取り込みはコピー上で判定し、新規項目が生き残る場合だけ確定する（既存項目を巻き添えにしない）。
+    @MainActor private mutating func insert(text string: String, now: Date) -> Bool {
+        self.hasPendingClipboard = false
         var item = ClipboardHistoryItem(content: .text(string), createdData: now)
-        if let index = self.items.firstIndex(where: { item.content == $0.content }) {
-            let oldItem = self.items.remove(at: index)
+        var candidate = self.items
+        Self.removeExpired(from: &candidate, now: now)
+        if let index = candidate.firstIndex(where: { item.content == $0.content }) {
+            let oldItem = candidate.remove(at: index)
             if oldItem.pinnedDate != nil {
                 item.pinnedDate = now
             }
         }
-        if self.items.isEmpty {
-            self.items.append(item)
-        } else if let index = self.items.firstIndex(where: { item > $0 }) {
-            self.items.insert(item, at: index)
-        } else {
-            self.items.append(item)
+        candidate.append(item)
+        // Normalize the order BEFORE any policy: an «unpin all» from the tab concatenates groups without
+        // re-sorting, and the count policy keeps the first unpinned entries it meets.
+        candidate.sort(by: >)
+        Self.applyCountPolicy(to: &candidate, maxCount: config.maxCount, protecting: item)
+        guard Self.pruneToRawFileBudget(&candidate, protecting: item),
+              candidate.contains(where: { $0.content == item.content }) else {
+            return false
         }
-
-        self.pruneExpired(now: now)
-        // 増えすぎないように削除する
-        while self.items.count > config.maxCount {
-            self.items.removeLast()
-        }
-        self.hasPendingClipboard = false
+        self.items = candidate
+        return true
     }
 
     /// Pulizia temporale: gli elementi non pinnati scadono dopo 7 giorni (privacy).
     /// Il clock è iniettabile (`now`) per rendere i test deterministici.
     @MainActor mutating func pruneExpired(now: Date = Date()) {
+        Self.removeExpired(from: &self.items, now: now)
+    }
+
+    /// Retention window (7 days) for unpinned entries — shared by the manager and the transactional insert.
+    static func removeExpired(from items: inout [ClipboardHistoryItem], now: Date) {
         let expirationLimit = now.addingTimeInterval(-7 * 24 * 60 * 60)
-        self.items.removeAll { item in
+        items.removeAll { item in
             item.pinnedDate == nil && item.createdData < expirationLimit
         }
     }
 
     private static func historyFileURL(config: any ClipboardHistoryManagerConfiguration) -> URL? {
         config.saveDirectory?.appendingPathComponent("clipboard_history.json", isDirectory: false)
+    }
+
+    // MARK: - Copaky [G-38/G-39]: ONE capacity policy for insert(), load() and save()
+
+    /// Unpinned entries keep at least one slot, so a fresh capture always survives next to `maxCount` pins.
+    static func unpinnedBudget(pinnedCount: Int, maxCount: Int) -> Int {
+        max(1, maxCount - pinnedCount)
+    }
+
+    /// Keeps every pinned item and only the newest unpinned ones within the budget (`items` sorted by `>`).
+    /// `protected` (the entry being captured) always keeps its slot, even when its date sorts it last
+    /// (clock moved backwards): it consumes one unit of the unpinned budget first.
+    static func applyCountPolicy(to items: inout [ClipboardHistoryItem], maxCount: Int, protecting protected: ClipboardHistoryItem? = nil) {
+        let pinnedCount = items.filter { $0.pinnedDate != nil }.count
+        var budget = unpinnedBudget(pinnedCount: pinnedCount, maxCount: maxCount)
+        let isProtected: (ClipboardHistoryItem) -> Bool = { item in
+            guard let protected, protected.pinnedDate == nil else { return false }
+            return item.pinnedDate == nil && item.content == protected.content
+        }
+        if items.contains(where: isProtected) {
+            budget -= 1
+        }
+        var seenUnpinned = 0
+        items.removeAll { item in
+            guard item.pinnedDate == nil, !isProtected(item) else { return false }
+            seenUnpinned += 1
+            return seenUnpinned > budget
+        }
+    }
+
+    static func encodedByteCount(_ items: [ClipboardHistoryItem]) -> Int? {
+        try? JSONEncoder().encode(HistoryFile(schemaVersion: currentSchemaVersion, items: items)).count
+    }
+
+    /// Rough per-entry cost in the encoded envelope (UTF-8 text + keys/dates); used to size prune batches.
+    static func estimatedEncodedBytes(_ item: ClipboardHistoryItem) -> Int {
+        switch item.content {
+        case .text(let string):
+            return string.utf8.count + 96
+        }
+    }
+
+    /// Prunes the oldest unpinned entries (never `protected`) until the envelope fits `maxRawFileBytes`.
+    /// Linear, not quadratic: each pass removes a BATCH sized from the estimated overshoot, then re-encodes
+    /// once; a history of thousands of tiny entries converges in a handful of passes.
+    /// Returns false when the remaining (pinned or protected) entries alone exceed the budget.
+    static func pruneToRawFileBudget(
+        _ items: inout [ClipboardHistoryItem],
+        protecting protected: ClipboardHistoryItem? = nil,
+        evictingPinnedAsLastResort: Bool = false
+    ) -> Bool {
+        while let size = encodedByteCount(items), size > maxRawFileBytes {
+            let overshoot = size - maxRawFileBytes
+            // Non-lazy on purpose: a lazy filter would capture the inout `items` in an escaping closure.
+            var candidates = items.indices
+                .filter { items[$0].pinnedDate == nil && items[$0].content != protected?.content }
+                .sorted { items[$0].createdData < items[$1].createdData }
+            if candidates.isEmpty {
+                // Only the container-app repair may touch pinned entries, oldest first, so that a history
+                // saturated by pins becomes usable again instead of staying unreadable forever.
+                guard evictingPinnedAsLastResort else {
+                    return false
+                }
+                candidates = items.indices
+                    .filter { items[$0].content != protected?.content }
+                    .sorted { items[$0].createdData < items[$1].createdData }
+                guard !candidates.isEmpty else {
+                    return false
+                }
+            }
+            var freed = 0
+            var removed = Set<Int>()
+            for index in candidates {
+                removed.insert(index)
+                freed += estimatedEncodedBytes(items[index])
+                if freed >= overshoot + overshoot / 10 + 1 {
+                    break
+                }
+            }
+            items = items.enumerated().filter { !removed.contains($0.offset) }.map(\.element)
+        }
+        return true
+    }
+
+    /// Copaky [G-22]: atomic replacement with data protection, then backup exclusion re-applied to the NEW
+    /// inode and verified by reading it back (one retry); a persistent failure is logged, never hidden.
+    static func writeHistoryFile(_ encoded: Data, to url: URL) throws {
+        try encoded.write(to: url, options: [.atomic, .completeFileProtectionUnlessOpen])
+        for _ in 0..<2 {
+            excludeFromBackup(url)
+            if (try? url.resourceValues(forKeys: [.isExcludedFromBackupKey]))?.isExcludedFromBackup == true {
+                return
+            }
+        }
+        // Fail closed: the bytes are on disk, but the caller must know the exclusion is not confirmed.
+        throw IOError.backupExclusionNotConfirmed
+    }
+
+    public enum RepairOutcome: Equatable, Sendable {
+        case notNeeded
+        case shrunk
+        case movedAside
+        case failed
+    }
+
+    /// Files larger than this are not a history at all (16× the budget): moved aside without decoding.
+    static let repairReadLimit = 16 * maxRawFileBytes
+
+    /// Where the history lives for `config` (nil when the App Group container is unavailable).
+    public static func historyFileLocation(config: any ClipboardHistoryManagerConfiguration) -> URL? {
+        historyFileURL(config: config)
+    }
+
+    /// Copaky [G-38]: BOUNDED repair for the container app (no 50 MB ceiling), so a history the keyboard
+    /// extension cannot read stops being unreadable forever: an oversized VALID file (build-8 growth) is
+    /// shrunk with the shared capacity policy — unpinned first, then, as a last resort, the oldest pinned
+    /// entries; a malformed file, or one beyond `repairReadLimit`, is MOVED ASIDE (never deleted) so the
+    /// keyboard starts from an empty history. Runs off the main actor; nothing is decoded above the limit.
+    /// Copaky [G-38]: 本体アプリ側の有界な修復。上限超過の正当なファイルは縮小（最後の手段として古いピン留めも）、
+    /// 壊れたファイルや極端に大きいファイルは削除せず退避して空の履歴から再開する。
+    public static func repairUnreadableHistory(at url: URL, maxCount: Int) -> RepairOutcome {
+        guard let size = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? NSNumber)?.intValue else {
+            return .notNeeded
+        }
+        // Copaky [G-22]: the container app can run before the extension's next load() — harden the file
+        // here too, so a valid build-8 history never stays backup-eligible until the keyboard reads it.
+        // Copaky [G-22]: 本体アプリが先に起動しても、既存ファイルをここで保護・バックアップ除外する。
+        applyLegacyFileProtection(to: url)
+        excludeFromBackup(url)
+        guard size <= repairReadLimit else {
+            return moveAside(url) ? .movedAside : .failed
+        }
+        guard let encoded = try? Data(contentsOf: url) else {
+            return .failed
+        }
+        var items: [ClipboardHistoryItem]
+        do {
+            items = try decodeItems(from: encoded)
+        } catch IOError.unsupportedSchemaVersion {
+            // A newer build wrote it: not ours to touch (the extension keeps it collapsed, unmodified).
+            return .notNeeded
+        } catch {
+            return moveAside(url) ? .movedAside : .failed
+        }
+        guard size > maxRawFileBytes else {
+            return .notNeeded
+        }
+        items.sort(by: >)
+        applyCountPolicy(to: &items, maxCount: maxCount)
+        guard pruneToRawFileBudget(&items, evictingPinnedAsLastResort: true),
+              let data = try? JSONEncoder().encode(HistoryFile(schemaVersion: currentSchemaVersion, items: items)) else {
+            return .failed
+        }
+        do {
+            try writeHistoryFile(data, to: url)
+            return .shrunk
+        } catch {
+            return .failed
+        }
+    }
+
+    @MainActor public static func repairUnreadableHistory(config: any ClipboardHistoryManagerConfiguration) -> RepairOutcome {
+        guard let url = historyFileURL(config: config) else {
+            return .notNeeded
+        }
+        return repairUnreadableHistory(at: url, maxCount: config.maxCount)
+    }
+
+    /// Renames the file next to itself with a timestamp; the bytes are preserved for a later look.
+    private static func moveAside(_ url: URL) -> Bool {
+        // Timestamp + random suffix: two repairs within the same second must not collide.
+        let stamp = "\(Int(Date().timeIntervalSince1970))-\(UUID().uuidString.prefix(8))"
+        let target = url.deletingLastPathComponent().appendingPathComponent("clipboard_history.unreadable-\(stamp).json", isDirectory: false)
+        do {
+            try FileManager.default.moveItem(at: url, to: target)
+        } catch {
+            return false
+        }
+        // The aside still holds clipboard text: same at-rest protection and backup exclusion as the history.
+        applyLegacyFileProtection(to: target)
+        excludeFromBackup(target)
+        return true
+    }
+
+    private static func applyLegacyFileProtection(to url: URL) {
+        // Copaky [G-22]: existing histories need the same at-rest protection as newly written files.
+        do {
+            try FileManager.default.setAttributes(
+                [.protectionKey: FileProtectionType.completeUnlessOpen],
+                ofItemAtPath: url.path
+            )
+        } catch {
+            debug("ClipboardHistoryManager: could not apply file protection", error)
+        }
+    }
+
+    private static func excludeFromBackup(_ url: URL) {
+        // Copaky [G-22]: clipboard history is device-local and must not enter iCloud/computer backups.
+        var resourceValues = URLResourceValues()
+        resourceValues.isExcludedFromBackup = true
+        var protectedURL = url
+        do {
+            try protectedURL.setResourceValues(resourceValues)
+        } catch {
+            debug("ClipboardHistoryManager: could not exclude history from backup", error)
+        }
     }
 
     /// Envelope versionato (formato v1+): {"schemaVersion": 1, "items": [...]}.
@@ -387,9 +623,30 @@ public struct ClipboardHistoryManager {
         var items: [FailableItem]
     }
 
+    /// Only the version: a newer build may change the shape of `items`, and that must still read as
+    /// «newer schema», never as «malformed». / 新しいビルドが items の形を変えても「壊れたファイル」と誤認しない。
+    private struct SchemaProbe: Decodable {
+        var schemaVersion: Int
+    }
+
     static func load(config: any ClipboardHistoryManagerConfiguration) throws -> [ClipboardHistoryItem] {
         guard let historyFileURL = historyFileURL(config: config) else {
             throw IOError.sharedDirectoryInaccessible
+        }
+        guard FileManager.default.fileExists(atPath: historyFileURL.path) else {
+            return []
+        }
+        // Copaky [G-22]: harden the file BEFORE any size gate or read, so an oversized legacy history is
+        // protected and excluded from backups too (it stays untouched while the manager is collapsed).
+        Self.applyLegacyFileProtection(to: historyFileURL)
+        Self.excludeFromBackup(historyFileURL)
+        // Copaky [G-38]: check the on-disk size BEFORE materializing the file, so an oversized or
+        // tampered history is never read whole into the extension's memory. An oversized file is a
+        // collapsed load, not an empty valid history: throwing keeps the bytes (save() becomes a no-op)
+        // until the container app repairs it (`repairOversizedHistory`).
+        if let size = (try? FileManager.default.attributesOfItem(atPath: historyFileURL.path)[.size] as? NSNumber)?.intValue,
+           size > Self.maxRawFileBytes {
+            throw IOError.rawFileOversized(bytes: size, limit: Self.maxRawFileBytes)
         }
         let encoded: Data
         do {
@@ -401,14 +658,26 @@ public struct ClipboardHistoryManager {
             }
             return []
         }
-        // Guardia anti-tamper: un file manomesso/gonfiato non deve essere deserializzato per intero
-        // nella memoria stretta dell'estensione.
         guard encoded.count <= Self.maxRawFileBytes else {
-            debug("ClipboardHistoryManager.load: history file oversized, ignoring", encoded.count)
-            return []
+            throw IOError.rawFileOversized(bytes: encoded.count, limit: Self.maxRawFileBytes)
         }
+        var items = try Self.decodeItems(from: encoded)
+        items.sort(by: >)
+        // Copaky [G-38/G-39]: same capacity policy as insert()/save(): every pinned entry survives and the
+        // newest unpinned keep at least one slot (a fresh capture next to `maxCount` pins is not lost).
+        Self.applyCountPolicy(to: &items, maxCount: config.maxCount)
+        return items
+    }
+
+    /// Tolerant decode shared by `load()` and `repairOversizedHistory()`: envelope or legacy bare array,
+    /// corrupted items dropped one by one, per-item caps re-applied.
+    static func decodeItems(from encoded: Data) throws -> [ClipboardHistoryItem] {
         let decoder = JSONDecoder()
         var items: [ClipboardHistoryItem]
+        // Copaky [G-38]: version check BEFORE the shape-dependent decode (counter-review n.4, N4).
+        if let probe = try? decoder.decode(SchemaProbe.self, from: encoded), probe.schemaVersion > Self.currentSchemaVersion {
+            throw IOError.unsupportedSchemaVersion(probe.schemaVersion)
+        }
         if let envelope = try? decoder.decode(TolerantHistoryFile.self, from: encoded) {
             guard envelope.schemaVersion <= Self.currentSchemaVersion else {
                 // File di un build più nuovo: non leggerlo e non sovrascriverlo (collapsed → save no-op).
@@ -437,10 +706,6 @@ public struct ClipboardHistoryManager {
                 return s.count > Self.maxItemCharacterCount || s.utf8.count > Self.maxItemByteCount
             }
         }
-        items.sort(by: >)
-        if items.count > config.maxCount {
-            items = Array(items.prefix(config.maxCount))
-        }
         return items
     }
 
@@ -453,9 +718,13 @@ public struct ClipboardHistoryManager {
         case unsupportedSchemaVersion(Int)
         /// ファイルの形式が不正で読み込めない / File format is malformed and cannot be read
         case malformedHistoryFile
+        /// Copaky [G-38]: the raw file exceeds the pre-decode memory guard and must be preserved.
+        case rawFileOversized(bytes: Int, limit: Int)
+        /// Copaky [G-22]: the file was written, but `isExcludedFromBackup` could not be confirmed on it.
+        case backupExclusionNotConfirmed
     }
 
-    @MainActor static func save(_ items: [ClipboardHistoryItem], config: any ClipboardHistoryManagerConfiguration) throws {
+    @MainActor static func save(_ items: [ClipboardHistoryItem], config: any ClipboardHistoryManagerConfiguration) throws -> [ClipboardHistoryItem]? {
         // jsonファイルとして共有空間に保存する
         // FullAccessがない場合は不可能なので`fail`にする
         guard SemiStaticStates.shared.hasFullAccess else {
@@ -464,8 +733,18 @@ public struct ClipboardHistoryManager {
         guard let historyFileURL = historyFileURL(config: config) else {
             throw IOError.sharedDirectoryInaccessible
         }
-        let encoded = try JSONEncoder().encode(HistoryFile(schemaVersion: Self.currentSchemaVersion, items: items))
-        try encoded.write(to: historyFileURL, options: .atomic)
+        var persistedItems = items.sorted(by: >)
+        // Copaky [G-38]: same capacity policy as insert()/load() — including the count policy (an unpin
+        // can leave maxCount + 1 entries in memory). Pinned data is never discarded automatically; if it
+        // alone exceeds the cap, preserve the existing file (nil = nothing written).
+        Self.applyCountPolicy(to: &persistedItems, maxCount: config.maxCount)
+        guard Self.pruneToRawFileBudget(&persistedItems) else {
+            debug("ClipboardHistoryManager.save: pinned history exceeds raw file limit")
+            return nil
+        }
+        let encoded = try JSONEncoder().encode(HistoryFile(schemaVersion: Self.currentSchemaVersion, items: persistedItems))
+        try Self.writeHistoryFile(encoded, to: historyFileURL)
+        return persistedItems
     }
 }
 

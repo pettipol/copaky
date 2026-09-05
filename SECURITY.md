@@ -43,7 +43,16 @@ These are the properties worth testing. Each is meant to hold structurally, not 
 3. **Secure fields are excluded.** Content typed into password fields is never captured into
    clipboard history.
 4. **Clipboard history never leaves the device.** It lives in the app group container, is
-   capped in size, and is pruned on a retention window.
+   capped in size, and is pruned on a retention window. Starting with build 9, its file uses
+   `completeUnlessOpen` data protection and is excluded from iCloud and computer backups. While the
+   device is locked the extension cannot open the file; since the history is re-read every time the
+   keyboard appears, the manager then stays *collapsed* — it captures nothing and writes nothing —
+   until the next unlock (the guarantee comes from that collapsed state, not from the protection
+   class alone; an oversized or malformed file is repaired by the container app, never by the extension).
+   The backup exclusion is re-applied on every read and every write of the file — of any copy the
+   repair sets aside, and by the container app at launch before it decides whether a repair is needed —
+   and verified after each write; a write whose exclusion cannot be confirmed is reported to the user
+   as a failed save.
 5. **Full Access is optional.** Typing, Japanese conversion and themes all work without it. It
    gates only the optional clipboard history and haptic feedback.
 
@@ -76,7 +85,12 @@ Copaky is pre-release. Only the latest build is supported; there are no backport
 (2) クリップボードの「値」を読むのは、ユーザーが取り込みボタンを押したときだけ（変更の検知は
 カウンターというメタデータのみ）。
 (3) パスワード等の保護フィールドは履歴に取り込まない。
-(4) クリップボード履歴は端末外に出ない（容量上限と保持期間による削除あり）。
+(4) クリップボード履歴は端末外に出ない（容量上限と保持期間による削除あり）。build 9 以降は
+`completeUnlessOpen` データ保護を適用し、iCloud／コンピュータのバックアップから除外する。端末ロック中は
+拡張がファイルを開けないためマネージャは collapsed 状態に留まり、取り込みも書き込みも行わない（保証は
+保護クラスではなくこの状態機械による）。次回ロック解除で復帰する。バックアップ除外は読み書きのたびに
+（修復で退避したコピーにも、本体アプリ起動時の点検でも）再適用し、書き込み後に検証する。確認できなかった
+書き込みは保存失敗としてユーザーに通知する。
 (5) フルアクセスは任意 — 入力・変換・テーマはフルアクセスなしで動作する。
 
 この5つのいずれかを破れるのであれば、それこそがお聞きしたい内容です。

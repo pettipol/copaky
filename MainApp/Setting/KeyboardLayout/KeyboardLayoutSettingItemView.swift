@@ -69,6 +69,9 @@ struct LanguageLayoutSettingView<SettingKey: LanguageLayoutKeyboardSetting>: Vie
     private var labelText: LocalizedStringKey {
         if setTogether {
             return "キーボードの種類 (現在: \(selection.label))"
+        } else if language == .english {
+            // Copaky [G-08]: English and Italian intentionally share this Latin layout choice.
+            return "英語・イタリア語のキーボードの種類 (現在: \(selection.label))"
         } else {
             return "\(language.name)キーボードの種類 (現在: \(selection.label))"
         }

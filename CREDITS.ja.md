@@ -48,7 +48,7 @@ Copaky は **azooKey をベースにした独立プロジェクト**であり、
 |---|---|---|
 | [SudachiDict](https://github.com/WorksApplications/SudachiDict) | 基本語彙 | Apache-2.0 |
 | IPAdic | 基本語彙 | NAIST ライセンス（アプリ内テキスト参照） |
-| [MeCab](https://taku910.github.io/mecab/) | 形態素解析 | GPL／LGPL／BSD（トライライセンス） |
+| [MeCab](https://taku910.github.io/mecab/) | 形態素解析 | GPL／LGPL／BSD（トライライセンス）— Copaky は BSD オプションを使用し、バイナリに MeCab コードは含まれません |
 | [mecab-ipadic-NEologd](https://github.com/neologd/mecab-ipadic-neologd) | 固有名詞解析 | COPYING 参照 |
 | [Mozc](https://github.com/google/mozc) | 一部データ | BSD-3-Clause, © 2010-2022 Google Inc. |
 | [japanese-word2vec-model-builder](https://github.com/shiroyagicorp/japanese-word2vec-model-builder) | 変換精度 | LICENSE 参照 |

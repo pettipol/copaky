@@ -271,7 +271,7 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
         case .qwerty_abc:
             let layout = numberRowLayout(for: tab)
             renderUnified(
-                modelsDict: QwertyLayoutProvider<Extension>.abcKeyboard(),
+                modelsDict: QwertyLayoutProvider<Extension>.abcKeyboard(language: variableStates.keyboardLanguage),
                 width: 10,
                 height: layout.rowCount,
                 keysHeight: layout.keysHeight

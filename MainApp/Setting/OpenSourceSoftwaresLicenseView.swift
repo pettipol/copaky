@@ -73,6 +73,8 @@ struct OpenSourceSoftwaresLicenseView: View {
     Nippon Telegraph and Telephone Corporation, and is released under
     any of the GPL (see the file GPL), the LGPL (see the file LGPL), or the
     BSD License (see the file BSD).
+
+    Copaky relies on the BSD License option of this tri-license; no MeCab code is linked into the app — only dictionary data derived from it is shipped.
     """
 
     private let license_ipadic = """
@@ -185,7 +187,8 @@ struct OpenSourceSoftwaresLicenseView: View {
                 }
                 Section {
                     Text(verbatim: "MeCab").font(.title).padding()
-                    Text("本アプリケーションは形態素解析器としてMeCabを使用しています。")
+                    // Copaky [G-34]: no MeCab code ships in the binary — only dictionary data built with it.
+                    Text("本アプリケーションはMeCabで構築された辞書データを使用しています。")
                     FallbackLink(verbatim: "MeCab: Yet Another Part-of-Speech and Morphological Analyzer", destination: "https://taku910.github.io/mecab/")
                     Text(license_mecab)
                 }

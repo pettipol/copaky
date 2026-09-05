@@ -71,15 +71,17 @@ struct QwertyLanguageSwitchKeyModel<Extension: ApplicationSpecificKeyboardViewEx
     }
     func variationSpace(variableStates: VariableStates) -> UnifiedVariationSpace {
         let cycle = self.cycle
-        guard cycle.count > 1 else {
-            return .none
-        }
-        let elements = cycle.map { language in
+        var elements = cycle.count > 1 ? cycle.map { language in
             QwertyVariationsModel.VariationElement(
                 label: .text(language.shortSymbol),
                 actions: actions(for: language)
             )
-        }
+        } : []
+        // Copaky [G-03]: keep app settings reachable even when only one keyboard language is active.
+        elements.append(QwertyVariationsModel.VariationElement(
+            label: .image("gearshape", accessibilityLabel: "Copakyの設定"),
+            actions: [.openApp("copaky://settings")]
+        ))
         return .linear(elements, direction: .right)
     }
 

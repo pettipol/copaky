@@ -47,7 +47,7 @@ section of Settings; this file is a consolidated summary.
 |---|---|---|
 | [SudachiDict](https://github.com/WorksApplications/SudachiDict) | Base vocabulary | Apache-2.0 |
 | IPAdic | Base vocabulary | NAIST license (see in-app text) |
-| [MeCab](https://taku910.github.io/mecab/) | Morphological analysis | GPL / LGPL / BSD (tri-license) |
+| [MeCab](https://taku910.github.io/mecab/) | Morphological analysis | GPL / LGPL / BSD (tri-license) — Copaky uses the BSD option; no MeCab code in the binary |
 | [mecab-ipadic-NEologd](https://github.com/neologd/mecab-ipadic-neologd) | Proper-noun analysis | see COPYING |
 | [Mozc](https://github.com/google/mozc) | Partial data | BSD-3-Clause, © 2010-2022 Google Inc. |
 | [japanese-word2vec-model-builder](https://github.com/shiroyagicorp/japanese-word2vec-model-builder) | Conversion accuracy | see LICENSE |

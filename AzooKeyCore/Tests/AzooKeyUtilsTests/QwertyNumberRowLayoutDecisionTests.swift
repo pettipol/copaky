@@ -222,7 +222,7 @@ final class QwertyNumberRowLayoutDecisionTests: XCTestCase {
         EnableQwertyNumberRow.value = false
         let standardHiragana = QwertyLayoutProvider<AzooKeyKeyboardViewExtension>.hiraKeyboard()
         // A-03/A-04 deliberately use this one qwerty_abc provider after both EN and IT reseeds.
-        let standardLatin = QwertyLayoutProvider<AzooKeyKeyboardViewExtension>.abcKeyboard()
+        let standardLatin = QwertyLayoutProvider<AzooKeyKeyboardViewExtension>.abcKeyboard(language: .en_US)
         let standardNumbers = QwertyLayoutProvider<AzooKeyKeyboardViewExtension>.numberKeyboard(language: .it_IT)
         let standardSymbols = QwertyLayoutProvider<AzooKeyKeyboardViewExtension>.symbolsKeyboard(language: .en_US)
 
@@ -234,7 +234,7 @@ final class QwertyNumberRowLayoutDecisionTests: XCTestCase {
         )
         assertExpansion(
             from: standardLatin,
-            to: QwertyLayoutProvider<AzooKeyKeyboardViewExtension>.abcKeyboard(),
+            to: QwertyLayoutProvider<AzooKeyKeyboardViewExtension>.abcKeyboard(language: .en_US),
             variant: "qwerty_abc (shared by EN and IT)"
         )
         assertExpansion(

@@ -36,7 +36,8 @@ extension ClipboardLongPressSlots: Savable {
 public struct ClipboardLongPressSlotsSetting: KeyboardSettingKey, StoredInUserDefault {
     public static let title: LocalizedStringKey = "長押しで履歴を開くキー"
     public static let explanation: LocalizedStringKey = "オンにしたキーを長押しするとクリップボード履歴が開きます。少なくとも1つのキーを選んでください。"
-    public static let defaultValue = ClipboardLongPressSlots(slots: [.qwertyNumbers])
+    // Copaky [G-04]: expose the same one-gesture history access on Latin 123 and flick ☆123.
+    public static let defaultValue = ClipboardLongPressSlots(slots: [.qwertyNumbers, .flickStar123])
     public static let key = "clipboard_long_press_slots"
 
     @MainActor static func get() -> ClipboardLongPressSlots? {
@@ -52,11 +53,18 @@ public struct ClipboardLongPressSlotsSetting: KeyboardSettingKey, StoredInUserDe
 
     @MainActor public static var value: ClipboardLongPressSlots {
         get {
-            get() ?? defaultValue
+            resolvedValue(from: SharedStore.userDefaults)
         }
         set {
             set(newValue: newValue)
         }
+    }
+
+    @MainActor static func resolvedValue(from userDefaults: UserDefaults) -> ClipboardLongPressSlots {
+        guard let storedValue = userDefaults.object(forKey: key) else {
+            return defaultValue
+        }
+        return ClipboardLongPressSlots.get(storedValue) ?? defaultValue
     }
 }
 

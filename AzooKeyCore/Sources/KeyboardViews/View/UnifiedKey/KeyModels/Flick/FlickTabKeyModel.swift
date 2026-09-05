@@ -63,7 +63,12 @@ struct FlickTabKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: Un
     func flickSensitivity(to direction: FlickDirection) -> CGFloat { 25 / Extension.SettingProvider.flickSensitivity }
 
     func label<ThemeExtension>(width: CGFloat, theme _: ThemeData<ThemeExtension>, states _: VariableStates, color _: Color?) -> KeyLabel<Extension> where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
-        KeyLabel(labelType, width: width)
+        // Copaky [G-04]: expose a stable leaf identifier for the configurable clipboard shortcut.
+        KeyLabel(
+            labelType,
+            width: width,
+            accessibilityIdentifier: clipboardLongPressSite == .flickStar123 ? "keyboard-flick-star-123" : nil
+        )
     }
 
     @MainActor func labelCornerHintSystemImage(variableStates: VariableStates) -> String? {

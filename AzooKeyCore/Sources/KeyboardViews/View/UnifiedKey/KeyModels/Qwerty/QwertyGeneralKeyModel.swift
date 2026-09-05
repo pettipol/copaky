@@ -18,6 +18,7 @@ struct QwertyGeneralKeyModel<Extension: ApplicationSpecificKeyboardViewExtension
     private let direction: VariationsViewDirection
     private let role: UnpressedRole
     private let clipboardLongPressSite: ClipboardLongPressSite?
+    private let accessibilityIdentifier: String?
     // 文字キー等で英語時シフト・Capsで大文字化するか（カスタムキー等では無効にしたい）
     private let shouldUppercaseForEnglish: Bool
 
@@ -29,7 +30,8 @@ struct QwertyGeneralKeyModel<Extension: ApplicationSpecificKeyboardViewExtension
          showsTapBubble: Bool,
          role: UnpressedRole,
          shouldUppercaseForEnglish: Bool = true,
-         clipboardLongPressSite: ClipboardLongPressSite? = nil
+         clipboardLongPressSite: ClipboardLongPressSite? = nil,
+         accessibilityIdentifier: String? = nil
     ) {
         self.labelType = labelType
         self.press = pressActions
@@ -40,6 +42,7 @@ struct QwertyGeneralKeyModel<Extension: ApplicationSpecificKeyboardViewExtension
         self.role = role
         self.shouldUppercaseForEnglish = shouldUppercaseForEnglish
         self.clipboardLongPressSite = clipboardLongPressSite
+        self.accessibilityIdentifier = accessibilityIdentifier
     }
 
     // 静的アクション版（LinearCustomの置き換え用）
@@ -51,7 +54,8 @@ struct QwertyGeneralKeyModel<Extension: ApplicationSpecificKeyboardViewExtension
          showsTapBubble: Bool,
          role: UnpressedRole,
          shouldUppercaseForEnglish: Bool = true,
-         clipboardLongPressSite: ClipboardLongPressSite? = nil
+         clipboardLongPressSite: ClipboardLongPressSite? = nil,
+         accessibilityIdentifier: String? = nil
     ) {
         self.init(
             labelType: labelType,
@@ -62,7 +66,8 @@ struct QwertyGeneralKeyModel<Extension: ApplicationSpecificKeyboardViewExtension
             showsTapBubble: showsTapBubble,
             role: role,
             shouldUppercaseForEnglish: shouldUppercaseForEnglish,
-            clipboardLongPressSite: clipboardLongPressSite
+            clipboardLongPressSite: clipboardLongPressSite,
+            accessibilityIdentifier: accessibilityIdentifier
         )
     }
 
@@ -95,14 +100,14 @@ struct QwertyGeneralKeyModel<Extension: ApplicationSpecificKeyboardViewExtension
            states.keyboardLanguage.usesLatinScript {
             switch labelType {
             case let .text(text):
-                return KeyLabel(.text(text.uppercased()), width: width, textColor: color)
+                return KeyLabel(.text(text.uppercased()), width: width, textColor: color, accessibilityIdentifier: accessibilityIdentifier)
             case let .textWithUpperHint(main, hint):
-                return KeyLabel(.textWithUpperHint(main.uppercased(), hint), width: width, textColor: color)
+                return KeyLabel(.textWithUpperHint(main.uppercased(), hint), width: width, textColor: color, accessibilityIdentifier: accessibilityIdentifier)
             default:
                 break
             }
         }
-        return KeyLabel(labelType, width: width, textColor: color)
+        return KeyLabel(labelType, width: width, textColor: color, accessibilityIdentifier: accessibilityIdentifier)
     }
 
     @MainActor func labelCornerHintSystemImage(variableStates: VariableStates) -> String? {

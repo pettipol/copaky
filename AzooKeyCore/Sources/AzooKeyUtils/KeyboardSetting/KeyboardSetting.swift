@@ -31,19 +31,25 @@ public struct KeyboardSetting<T: KeyboardSettingKey> {
 /// 生の`SettingKey`の値を`@State`で宣言した場合、更新の反映ができない。
 /// `SettingUpdater`で包むことで、設定の更新を行いつつUIの更新も行われるようにできる。
 @MainActor public struct SettingUpdater<Wrapped: KeyboardSettingKey> {
+    private var storedValue: Wrapped.Value
+
     public var value: Wrapped.Value {
-        didSet {
-            let newValue = value
+        get {
+            storedValue
+        }
+        set {
+            storedValue = newValue
             Wrapped.value = newValue
         }
     }
 
     public init() {
-        self.value = Wrapped.value
+        self.storedValue = Wrapped.value
     }
 
     public mutating func reload() {
-        self.value = Wrapped.value
+        // Copaky [G-04]: refreshing UI state must not materialize a missing default on disk.
+        self.storedValue = Wrapped.value
     }
 }
 

@@ -103,6 +103,17 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
                 $0.remove(at: index)
             }
         }
+        self.persistMutation()
+    }
+
+    /// Copaky [G-38]: pin/unpin/delete used to live in memory until `closeKeyboard()`, whose `save()` result
+    /// is discarded — a pin that cannot be persisted (pinned data alone at the file budget) was lost silently
+    /// at the next load. Persist here and say it when nothing could be written (counter-review n. 5).
+    /// Copaky [G-38]: ピン留め・解除・削除は即座に保存し、書けなかった場合はその場で知らせる。
+    private func persistMutation() {
+        if !variableStates.clipboardHistoryManager.save() {
+            variableStates.temporalMessage = .clipboardHistorySaveFailed
+        }
     }
 
     /// Cattura user-initiated: legge gli appunti SOLO quando l'utente tocca questo bottone (intento).
@@ -183,11 +194,13 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
                                             $0.pinnedDate = nil
                                         }
                                     }
+                                    self.persistMutation()
                                 }
                                 Button("全て削除", systemImage: "trash", role: .destructive) {
                                     self.target.updatePinnedItems(manager: &variableStates.clipboardHistoryManager) {
                                         $0.removeAll()
                                     }
+                                    self.persistMutation()
                                 }
                             }
                             .labelStyle(.iconOnly)
@@ -209,6 +222,7 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
                                     self.target.updateNotPinnedItems(manager: &variableStates.clipboardHistoryManager) {
                                         $0.removeAll()
                                     }
+                                    self.persistMutation()
                                 }
                             }
                             .labelStyle(.iconOnly)
@@ -280,6 +294,7 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
             notPinned.append(item)
             notPinned.sort(by: >)
         }
+        self.persistMutation()
     }
     private func pinItem(item: ClipboardHistoryItem, at index: Int) {
         self.target.updateBothItems(manager: &variableStates.clipboardHistoryManager) { (pinned, notPinned) in
@@ -289,6 +304,7 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
             pinned.append(item)
             pinned.sort(by: >)
         }
+        self.persistMutation()
     }
 }
 

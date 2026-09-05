@@ -31,11 +31,18 @@ struct QwertyShiftKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>:
 
     func label<ThemeExtension>(width: CGFloat, theme _: ThemeData<ThemeExtension>, states: VariableStates, color: Color?) -> KeyLabel<Extension> where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         if states.boolStates.isCapsLocked {
-            return KeyLabel(.image("capslock.fill", accessibilityLabel: "大文字に固定する"), width: width, textColor: color)
+            // Copaky [G-01]: explicit tri-state value for VoiceOver (off / active / locked).
+            return KeyLabel(.image("capslock.fill", accessibilityLabel: "大文字に固定する"), width: width, textColor: color, accessibilityValue: "大文字に固定中")
         } else if states.boolStates.isShifted {
-            return KeyLabel(.image("shift.fill", accessibilityLabel: "大文字"), width: width, textColor: color)
+            // Copaky [G-01]: VoiceOver distinguishes one-shot Shift from the inactive state.
+            return KeyLabel(
+                .image("shift.fill", accessibilityLabel: "大文字"),
+                width: width,
+                textColor: color,
+                accessibilityValue: "有効"
+            )
         } else {
-            return KeyLabel(.image("shift", accessibilityLabel: "大文字"), width: width, textColor: color)
+            return KeyLabel(.image("shift", accessibilityLabel: "大文字"), width: width, textColor: color, accessibilityValue: "オフ")
         }
     }
 

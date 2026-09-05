@@ -35,6 +35,7 @@ private enum L {
     static let closeOnboarding = ["閉じる", "Close", "Chiudi"]
     static let settingsTab = ["設定", "Settings", "Impostazioni"]
     static let clipboardToggle = ["Keep clipboard histories", "クリップボードの履歴を保存", "Salva la cronologia degli appunti"]
+    static let clipboardAdvancedLink = ["clipboard-long-press-slots-settings-link"]
     static let captureBar = ["コピーした内容を追加", "現在のクリップボードを追加", "Add copied text", "Add current clipboard", "Aggiungi il testo copiato", "Aggiungi gli appunti correnti"]
     static let clipboardTab = [
         "コピー履歴", "クリップボードの履歴", "Clipboard histories", "Cronologia degli appunti",
@@ -535,8 +536,12 @@ final class CopakyCampaignTests: XCTestCase {
             // briefly DUPLICATES the key's label, and a multi-match crashes the runner with an
             // unswallowable ObjC exception (paid on the phone 2026-08-14, test35 typing "perche").
             // タップ中は拡大バブルがラベルを複製するため必ずfirstMatch。
-            let key = app.descendants(matching: .any)
-                .matching(NSPredicate(format: "label == %@", label)).firstMatch
+            // StaticText first (05/09): with the empty candidate bar hidden the top-row key CONTAINERS
+            // (`Other`) report an invalid activation point and `.any` would pick them before the label.
+            let staticKey = app.staticTexts.matching(NSPredicate(format: "label == %@", label)).firstMatch
+            let key = staticKey.waitForExistence(timeout: 4)
+                ? staticKey
+                : app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", label)).firstMatch
             if !key.waitForExistence(timeout: 4) {
                 dump(app, "key-not-found-\(label)")
                 shot("key-not-found-\(label)")
@@ -544,6 +549,32 @@ final class CopakyCampaignTests: XCTestCase {
             XCTAssertTrue(key.exists, "Key '\(label)' not found on Copaky keyboard")
             key.tap()
         }
+    }
+
+    /// Copaky [G-01]: web fields publish their value with a short delay — poll instead of reading once
+    /// (measured 05/09: the failure dump already showed value "Q" while the immediate read did not).
+    private func waitForFieldValue(_ field: XCUIElement, _ expected: String, timeout: TimeInterval = 3) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if (field.value as? String) == expected { return true }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+        }
+        return (field.value as? String) == expected
+    }
+
+    /// Copaky [G-01]: freeze the key coordinate because its SF Symbol node changes after tap one.
+    /// Two short presses keep the gesture inside the product's double-tap recognition window.
+    private func doubleTapKey(_ element: XCUIElement, in app: XCUIApplication) {
+        // Two synthesized presses land too far apart for the product's double-press window
+        // (measured 05/09: caps lock never engaged); XCUI's native doubleTap() is fast enough.
+        let frame = element.frame
+        let appFrame = app.frame
+        let coordinate = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(
+            dx: frame.midX - appFrame.minX,
+            dy: frame.midY - appFrame.minY
+        ))
+        coordinate.doubleTap()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.6))
     }
 
     // Copaky: tap the actual Latin space key; accepting a next-candidate label here could hide an
@@ -988,6 +1019,7 @@ final class CopakyCampaignTests: XCTestCase {
             return
         }
         capture.tap()
+        answerPastePermissionIfPrompted()
         RunLoop.current.run(until: Date().addingTimeInterval(1.5))
         shot("12-after-capture")
         dump(safari, "12-after-capture")
@@ -1009,9 +1041,10 @@ final class CopakyCampaignTests: XCTestCase {
     /// A false result means the key was absent or not hittable; callers decide whether that is a
     /// failed assertion or a best-effort skip. / 123枠の長押し経路を一か所に集約する。
     private func longPressClipboardShortcut(labels: [String] = L.tabBarToggleKey,
+                                             identifiers: [String] = [],
                                              timeout: TimeInterval = 4) -> Bool {
         let key = safari.descendants(matching: .any)
-            .matching(NSPredicate(format: "label IN %@", labels)).firstMatch
+            .matching(NSPredicate(format: "label IN %@ OR identifier IN %@", labels, identifiers)).firstMatch
         guard key.waitForExistence(timeout: timeout), key.isHittable else { return false }
         key.press(forDuration: 1.0)
         RunLoop.current.run(until: Date().addingTimeInterval(0.8))
@@ -1186,6 +1219,25 @@ final class CopakyCampaignTests: XCTestCase {
         shot("13-after-bytecap")
     }
 
+    /// Copaky (05/09): a fresh install resets the paste permission, and the SpringBoard alert
+    /// («"Copaky" vorrebbe incollare elementi da…») blocks every Safari query until answered AND survives
+    /// the run. Watch SpringBoard alone, allow, and only then touch Safari again (test13's recipe).
+    /// 新規インストール後はペースト許可のアラートが出る。SpringBoard側で先に許可してからSafariに触る。
+    @discardableResult
+    private func answerPastePermissionIfPrompted(timeout: TimeInterval = 6) -> Bool {
+        let sbAlert = springboard.alerts.firstMatch
+        guard sbAlert.waitForExistence(timeout: timeout) else { return false }
+        let allow = sbAlert.buttons
+            .matching(NSPredicate(format: "label IN %@", L.allowPasteButtons)).firstMatch
+        guard allow.waitForExistence(timeout: 2), allow.isHittable else {
+            XCTFail("HARNESS: paste-permission prompt appeared but no Allow Paste button was hittable")
+            return false
+        }
+        allow.tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+        return true
+    }
+
     // MARK: - 14 · Pin / delete / persistence (B-06, B-07)
 
     func test14_phaseB_pinDeletePersistence() throws {
@@ -1195,6 +1247,7 @@ final class CopakyCampaignTests: XCTestCase {
         try openClipboardTab()
         if let capture = firstMatch(in: safari, labels: L.captureBar, timeout: 6) {
             capture.tap()
+            answerPastePermissionIfPrompted()
         }
         RunLoop.current.run(until: Date().addingTimeInterval(1))
         // Long-press the tile → context menu 固定 (pin)
@@ -1433,13 +1486,12 @@ final class CopakyCampaignTests: XCTestCase {
         file: StaticString = #filePath,
         line: UInt = #line
     ) -> Bool {
-        let languageKey = app.descendants(matching: .any)
-            .matching(NSPredicate(format: "label IN %@", ["IT", "あ"])).firstMatch
+        let languageKey = currentLanguageSwitchState(in: app)?.element
         let q = app.descendants(matching: .any)
             .matching(NSPredicate(format: "label IN %@", ["q", "Q"])).firstMatch
         let w = app.descendants(matching: .any)
             .matching(NSPredicate(format: "label IN %@", ["w", "W"])).firstMatch
-        guard languageKey.waitForExistence(timeout: 4), languageKey.isHittable,
+        guard let languageKey, languageKey.waitForExistence(timeout: 4), languageKey.isHittable,
               q.waitForExistence(timeout: 4), w.waitForExistence(timeout: 4) else {
             dump(app, "language-menu-prerequisite-missing-index-\(index)")
             shot("language-menu-prerequisite-missing-index-\(index)")
@@ -1449,6 +1501,8 @@ final class CopakyCampaignTests: XCTestCase {
 
         let pitch = abs(w.frame.midX - q.frame.midX)
         guard pitch > 1 else {
+            dump(app, "language-menu-invalid-pitch-index-\(index)")
+            shot("language-menu-invalid-pitch-index-\(index)")
             XCTFail("Could not derive a positive QWERTY key pitch", file: file, line: line)
             return false
         }
@@ -1514,9 +1568,12 @@ final class CopakyCampaignTests: XCTestCase {
         switchToCopaky(in: safari)
         switchToEnglishTab(in: safari)
         shot("30-english-tab")
-        let eKey = safari.descendants(matching: .any)
+        // StaticText (05/09): the key container `Other` can report an invalid activation point.
+        let eKey = safari.staticTexts
             .matching(NSPredicate(format: "label == %@", "e")).firstMatch
-        guard eKey.waitForExistence(timeout: 4), eKey.isHittable else {
+        // No `isHittable` (05/09): on the hidden-empty-bar layout the top-row StaticText reports an
+        // invalid activation point; the gesture below is coordinate-based and only needs the frame.
+        guard eKey.waitForExistence(timeout: 4), eKey.frame.height > 1 else {
             dump(safari, "30-e-key-not-found")
             shot("30-e-key-not-found")
             XCTFail("Key 'e' not found on Copaky EN keyboard")
@@ -2396,7 +2453,10 @@ final class CopakyCampaignTests: XCTestCase {
             throw XCTSkip("Clipboard tab not reachable on this build (App Group / Full Access / «Save clipboard history» off) — prerequisite, not a long-press failure; on a signed build seed the setting and grant Full Access first.")
         }
 
-        let numberKeyLabels = ["123", "#+=", "numbers", "Numbers", "numeri", "Numeri", "数字", "textformat.123", "textformat.numbers"]
+        // Copaky [G-04] (05/09): «#+=» is NOT a default long-press slot any more (123 + ☆123 are; #+= is
+        // optional). With it in the list, firstMatch sometimes picked the «#+=» StaticText instead of the 123
+        // Image (identifier textformat.123) and the long press did nothing — round 12 of the 24th session.
+        let numberKeyLabels = ["123", "numbers", "Numbers", "numeri", "Numeri", "数字", "textformat.123", "textformat.numbers"]
         guard longPressClipboardShortcut(labels: numberKeyLabels) else {
             dump(safari, "39-numbers-key-not-found")
             shot("39-numbers-key-not-found")
@@ -3761,7 +3821,9 @@ final class CopakyCampaignTests: XCTestCase {
         }
         clearFocusedField(offField, placeholder: "plain-text", in: safari)
         guard let offFrames = letterFrames(evidence: "off") else { return }
-        XCTAssertNil(keyboardKey(labels: ["5"]), "A standalone 5 key exists while the real number row is OFF")
+        // Copaky [G-05]: `sizedLike` keeps the number-row HINT digit (an 18 pt StaticText inside the
+        // "t" key, exposed by XCUI) out of this check — only a letter-sized standalone "5" counts.
+        XCTAssertNil(keyboardKey(labels: ["5"], sizedLike: offFrames.first), "A standalone 5 key exists while the real number row is OFF")
         shot("46-real-number-row-off")
 
         // Re-activating the SAME Safari/keyboard session after the MainApp round trip leaves the
@@ -4176,6 +4238,315 @@ final class CopakyCampaignTests: XCTestCase {
         add(attachment)
     }
 
+    // MARK: - 52 · Apple-like Shift cycle and Caps Lock
+
+    /// Copaky [G-01]: one tap is one-shot Shift, a long press and double tap lock capitals, and the
+    /// dynamic key resumes its 123 role after Shift is released.
+    func test52_shiftKeyCycleAndCapsLock() throws {
+        let field = activatePreNavigatedField("plain-text")
+        switchToCopaky(in: safari)
+        dismissCopakyNotice(in: safari)
+        guard switchToLatinQwertyTab(in: safari) else {
+            dump(safari, "52-latin-tab-missing")
+            shot("52-latin-tab-missing")
+            XCTFail("Could not establish Latin QWERTY for the Shift cycle")
+            return
+        }
+        clearFocusedField(field, placeholder: "plain-text", in: safari)
+
+        guard let shift = keyboardImageKey(identifier: "shift", in: safari), shift.isHittable else {
+            dump(safari, "52-shift-off-missing")
+            shot("52-shift-off-missing")
+            XCTFail("Inactive Shift key with identifier 'shift' is missing")
+            return
+        }
+        shift.tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.4))
+
+        guard keyboardImageKey(identifier: "shift.fill", in: safari) != nil else {
+            dump(safari, "52-shift-active-missing")
+            shot("52-shift-active-missing")
+            XCTFail("One tap did not expose the active 'shift.fill' state")
+            return
+        }
+        // Copaky [G-01]: query the StaticText, not `.any` — the key container `Other` reports an
+        // invalid activation point ("Failed to determine hittability", measured 04/09), while the
+        // StaticText is what every other key tap in this harness targets.
+        let uppercaseQ = safari.staticTexts.matching(NSPredicate(format: "label == %@", "Q")).firstMatch
+        guard uppercaseQ.waitForExistence(timeout: 4),
+              uppercaseQ.frame.minY >= safari.frame.height * 0.45 else {
+            dump(safari, "52-uppercase-q-missing")
+            shot("52-uppercase-q-missing")
+            XCTFail("One-shot Shift did not uppercase the Q key")
+            return
+        }
+        uppercaseQ.tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.4))
+        guard waitForFieldValue(field, "Q"),
+              keyboardImageKey(identifier: "shift", in: safari) != nil else {
+            dump(safari, "52-one-shot-did-not-release")
+            shot("52-one-shot-did-not-release")
+            XCTFail("Typing Q must insert one uppercase letter and release one-shot Shift")
+            return
+        }
+
+        guard let shiftForLongPress = keyboardImageKey(identifier: "shift", in: safari),
+              shiftForLongPress.isHittable else {
+            dump(safari, "52-shift-longpress-source-missing")
+            shot("52-shift-longpress-source-missing")
+            XCTFail("Shift key disappeared before the Caps Lock long press")
+            return
+        }
+        shiftForLongPress.press(forDuration: 1.0)
+        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+        guard let capsLock = keyboardImageKey(identifier: "capslock.fill", in: safari),
+              capsLock.isHittable else {
+            dump(safari, "52-capslock-longpress-missing")
+            shot("52-capslock-longpress-missing")
+            XCTFail("Long-pressing Shift did not enable 'capslock.fill'")
+            return
+        }
+        // Copaky [G-01]: "A" is ambiguous — the language key exposes a StaticText "A" (its
+        // keyboard-language-switch-A-IT label) that the label lookup hits first (measured 05/09).
+        // Copaky [G-01]: while Caps Lock is on, the dynamic key gives up its 123 role (upstream design:
+        // shift/caps states hand the slot back to the globe/symbols role) — assert the contract explicitly.
+        XCTAssertNil(keyboardImageKey(identifier: "textformat.123", in: safari, timeout: 1), "The dynamic key must not show 123 while Caps Lock is on")
+        tapKeys(["K", "J"], in: safari)
+        RunLoop.current.run(until: Date().addingTimeInterval(0.4))
+        guard waitForFieldValue(field, "QKJ") else {
+            dump(safari, "52-capslock-typing-wrong")
+            shot("52-capslock-typing-wrong")
+            XCTFail("Caps Lock must keep both following letters uppercase; got '\((field.value as? String) ?? "")'")
+            return
+        }
+
+        capsLock.tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.4))
+        guard let shiftForDoubleTap = keyboardImageKey(identifier: "shift", in: safari),
+              shiftForDoubleTap.isHittable else {
+            dump(safari, "52-shift-before-doubletap-missing")
+            shot("52-shift-before-doubletap-missing")
+            XCTFail("Tapping Caps Lock did not restore inactive Shift")
+            return
+        }
+        // Copaky [G-01]: the double-tap → Caps Lock gesture is NOT reproducible with synthesized XCUI
+        // taps (measured 05/09 ×3: two 0.05 s presses and the native doubleTap() both land outside the
+        // product's double-press window). It stays a DEVICE check (build-9 what-to-test); here it is
+        // best-effort: whatever state the two taps leave, the test restores Shift OFF and continues.
+        doubleTapKey(shiftForDoubleTap, in: safari)
+        if let doubleTapCaps = keyboardImageKey(identifier: "capslock.fill", in: safari, timeout: 2), doubleTapCaps.isHittable {
+            doubleTapCaps.tap()
+        } else {
+            print("HARNESS-NOTE|test52|double-tap caps lock not reproducible via XCUI; verify on device")
+            shot("52-capslock-doubletap-not-reproduced")
+            if let stillActive = keyboardImageKey(identifier: "shift.fill", in: safari, timeout: 1), stillActive.isHittable {
+                stillActive.tap()
+            }
+        }
+        RunLoop.current.run(until: Date().addingTimeInterval(0.4))
+        guard let inactiveShift = keyboardImageKey(identifier: "shift", in: safari),
+              let numbers = keyboardImageKey(identifier: "textformat.123", in: safari),
+              let space = firstMatch(in: safari, labels: L.spaceKey, timeout: 4) else {
+            dump(safari, "52-off-numbers-role-missing")
+            shot("52-off-numbers-role-missing")
+            XCTFail("Shift OFF must restore the dynamic 123 key beside Space")
+            return
+        }
+        let bottomRowTolerance = max(4, numbers.frame.height * 0.2)
+        guard abs(inactiveShift.frame.midY - numbers.frame.midY) <= bottomRowTolerance,
+              numbers.frame.minX >= inactiveShift.frame.maxX - bottomRowTolerance,
+              numbers.frame.maxX <= space.frame.minX + bottomRowTolerance,
+              space.frame.minX - numbers.frame.maxX <= numbers.frame.width * 0.25 else {
+            dump(safari, "52-numbers-not-left-of-space")
+            shot("52-numbers-not-left-of-space")
+            XCTFail("The dynamic 123 key must occupy the bottom-row slot between Shift and Latin Space")
+            return
+        }
+        shot("52-shift-cycle-complete")
+    }
+
+    // MARK: - 54 · Language-key menu opens Copaky Settings
+
+    /// Copaky [G-03]: the final held-menu item launches copaky://settings and selects Settings.
+    func test54_languageKeyMenuOpensCopakySettings() throws {
+        guard #available(iOS 18.0, *) else {
+            throw XCTSkip("Opening a containing app through the keyboard responder chain requires iOS 18+")
+        }
+        mainApp.launch()
+        if let close = firstMatch(in: mainApp, labels: L.closeOnboarding, timeout: 4) { close.tap() }
+        mainApp.terminate()
+
+        _ = activatePreNavigatedField("plain-text")
+        switchToCopaky(in: safari)
+        dismissCopakyNotice(in: safari)
+        guard switchToLatinQwertyTab(in: safari) else {
+            dump(safari, "54-latin-tab-missing")
+            shot("54-latin-tab-missing")
+            XCTFail("Could not establish Latin QWERTY before opening the language menu")
+            return
+        }
+        guard selectActiveLanguageMenuIndex(3, in: safari) else { return }
+        guard mainApp.wait(for: .runningForeground, timeout: 8) else {
+            dump(safari, "54-app-not-opened-safari")
+            dump(mainApp, "54-app-not-opened-mainapp")
+            shot("54-app-not-opened")
+            XCTFail("The final language-menu item did not bring Copaky to the foreground")
+            return
+        }
+        let settingsTab = mainApp.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier == %@", "main-tab-settings")).firstMatch
+        guard settingsTab.waitForExistence(timeout: 8),
+              firstMatch(in: mainApp, labels: L.showAllSettings, timeout: 8) != nil else {
+            dump(mainApp, "54-settings-route-missing")
+            shot("54-settings-route-missing")
+            XCTFail("copaky://settings opened the app without selecting the Settings tab")
+            return
+        }
+        shot("54-copaky-settings-open")
+    }
+
+    // MARK: - 55 · Clipboard history from Japanese flick ☆123
+
+    /// Copaky [G-04]: the new default ☆123 slot opens Clipboard history with one long press.
+    func test55_flickStar123LongPressOpensClipboardHistory() throws {
+        _ = activatePreNavigatedField("plain-text")
+        switchToCopaky(in: safari)
+        dismissCopakyNotice(in: safari)
+        switchToJapaneseFlickTab(in: safari)
+
+        let star123 = safari.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier == %@", "keyboard-flick-star-123")).firstMatch
+        guard star123.waitForExistence(timeout: 4), star123.isHittable else {
+            dump(safari, "55-star123-missing")
+            shot("55-star123-missing")
+            XCTFail("Japanese flick ☆123 key is missing stable identifier 'keyboard-flick-star-123'")
+            return
+        }
+
+        // The small doc.badge.clock overlay is intentionally accessibilityHidden in the product, so
+        // the observable contract is the panel itself rather than a synthetic badge query.
+        func clipboardTabItem() -> XCUIElement? {
+            let symbolPred = NSPredicate(format: "identifier CONTAINS 'doc.badge.clock' OR label CONTAINS 'doc.badge.clock'")
+            let symbol = safari.descendants(matching: .any).matching(symbolPred).firstMatch
+            if symbol.exists, symbol.isHittable { return symbol }
+            return firstMatch(in: safari, labels: L.clipboardTab, timeout: 1)
+        }
+        if clipboardTabItem() == nil,
+           let barButton = firstMatch(in: safari, labels: L.tabBarButton, timeout: 3),
+           barButton.isHittable {
+            barButton.tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+        }
+        guard clipboardTabItem() != nil else {
+            dump(safari, "55-clipboard-prerequisite-unavailable")
+            shot("55-clipboard-prerequisite-unavailable")
+            if ProcessInfo.processInfo.environment["COPAKY_CLIPBOARD_PRESEEDED"] == "1" {
+                XCTFail("Clipboard tab is missing even though the harness successfully seeded its App Group files")
+                return
+            }
+            throw XCTSkip("Clipboard tab not reachable on this build (App Group / Full Access / «Save clipboard history» off) — prerequisite, not a ☆123 long-press failure; on a signed build seed the setting and grant Full Access first.")
+        }
+
+        guard longPressClipboardShortcut(labels: [], identifiers: ["keyboard-flick-star-123"]) else {
+            dump(safari, "55-star123-longpress-source-missing")
+            shot("55-star123-longpress-source-missing")
+            XCTFail("Japanese flick ☆123 key disappeared before its long press")
+            return
+        }
+        let marker = firstMatch(
+            in: safari,
+            labels: L.backKey + ["ピン留め", "Pinned", "Fissati"],
+            timeout: 4
+        )
+        guard marker != nil, clipboardPanelIsOpen(timeout: 2) else {
+            dump(safari, "55-clipboard-not-open")
+            shot("55-clipboard-not-open")
+            XCTFail("Long-pressing Japanese flick ☆123 did not open Clipboard history")
+            return
+        }
+        shot("55-flick-star123-clipboard-open")
+    }
+
+    // MARK: - 58 · Real number-row digit variations
+
+    /// Copaky [G-05]: a held real-row 1 inserts its first superscript variation; a tap on 2 remains 2.
+    func test58_numberRowDigitLongPressVariations() throws {
+        let field = activatePreNavigatedField("plain-text")
+        switchToCopaky(in: safari)
+        dismissCopakyNotice(in: safari)
+        guard switchToLatinQwertyTab(in: safari) else {
+            dump(safari, "58-latin-tab-missing")
+            shot("58-latin-tab-missing")
+            XCTFail("Could not establish Latin QWERTY for real-row digit variations")
+            return
+        }
+        clearFocusedField(field, placeholder: "plain-text", in: safari)
+        guard let keyboardFrame = waitForKeyboardInputViewFrame(of: safari, timeout: 6) else {
+            dump(safari, "58-inputview-missing")
+            shot("58-inputview-missing")
+            XCTFail("The keyboard inputView is required to isolate real number-row keys")
+            return
+        }
+
+        func digitKey(_ digit: String) -> XCUIElement? {
+            let identifier = "keyboard-number-row-\(digit)"
+            let matches = safari.descendants(matching: .any)
+                .matching(NSPredicate(format: "identifier == %@", identifier))
+            _ = matches.firstMatch.waitForExistence(timeout: 4)
+            var topmost: XCUIElement?
+            var topY = CGFloat.greatestFiniteMagnitude
+            for index in 0..<min(matches.count, 12) {
+                let candidate = matches.element(boundBy: index)
+                guard candidate.exists, candidate.isHittable else { continue }
+                let frame = candidate.frame
+                guard keyboardFrame.intersection(frame).height >= frame.height * 0.5 else { continue }
+                if frame.minY < topY {
+                    topY = frame.minY
+                    topmost = candidate
+                }
+            }
+            return topmost
+        }
+
+        guard let one = digitKey("1") else {
+            dump(safari, "58-one-key-missing")
+            shot("58-one-key-missing")
+            XCTFail("Real number-row key '1' is missing; seed enable_qwerty_number_row=true")
+            return
+        }
+        let keyFrame = one.frame
+        let appFrame = safari.frame
+        let start = safari.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(
+            dx: keyFrame.midX - appFrame.minX,
+            dy: keyFrame.midY - appFrame.minY
+        ))
+        let firstVariant = start.withOffset(CGVector(dx: 0, dy: -keyFrame.height))
+        start.press(forDuration: 0.8, thenDragTo: firstVariant)
+        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+        guard (field.value as? String) == "¹" else {
+            dump(safari, "58-superscript-one-not-inserted")
+            shot("58-superscript-one-not-inserted")
+            XCTFail("Long-pressing real-row 1 did not insert first variation '¹'; got '\((field.value as? String) ?? "")'")
+            return
+        }
+
+        guard let two = digitKey("2") else {
+            dump(safari, "58-two-key-missing")
+            shot("58-two-key-missing")
+            XCTFail("Real number-row key '2' is missing after the variation gesture")
+            return
+        }
+        two.tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+        guard (field.value as? String) == "¹2" else {
+            dump(safari, "58-plain-two-not-inserted")
+            shot("58-plain-two-not-inserted")
+            XCTFail("A simple tap on real-row 2 must remain plain '2'; got '\((field.value as? String) ?? "")'")
+            return
+        }
+        shot("58-number-row-variations")
+    }
+
     // MARK: - 50 · Accessibility audit inventory across the Settings screens
 
     /// One collected accessibility-audit issue, flattened to plain strings so it can be JSON-encoded
@@ -4314,6 +4685,22 @@ final class CopakyCampaignTests: XCTestCase {
             issues += auditScreen("Impostazioni (tutte le sezioni)", in: mainApp)
         } else {
             print("A11Y-SKIP|Impostazioni (tutte le sezioni)|could not confirm 'Mostra tutte le impostazioni' ON")
+        }
+
+        // 3b · Clipboard long-press advanced options (Copaky [G-07]) — fail-closed: once the history toggle
+        // is ON, the «詳しい設定» link must exist (counter-review 05/09: no silent A11Y-SKIP here).
+        if driveSwitch(L.clipboardToggle, to: true) {
+            guard softTapScrolling(L.clipboardAdvancedLink, in: mainApp) else {
+                dump(mainApp, "50-clipboard-advanced-link-missing")
+                shot("50-clipboard-advanced-link-missing")
+                XCTFail("G-07: the clipboard advanced-options link is missing while the history toggle is ON")
+                return
+            }
+            shot("50-clipboard-advanced")
+            issues += auditScreen("Opzioni avanzate appunti", in: mainApp)
+            softBack(mainApp)
+        } else {
+            print("A11Y-SKIP|Opzioni avanzate appunti|could not drive the clipboard toggle ON (Full Access prerequisite)")
         }
 
         // 4 · OSS license screen (OpenSourceSoftwaresLicenseView), reached from the all-sections list

@@ -87,7 +87,8 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
     @MainActor private static func latinInputKey(
         _ label: String,
         variations: [String] = [],
-        direction: VariationsViewDirection = .right
+        direction: VariationsViewDirection = .right,
+        accessibilityIdentifier: String? = nil
     ) -> any UnifiedKeyModelProtocol<Extension> {
         let variationModels = variations.map {
             QwertyVariationsModel.VariationElement(label: .text($0), actions: [.input($0)])
@@ -99,13 +100,36 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
             variations: variationModels,
             direction: direction,
             showsTapBubble: !variationModels.isEmpty,
-            role: .normal
+            role: .normal,
+            accessibilityIdentifier: accessibilityIdentifier
         )
     }
 
-    /// Shift the existing four-row layout down and prepend the language-neutral real digit row.
-    /// The digit model is the same plain tap-only model used by the Latin numbers tab.
-    @MainActor private static func applyingNumberRow(to layout: Layout) -> Layout {
+    // Copaky [G-05]: real number-row keys expose typographic variants without changing tap input.
+    private static func digitVariations(for language: KeyboardLanguage) -> [String: [String]] {
+        let common = [
+            "1": ["¹", "½", "⅓", "¼"],
+            "2": ["²", "⅔"],
+            "3": ["³", "¾"],
+            "4": ["⁴"],
+            "5": ["⁵"],
+            "6": ["⁶"],
+            "7": ["⁷"],
+            "8": ["⁸"],
+            "9": ["⁹"],
+            "0": ["°", "⁰"],
+        ]
+        guard language == .ja_JP else {
+            return common
+        }
+        let fullWidthDigits = ["１", "２", "３", "４", "５", "６", "７", "８", "９", "０"]
+        return Dictionary(uniqueKeysWithValues: zip(QwertyNumberRowLayoutDecision.digits, fullWidthDigits).map { digit, fullWidthDigit in
+            (digit, [fullWidthDigit] + (common[digit] ?? []))
+        })
+    }
+
+    /// Shift the existing four-row layout down and prepend the language-aware real digit row.
+    @MainActor private static func applyingNumberRow(to layout: Layout, language: KeyboardLanguage) -> Layout {
         guard Extension.SettingProvider.enableQwertyNumberRow else {
             return layout
         }
@@ -121,7 +145,9 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
         for (index, digit) in QwertyNumberRowLayoutDecision.digits.enumerated() {
             expanded[.init(x: CGFloat(index), y: 0)] = latinInputKey(
                 digit,
-                direction: index < 8 ? .right : .left
+                variations: digitVariations(for: language)[digit] ?? [],
+                direction: index < 8 ? .right : .left,
+                accessibilityIdentifier: "keyboard-number-row-\(digit)"
             )
         }
         return expanded
@@ -175,9 +201,9 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
     // Copaky: 言語なし数字タブを保持中の入力言語から動的に構築する。
     @MainActor static func numberKeyboard(language: KeyboardLanguage) -> Layout {
         if language.usesLatinScript {
-            return applyingNumberRow(to: latinNumberKeyboard(language: language))
+            return applyingNumberRow(to: latinNumberKeyboard(language: language), language: language)
         }
-        return applyingNumberRow(to: japaneseNumberKeyboard)
+        return applyingNumberRow(to: japaneseNumberKeyboard, language: language)
     }
 
     @MainActor private static var japaneseNumberKeyboard: Layout {
@@ -387,10 +413,10 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
         dict[.init(x: 1.25, y: 3, width: 1.25)] = tabs.changeKeyboardKey
         dict[.init(x: 2.5, y: 3, width: 5)] = spaceKey(supportsSpaceSlideCursor: true)
         dict[.init(x: 7.5, y: 3, width: 2.5)] = UnifiedEnterKeyModel<Extension>(textSize: .small)
-        return applyingNumberRow(to: dict)
+        return applyingNumberRow(to: dict, language: .ja_JP)
     }
 
-    @MainActor static func abcKeyboard() -> [UnifiedPositionSpecifier: any UnifiedKeyModelProtocol<Extension>] {
+    @MainActor static func abcKeyboard(language: KeyboardLanguage) -> [UnifiedPositionSpecifier: any UnifiedKeyModelProtocol<Extension>] {
         func key(_ x: Double, _ y: Double, _ t: String) -> (UnifiedPositionSpecifier, any UnifiedKeyModelProtocol<Extension>) {
             (.init(x: x, y: y), QwertyGeneralKeyModel(labelType: .text(t), pressActions: { _ in [.input(t)] }, longPressActions: { _ in .none }, variations: [], direction: .right, showsTapBubble: true, role: .normal))
         }
@@ -498,16 +524,16 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
         dict[.init(x: 1.25, y: 3, width: 1.25)] = tabsAbc.changeKeyboardKey
         dict[.init(x: 2.5, y: 3, width: 5)] = spaceKey(supportsSpaceSlideCursor: true)
         dict[.init(x: 7.5, y: 3, width: 2.5)] = UnifiedEnterKeyModel<Extension>(textSize: .small)
-        return applyingNumberRow(to: dict)
+        return applyingNumberRow(to: dict, language: language)
     }
 
     // Copaky: Build language-less symbol tabs on demand from the preserved typing language.
     // Copaky: 言語なし記号タブを保持中の入力言語から動的に構築する。
     @MainActor static func symbolsKeyboard(language: KeyboardLanguage) -> Layout {
         if language.usesLatinScript {
-            return applyingNumberRow(to: latinSymbolsKeyboard(language: language))
+            return applyingNumberRow(to: latinSymbolsKeyboard(language: language), language: language)
         }
-        return applyingNumberRow(to: japaneseSymbolsKeyboard())
+        return applyingNumberRow(to: japaneseSymbolsKeyboard(), language: language)
     }
 
     @MainActor private static func japaneseSymbolsKeyboard() -> Layout {

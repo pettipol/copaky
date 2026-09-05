@@ -84,6 +84,10 @@ struct SettingTabView: View {
                             KeyboardLayoutTypeDetailsView()
                         }
                         BoolSettingView(.liveConversion)
+                        // Copaky [G-08]: clarify the language boundary immediately below each toggle.
+                        Text("入力しながら、ひらがなを自動で漢字に変換します。日本語のみ。スペースキーでの変換は不要です。")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                         BoolSettingView(.enableNumberRowHints)
                         BoolSettingView(.enableQwertyNumberRow)
                         SpaceSlideCursorSettingRows()
@@ -91,7 +95,13 @@ struct SettingTabView: View {
                         // Copaky: keep auto-accent next to the Italian-language switch it qualifies.
                         // Copaky: アクセント自動補正を対象となるイタリア語設定の直後に置く。
                         BoolSettingView(.italianAutoAccentOnSpace)
+                        Text("イタリア語のアクセント記号を自動補完します（イタリア語のみ）。")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                         BoolSettingView(.enableLatinAutocorrect)
+                        Text("ラテン文字の単語をスペース後に自動修正します（日本語には影響しません）。")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                         BoolSettingView(.enableDoubleSpacePeriod)
                         BoolSettingView(.enableLatinAutoCapitalization)
                         ClipboardHistorySettingRows()
@@ -125,6 +135,10 @@ struct SettingTabView: View {
 
                 Section("ライブ変換") {
                     BoolSettingView(.liveConversion)
+                    // Copaky [G-08]: mirror the short list's language-scoped explanation.
+                    Text("入力しながら、ひらがなを自動で漢字に変換します。日本語のみ。スペースキーでの変換は不要です。")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                     NavigationLink("詳しい設定") {
                         LiveConversionSettingView()
                     }
@@ -159,7 +173,7 @@ struct SettingTabView: View {
                     BoolSettingView(.useReflectStyleCursorBar)
                         .searchKeys("カーソルバー", "バー", "cursore", "barra", "cursor", "bar")
                     ClipboardHistorySettingRows()
-                        .searchKeys("コピー履歴", "クリップボード履歴", "履歴", "123", "#+=", "☆123", "appunti", "clipboard", "cronologia", "long press", "pressione prolungata")
+                        .searchKeys("コピー履歴", "クリップボード履歴", "履歴", "123", "#+=", "☆123", "詳しい設定", "appunti", "clipboard", "cronologia", "advanced", "opzioni avanzate", "tocco lungo", "long press", "pressione prolungata")
                     BoolSettingView(.displayTabBarButton)
                         .searchKeys("Copakyボタン", "候補バー", "barra", "suggerimenti", "candidate", "button")
                     BoolSettingView(.hideEmptyCandidateBarOnLatin)
@@ -229,8 +243,14 @@ struct SettingTabView: View {
                     // Copaky: 空白での補正設定を隣接表示し、日英伊の語で検索可能にする。
                     BoolSettingView(.italianAutoAccentOnSpace)
                         .searchKeys("イタリア語", "アクセント", "自動補正", "スペース", "italiano", "accento", "automatico", "spazio", "italian", "accent", "automatic", "space")
+                    Text("イタリア語のアクセント記号を自動補完します（イタリア語のみ）。")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                     BoolSettingView(.enableLatinAutocorrect)
                         .searchKeys("自動修正", "誤字", "ラテン文字", "refusi", "correzione", "automatica", "tastiere", "latine", "typos", "autocorrect", "latin", "keyboards")
+                    Text("ラテン文字の単語をスペース後に自動修正します（日本語には影響しません）。")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                     BoolSettingView(.enableDoubleSpacePeriod)
                         .searchKeys("スペース", "2回", "ピリオド", "punto", "doppio", "spazio", "period", "double", "space")
                     BoolSettingView(.enableLatinAutoCapitalization)
@@ -306,10 +326,10 @@ struct SettingTabView: View {
                         SupportedLanguagesView()
                     }
                     .searchKeys("対応言語", "言語", "日本語", "英語", "イタリア語", "languages")
-                    FallbackLink("プライバシーポリシー", destination: URL(string: "https://copaky.app/privacy.html")!)
+                    FallbackLink("プライバシーポリシー", destination: URL(string: "https://copaky.app/privacy\(legalPageSuffix(preferredLanguages: Locale.preferredLanguages)).html")!)
                         .foregroundStyle(.primary)
                         .searchKeys("プライバシーポリシー", "個人情報", "ライセンス")
-                    FallbackLink("利用規約", destination: URL(string: "https://copaky.app/terms.html")!)
+                    FallbackLink("利用規約", destination: URL(string: "https://copaky.app/terms\(legalPageSuffix(preferredLanguages: Locale.preferredLanguages)).html")!)
                         .foregroundStyle(.primary)
                         .searchKeys("利用規約", "規約", "ライセンス")
                     NavigationLink("更新履歴") {

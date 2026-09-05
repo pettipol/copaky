@@ -71,8 +71,10 @@ public extension KeyboardSettingKey where Self == JapaneseKeyboardLayout {
 }
 
 public struct EnglishKeyboardLayout: LanguageLayoutKeyboardSetting {
-    public static let title: LocalizedStringKey = "英語キーボードの種類"
-    public static let explanation: LocalizedStringKey = "英語の入力方法をフリック入力とローマ字入力から選択できます。"
+    // Copaky [G-08]: the single Latin layout setting controls both English and Italian.
+    public static let title: LocalizedStringKey = "英語・イタリア語のキーボードの種類"
+    // Copaky [G-08]: the explanation names both languages (the previous key had no en/it entry).
+    public static let explanation: LocalizedStringKey = "英語・イタリア語の入力方法をフリック入力とQWERTY入力から選択できます。"
     public static let defaultValue: LanguageLayout = .qwerty
     public static let key: String = "keyboard_type_en"
 }

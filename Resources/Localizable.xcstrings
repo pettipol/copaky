@@ -2567,6 +2567,29 @@
         }
       }
     },
+    "Copakyの設定" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copaky settings"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impostazioni Copaky"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copakyの設定"
+          }
+        }
+      }
+    },
     "Copakyは、キーボードの振動フィードバックや、キーボードからのペーストを実現するために、フルアクセスの許可が必要です。フルアクセスを許可していただくことで、これらの機能が使用できます。" : {
       "localizations" : {
         "en" : {
@@ -9995,6 +10018,29 @@
         }
       }
     },
+    "有効" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Active"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Attivo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "有効"
+          }
+        }
+      }
+    },
     "大文字・小文字キー" : {
       "localizations" : {
         "en" : {
@@ -11688,6 +11734,236 @@
         }
       }
     },
+    "本アプリケーションはMeCabで構築された辞書データを使用しています。" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This application uses dictionary data built with MeCab."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questa applicazione utilizza dati di dizionario costruiti con MeCab."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本アプリケーションはMeCabで構築された辞書データを使用しています。"
+          }
+        }
+      }
+    },
+    "オフ" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Off"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disattivato"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "オフ"
+          }
+        }
+      }
+    },
+    "大文字に固定中" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Locked"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bloccato"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "大文字に固定中"
+          }
+        }
+      }
+    },
+    "ピン留めが多すぎて履歴に追加できませんでした" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clipboard history is full of pinned entries: unpin something first"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cronologia appunti piena di elementi fissati: sblocca qualcosa prima"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ピン留めが多すぎて履歴に追加できませんでした"
+          }
+        }
+      }
+    },
+    "クリップボード履歴を読み込めません。Copaky アプリを開いて修復してください" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clipboard history cannot be read. Open the Copaky app to repair it."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La cronologia appunti non è leggibile. Apri l'app Copaky per ripararla."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "クリップボード履歴を読み込めません。Copaky アプリを開いて修復してください"
+          }
+        }
+      }
+    },
+    "クリップボードの履歴がオンになりました。既定では文字タブの123キーとフリックの☆123キーを長押しすると履歴タブが開きます。設定で #+= キーも追加できます。「ペーストの許可」を求めるダイアログが繰り返し出る場合は、設定アプリ ▸ Copaky ▸「ほかの App からペースト」を「許可」にしてください。" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clipboard history is on. By default, long-press the 123 key on the letters tab or the ☆123 key on the Japanese flick keyboard to open the history tab. You can also enable the #+= key in Settings. If the «Allow Paste» dialog keeps appearing, set Settings ▸ Copaky ▸ «Paste from Other Apps» to «Allow»."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La Cronologia appunti è attiva. Per impostazione predefinita, tieni premuto il tasto 123 nel tab delle lettere o il tasto ☆123 sulla tastiera flick giapponese per aprire la cronologia. Nelle Impostazioni puoi attivare anche il tasto #+=. Se la finestra «Consenti incolla» continua a comparire, imposta Impostazioni ▸ Copaky ▸ «Incolla da altre app» su «Consenti»."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "クリップボードの履歴がオンになりました。既定では文字タブの123キーとフリックの☆123キーを長押しすると履歴タブが開きます。設定で #+= キーも追加できます。「ペーストの許可」を求めるダイアログが繰り返し出る場合は、設定アプリ ▸ Copaky ▸「ほかの App からペースト」を「許可」にしてください。"
+          }
+        }
+      }
+    },
+    "クリップボードの履歴は、既定では文字タブの123キーとフリックの☆123キーの長押しで開きます。設定で #+= キーも追加できます。" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "By default, open Clipboard history with a long press on the 123 key in the letters tab or on the ☆123 key of the Japanese flick keyboard. You can also enable the #+= key in Settings."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Per impostazione predefinita, apri la Cronologia appunti tenendo premuto il tasto 123 nel tab delle lettere o il tasto ☆123 sulla tastiera flick giapponese. Nelle Impostazioni puoi attivare anche il tasto #+=."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "クリップボードの履歴は、既定では文字タブの123キーとフリックの☆123キーの長押しで開きます。設定で #+= キーも追加できます。"
+          }
+        }
+      }
+    },
+    "オンにすると候補バーに Copaky ボタンを表示します。長押しは既定で文字タブの123キーとフリックの☆123キーを使い、設定で #+= キーも追加できます。クリップボード履歴がオンなら、設定したキーから履歴を直接開きます。" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn on to show the Copaky button in the candidate bar. By default, long-press the 123 key on the letters tab or the ☆123 key on the Japanese flick keyboard; you can also enable #+= in Settings. When Clipboard history is on, configured keys open it directly."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Attiva per mostrare il pulsante Copaky nella barra dei suggerimenti. Per impostazione predefinita, tieni premuto 123 nel tab delle lettere o ☆123 sulla tastiera flick giapponese; nelle Impostazioni puoi abilitare anche #+=. Quando la Cronologia appunti è attiva, i tasti configurati la aprono direttamente."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "オンにすると候補バーに Copaky ボタンを表示します。長押しは既定で文字タブの123キーとフリックの☆123キーを使い、設定で #+= キーも追加できます。クリップボード履歴がオンなら、設定したキーから履歴を直接開きます。"
+          }
+        }
+      }
+    },
+    "既定ではローマ字入力の文字タブ左下にある「123」キーとフリック入力の「☆123」キーを長押ししても表示されます。設定で「#+=」も追加できます。" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "By default, you can also show it by long-pressing the 123 key at the lower left of the QWERTY letters tab or the ☆123 key of the flick keyboard. In Settings, you can also enable #+=."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Per impostazione predefinita, puoi visualizzarlo anche tenendo premuto 123 in basso a sinistra nel tab delle lettere QWERTY o il tasto ☆123 della tastiera flick. Nelle Impostazioni puoi abilitare anche #+=."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "既定ではローマ字入力の文字タブ左下にある「123」キーとフリック入力の「☆123」キーを長押ししても表示されます。設定で「#+=」も追加できます。"
+          }
+        }
+      }
+    },
+    "クリップボード履歴を保存できませんでした" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clipboard history could not be saved"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossibile salvare la cronologia appunti"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "クリップボード履歴を保存できませんでした"
+          }
+        }
+      }
+    },
     "本アプリケーションは形態素解析器としてMeCabを使用しています。" : {
       "localizations" : {
         "en" : {
@@ -13219,6 +13495,144 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Attiva per impostazione predefinita. Sulle tastiere QWERTY inglese e italiana, nasconde la barra dei suggerimenti quando non ci sono candidati, previsioni o avvisi e il pulsante Copaky è nascosto, rendendo la tastiera più bassa. Le tastiere giapponesi non sono interessate."
+          }
+        }
+      }
+    },
+    "入力しながら、ひらがなを自動で漢字に変換します。日本語のみ。スペースキーでの変換は不要です。" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turns kana into kanji as you type, with no space key. Japanese only — it never changes what you type in English or Italian."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Converte i kana in kanji mentre scrivi, senza premere spazio. Solo giapponese: non tocca mai il testo latino."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "入力しながら、ひらがなを自動で漢字に変換します。日本語のみ。スペースキーでの変換は不要です。"
+          }
+        }
+      }
+    },
+    "ラテン文字の単語をスペース後に自動修正します（日本語には影響しません）。" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fixes Latin words after a space. Japanese is unaffected."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Corregge parole latine dopo lo spazio. Non riguarda il giapponese."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ラテン文字の単語をスペース後に自動修正します（日本語には影響しません）。"
+          }
+        }
+      }
+    },
+    "イタリア語のアクセント記号を自動補完します（イタリア語のみ）。" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turns \"perche\" into \"perché\". Italian only."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trasforma «perche» in «perché». Solo italiano."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "イタリア語のアクセント記号を自動補完します（イタリア語のみ）。"
+          }
+        }
+      }
+    },
+    "英語・イタリア語の入力方法をフリック入力とQWERTY入力から選択できます。" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose flick or QWERTY input for English and Italian. Both languages share this layout."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scegli l\u2019input flick o QWERTY per inglese e italiano. Le due lingue condividono questo layout."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "英語・イタリア語の入力方法をフリック入力とQWERTY入力から選択できます。"
+          }
+        }
+      }
+    },
+    "英語・イタリア語のキーボードの種類" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "English and Italian keyboard layout"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tipo di tastiera per inglese e italiano"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "英語・イタリア語のキーボードの種類"
+          }
+        }
+      }
+    },
+    "英語・イタリア語のキーボードの種類 (現在: %@)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "English and Italian keyboard layout (current: %@)"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tipo di tastiera per inglese e italiano (attuale: %@)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "英語・イタリア語のキーボードの種類 (現在: %@)"
           }
         }
       }

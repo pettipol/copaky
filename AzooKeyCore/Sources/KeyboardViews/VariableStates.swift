@@ -385,10 +385,19 @@ public final class VariableStates: ObservableObject {
         switch result {
         case .captured:
             // Persisti subito: l'estensione può essere terminata prima di closeKeyboard (perdita dell'elemento).
-            self.clipboardHistoryManager.save()
+            // Copaky [G-22]: a failed persistence (write error, backup exclusion not confirmed) is said out loud.
+            if !self.clipboardHistoryManager.save() {
+                self.temporalMessage = .clipboardHistorySaveFailed
+            }
         case .rejectedOversized:
             // Fail closed sotto pressione: niente JSONEncoder/write della history invariata.
             self.showOversizedClipboardCaptureWarning()
+        case .rejectedHistoryFull:
+            // Copaky [G-38]: the entry was NOT kept (pins saturate the file budget): say it, never fake a capture.
+            self.temporalMessage = .clipboardHistoryFull
+        case .rejectedHistoryUnavailable:
+            // Copaky [G-38]: collapsed manager (oversized/locked/corrupt file): nothing captured, nothing written.
+            self.temporalMessage = .clipboardHistoryUnavailable
         case .rejected:
             // Preserve the pre-E-17 behavior for non-size rejections (for example a no-text race):
             // pending pin/delete mutations may still rely on this persistence opportunity.

@@ -41,7 +41,7 @@ struct ContentView: View {
                     .tag(TabSelection.customize)
                 SettingTabView()
                     .tabItem {
-                        TabItem(title: "設定", systemImage: "wrench.fill")
+                        TabItem(title: "設定", systemImage: "wrench.fill", accessibilityIdentifier: "main-tab-settings")
                     }
                     .tag(TabSelection.settings)
             }
@@ -72,10 +72,14 @@ struct ContentView: View {
                 }
             }
             .onOpenURL { url in
-                // Copaky: copaky:// deep links are no longer used; treat external URLs as file imports.
-                if url.scheme != "copaky" {
-                    importFileURL = url
+                // Copaky [G-03]: route the keyboard's settings deep link without treating it as an import.
+                if url.scheme == "copaky" {
+                    if url.host == "settings" {
+                        selection = .settings
+                    }
+                    return
                 }
+                importFileURL = url
             }
             .sheet(isPresented: $showWalkthrough, content: {
                 CustomizeTabWalkthroughView(isShowing: $showWalkthrough)
@@ -115,15 +119,25 @@ struct ContentView: View {
 }
 
 private struct TabItem: View {
-    init(title: LocalizedStringKey, systemImage: String) {
+    init(title: LocalizedStringKey, systemImage: String, accessibilityIdentifier: String? = nil) {
         self.title = title
         self.systemImage = systemImage
+        self.accessibilityIdentifier = accessibilityIdentifier
     }
 
     private let title: LocalizedStringKey
     private let systemImage: String
+    private let accessibilityIdentifier: String?
 
     var body: some View {
+        if let accessibilityIdentifier {
+            content.accessibilityIdentifier(accessibilityIdentifier)
+        } else {
+            content
+        }
+    }
+
+    private var content: some View {
         VStack {
             Image(systemName: systemImage).font(.system(size: 20, weight: .light))
                 .foregroundStyle(.systemGray2)

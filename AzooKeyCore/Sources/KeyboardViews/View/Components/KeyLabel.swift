@@ -83,6 +83,8 @@ public struct DirectionalKeyLabel: View {
 public struct KeyLabel<Extension: ApplicationSpecificKeyboardViewExtension>: View {
     private let labelType: KeyLabelType
     private let width: CGFloat
+    private let accessibilityIdentifier: String?
+    private let accessibilityValue: String?
     private var textColor: Color?
     private var textSize: Design.Fonts.LabelFontSizeStrategy
     @Environment(Extension.Theme.self) private var theme
@@ -93,11 +95,20 @@ public struct KeyLabel<Extension: ApplicationSpecificKeyboardViewExtension>: Vie
         textColor ?? theme.textColor.color
     }
 
-    init(_ type: KeyLabelType, width: CGFloat, textSize: Design.Fonts.LabelFontSizeStrategy = .large, textColor: Color? = nil) {
+    init(
+        _ type: KeyLabelType,
+        width: CGFloat,
+        textSize: Design.Fonts.LabelFontSizeStrategy = .large,
+        textColor: Color? = nil,
+        accessibilityIdentifier: String? = nil,
+        accessibilityValue: String? = nil
+    ) {
         self.labelType = type
         self.width = width
         self.textColor = textColor
         self.textSize = textSize
+        self.accessibilityIdentifier = accessibilityIdentifier
+        self.accessibilityValue = accessibilityValue
     }
 
     private var keyViewFontSize: CGFloat {
@@ -108,10 +119,18 @@ public struct KeyLabel<Extension: ApplicationSpecificKeyboardViewExtension>: Vie
         switch self.labelType {
         case let .text(text):
             let font = Design.fonts.keyLabelFont(text: text, width: width, fontSize: self.textSize, userDecidedSize: keyViewFontSize, theme: theme)
-            Text(text)
-                .font(font)
-                .foregroundStyle(mainKeyColor)
-                .allowsHitTesting(false)
+            if let accessibilityIdentifier {
+                Text(text)
+                    .font(font)
+                    .foregroundStyle(mainKeyColor)
+                    .accessibilityIdentifier(accessibilityIdentifier)
+                    .allowsHitTesting(false)
+            } else {
+                Text(text)
+                    .font(font)
+                    .foregroundStyle(mainKeyColor)
+                    .allowsHitTesting(false)
+            }
 
         case let .localizedText(key):
             // Resolve first: the font must be sized on the TRANSLATED text ("Emergency" is much wider
@@ -156,11 +175,21 @@ public struct KeyLabel<Extension: ApplicationSpecificKeyboardViewExtension>: Vie
         case let .image(imageName, accessibilityLabel):
             if let accessibilityLabel {
                 let localizedLabel = String(localized: String.LocalizationValue(accessibilityLabel), bundle: .main)
-                Image(systemName: imageName)
-                    .font(Design.fonts.iconImageFont(keyViewFontSizePreference: Extension.SettingProvider.keyViewFontSize, theme: theme))
-                    .foregroundStyle(mainKeyColor)
-                    .accessibilityLabel(Text(verbatim: localizedLabel))
-                    .allowsHitTesting(false)
+                if let accessibilityValue {
+                    let localizedValue = String(localized: String.LocalizationValue(accessibilityValue), bundle: .main)
+                    Image(systemName: imageName)
+                        .font(Design.fonts.iconImageFont(keyViewFontSizePreference: Extension.SettingProvider.keyViewFontSize, theme: theme))
+                        .foregroundStyle(mainKeyColor)
+                        .accessibilityLabel(Text(verbatim: localizedLabel))
+                        .accessibilityValue(Text(verbatim: localizedValue))
+                        .allowsHitTesting(false)
+                } else {
+                    Image(systemName: imageName)
+                        .font(Design.fonts.iconImageFont(keyViewFontSizePreference: Extension.SettingProvider.keyViewFontSize, theme: theme))
+                        .foregroundStyle(mainKeyColor)
+                        .accessibilityLabel(Text(verbatim: localizedLabel))
+                        .allowsHitTesting(false)
+                }
             } else {
                 Image(systemName: imageName)
                     .font(Design.fonts.iconImageFont(keyViewFontSizePreference: Extension.SettingProvider.keyViewFontSize, theme: theme))

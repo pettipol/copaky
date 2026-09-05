@@ -1,3 +1,4 @@
+import AzooKeyUtils
 import SwiftUI
 
 struct TermsOfServiceUpdateNews: View {
@@ -8,7 +9,7 @@ struct TermsOfServiceUpdateNews: View {
             TipsContentParagraph {
                 Text("必ずご確認ください。")
             }
-            FallbackLink("利用規約", destination: URL(string: "https://copaky.app/terms.html")!)
+            FallbackLink("利用規約", destination: URL(string: "https://copaky.app/terms\(legalPageSuffix(preferredLanguages: Locale.preferredLanguages)).html")!)
         }
         .onAppear {
             self.readTermsOfUseUpdate_2025_05_31 = true

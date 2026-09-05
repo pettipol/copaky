@@ -63,6 +63,14 @@ struct MainApp: App {
                 .onAppear {
                     // MARK: セットアップ
                     SemiStaticStates.shared.setup()
+                    // Copaky [G-38]: a build-8 history that grew past the 4 MiB budget is unreadable by the
+                    // extension (collapsed); the container app has no memory ceiling and shrinks it here.
+                    if let historyURL = ClipboardHistoryManager.historyFileLocation(config: ClipboardHistoryManagerConfig()) {
+                        let maxCount = ClipboardHistoryManagerConfig().maxCount
+                        Task.detached(priority: .utility) {
+                            _ = ClipboardHistoryManager.repairUnreadableHistory(at: historyURL, maxCount: maxCount)
+                        }
+                    }
                     SharedStore.setInitialAppVersion()
                     SharedStore.setLastAppVersion()
                     // 本体アプリで特定の作業を行わなずにDoneにできる場合。
@@ -72,8 +80,11 @@ struct MainApp: App {
                     }
                     // 設定を上書きする
                     // Copaky: isCopakyEra — a 0.x initial install is a fresh install, not a pre-2.2.3 legacy one
-                    if let initialVersion = SharedStore.initialAppVersion, initialVersion > .azooKey_v2_2_2 || initialVersion.isCopakyEra {
+                    if let initialVersion = SharedStore.initialAppVersion,
+                       initialVersion > .azooKey_v2_2_2 || initialVersion.isCopakyEra,
+                       KeepDeprecatedShiftKeyBehavior.get() == nil {
                         // Version 2.2.3以降にインストールしたユーザにはこのオプションを有効化しない
+                        // Copaky [G-01]: initialize only an absent key; preserve every stored upgrade value.
                         KeepDeprecatedShiftKeyBehavior.value = false
                     }
                 }

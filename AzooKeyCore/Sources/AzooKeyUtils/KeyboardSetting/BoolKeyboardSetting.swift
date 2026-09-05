@@ -36,11 +36,15 @@ public extension BoolKeyboardSettingKey {
 
     @MainActor static var value: Value {
         get {
-            get() ?? defaultValue
+            resolvedValue(from: SharedStore.userDefaults)
         }
         set {
             set(newValue: newValue)
         }
+    }
+
+    @MainActor internal static func resolvedValue(from userDefaults: UserDefaults) -> Value {
+        (userDefaults.object(forKey: key) as? Bool) ?? defaultValue
     }
 }
 
@@ -150,7 +154,8 @@ public extension KeyboardSettingKey where Self == DisplayCursorBarAutomatically 
 public struct UseShiftKey: BoolKeyboardSettingKey {
     public static let title: LocalizedStringKey = "シフトキーを使う"
     public static let explanation: LocalizedStringKey = "QwertyキーボードでAaキーの代わりにシフトキーを利用します。"
-    public static let defaultValue = false
+    // Copaky [G-01]: use the familiar system-style bottom-left Shift layout on fresh installs.
+    public static let defaultValue = true
     public static let key: String = "use_shift_key"
 }
 
@@ -161,7 +166,8 @@ public extension KeyboardSettingKey where Self == UseShiftKey {
 public struct KeepDeprecatedShiftKeyBehavior: BoolKeyboardSettingKey {
     public static let title: LocalizedStringKey = "シフトキーの古い挙動を使う"
     public static let explanation: LocalizedStringKey = "シフトキーの以前の挙動を利用します。iOS 18以降では廃止されます。"
-    public static let defaultValue: Bool = true
+    // Copaky [G-01]: the hidden legacy toggle must not move Shift back into the letter row by default.
+    public static let defaultValue: Bool = false
     public static let key: String = "keep_deprecated_shift_key_behavior"
 }
 
@@ -298,6 +304,20 @@ public extension KeyboardSettingKey where Self == EnableItalianKeyboardLanguage 
     static var enableItalianKeyboardLanguage: Self { .init() }
 }
 
+/// Copaky [G-26]: select the localized legal document from the first system language only.
+public func legalPageSuffix(preferredLanguages: [String]) -> String {
+    guard let language = preferredLanguages.first?.lowercased() else {
+        return ""
+    }
+    if language.hasPrefix("it") {
+        return ".it"
+    }
+    if language.hasPrefix("ja") {
+        return ".ja"
+    }
+    return ""
+}
+
 // Copaky: optionally replace a plain Italian word with its dictionary-backed accented form when
 // space commits it. The setting is independent from enabling the Italian keyboard language.
 // Copaky: 空白で確定するとき、辞書に基づくアクセント付き語への補正を個別に切り替える。
@@ -403,7 +423,8 @@ public struct EnableClipboardHistoryManagerTab: BoolKeyboardSettingKey {
             }
             tabBarData.lastUpdateDate = Date()
             try manager.saveTabBarData(tabBarData: tabBarData)
-            return "クリップボードの履歴がオンになりました。既定では文字タブの123キーを長押しすると履歴タブが開きます。設定で #+= / ☆123 キーも追加できます。「ペーストの許可」を求めるダイアログが繰り返し出る場合は、設定アプリ ▸ Copaky ▸「ほかの App からペースト」を「許可」にしてください。"
+            // Copaky [G-04]: the default now covers both 123 (Latin) and ☆123 (Japanese flick).
+            return "クリップボードの履歴がオンになりました。既定では文字タブの123キーとフリックの☆123キーを長押しすると履歴タブが開きます。設定で #+= キーも追加できます。「ペーストの許可」を求めるダイアログが繰り返し出る場合は、設定アプリ ▸ Copaky ▸「ほかの App からペースト」を「許可」にしてください。"
         } catch {
             debug("EnableClipboardHistoryManagerTab onEnabled", error)
             return nil
@@ -432,7 +453,8 @@ public extension KeyboardSettingKey where Self == EnableClipboardHistoryManagerT
 /// Copaky: 候補バーのショートカットは任意表示で、既定ではオフ。
 public struct DisplayTabBarButton: BoolKeyboardSettingKey {
     public static let title: LocalizedStringKey = "Copaky ボタンを候補バーに表示"
-    public static let explanation: LocalizedStringKey = "オンにすると候補バーに Copaky ボタンを表示します。長押しは既定で文字タブの123キーを使い、設定で #+= / ☆123 キーも追加できます。クリップボード履歴がオンなら、設定したキーから履歴を直接開きます。"
+    // Copaky [G-04]: 123 and ☆123 are the default long-press openers; #+= is the optional one.
+    public static let explanation: LocalizedStringKey = "オンにすると候補バーに Copaky ボタンを表示します。長押しは既定で文字タブの123キーとフリックの☆123キーを使い、設定で #+= キーも追加できます。クリップボード履歴がオンなら、設定したキーから履歴を直接開きます。"
     public static let defaultValue = false
     public static let key: String = "display_tab_bar_button"
 }

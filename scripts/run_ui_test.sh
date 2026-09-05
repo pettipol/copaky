@@ -15,6 +15,9 @@ CLIPBOARD_LANG=""
 PBSEED_BYTES=""
 TEST=""
 USER_SEEDS=()
+DELETE_KEYS=()
+AUTO_CLIPBOARD_SEED=0
+CLIPBOARD_PRESEEDED=0
 SEEDS=(
   keyboard_type=flick
   keyboard_type_en=roman
@@ -28,6 +31,12 @@ SEEDS=(
   # Copaky [F-04b]: 自動大文字化は文頭でShiftを立てラベルが大文字になるため、ハーネスではOFFに固定。
   enable_latin_auto_capitalization=false
   enable_italian_keyboard_language=true
+  # Copaky [G-01]: campaign tests use the new Apple-like Shift default unless an historical
+  # geometry test pins the previous no-Shift baseline below.
+  use_shift_key=true
+  # Copaky [F-05] (05/09): mirror the product default explicitly, so a value pinned by one test never
+  # leaks into the next run (the device-wide plist survives reinstalls).
+  hide_empty_candidate_bar_on_latin=true
 )
 
 while [[ $# -gt 0 ]]; do
@@ -83,7 +92,9 @@ fi
 # test48 instead pins the new default before changing it through the real MainApp toggle.
 # Copaky [F-05]: test39/46/47は空バーを確保した従来基準で固定し、test48は新しい既定値から開始する。
 case "$TEST" in
-  test39_longPressNumbersKeyOpensClipboardHistory|test46_realQwertyNumberRowPreservesLetterHeights|test47_spaceSlideCursorOnLatinQwerty)
+  test30_accentVariationsOnLongPress|test39_longPressNumbersKeyOpensClipboardHistory|test46_realQwertyNumberRowPreservesLetterHeights|test47_spaceSlideCursorOnLatinQwerty)
+    # Copaky (05/09): test30's accent-popup drag is calibrated with the empty bar VISIBLE (row 1 not at the
+    # very top of the inputView) — pin its historical baseline like the geometry tests.
     SEEDS+=(hide_empty_candidate_bar_on_latin=false)
     ;;
   test48_hiddenCandidateBarReducesHeight)
@@ -94,6 +105,28 @@ case "$TEST" in
     ;;
   test50_accessibilityAudit_settingsScreens)
     SEEDS+=(use_shift_key=false)
+    ;;
+esac
+case "$TEST" in
+  test52_shiftKeyCycleAndCapsLock)
+    SEEDS+=(use_shift_key=true keep_deprecated_shift_key_behavior=false hide_empty_candidate_bar_on_latin=true display_tab_bar_button=false enable_latin_auto_capitalization=false)
+    ;;
+  test54_languageKeyMenuOpensCopakySettings)
+    SEEDS+=(keyboard_type_en=roman enable_italian_keyboard_language=true)
+    ;;
+  test55_flickStar123LongPressOpensClipboardHistory)
+    SEEDS+=(keyboard_type=flick enable_clipboard_history_manager_tab=true use_system_paste_control=false display_tab_bar_button=true)
+    # Copaky [G-04]: remove the previously persisted Data array so the product's new default is tested.
+    DELETE_KEYS+=(clipboard_long_press_slots)
+    if [[ -z "$CLIPBOARD_LANG" ]]; then
+      # Seed onEnabled's tab-bar side effect when a signed App Group container is available. If the
+      # prerequisite container is absent, the UI test retains test39's explicit XCTSkip path.
+      CLIPBOARD_LANG=it
+      AUTO_CLIPBOARD_SEED=1
+    fi
+    ;;
+  test58_numberRowDigitLongPressVariations)
+    SEEDS+=(enable_qwerty_number_row=true enable_qwerty_number_row_hints=false hide_empty_candidate_bar_on_latin=false use_shift_key=true)
     ;;
 esac
 if [[ "$TEST" == "test39_longPressNumbersKeyOpensClipboardHistory" ]]; then
@@ -116,6 +149,21 @@ APP_BUNDLE="com.pettipol.copaky"
 KB_BUNDLE="com.pettipol.copaky.keyboard"
 RUNNER_BUNDLE="com.pettipol.copaky.uitests.xctrunner"
 FIELDS_URL="http://127.0.0.1:8377/kbtest.html"
+# Copaky (05/09): the host app product must ALWAYS carry the App Group entitlement. An unsigned
+# build-for-testing (CODE_SIGNING_ALLOWED=NO) re-links azooKey.app without its Simulated.xcent and
+# test-without-building then reinstalls it over the signed app: containermanagerd drops the group
+# ("Reconciled [com.pettipol.copaky] … new app groups: (null)") and the keyboard logs "client is not
+# entitled" — every clipboard test that followed a --fresh-install failed that way (24th session, round
+# 10: test14 no tile, test13 seed without container). With a team available the whole scheme is signed
+# ad hoc for the simulator (no profile needed), so every reinstall keeps the group.
+# 署名なしビルドで再インストールするとApp Groupが消えるため、チームがあれば常に署名付きでビルドする。
+TEAM="${COPAKY_TEAM:-$(sed -n 's/^[[:space:]]*DEVELOPMENT_TEAM[[:space:]]*=[[:space:]]*//p' "$REPO_DIR/Copaky.local.xcconfig" 2>/dev/null | sed -n '1p' || true)}"
+if [[ -n "$TEAM" ]]; then
+  SIGNING_ARGS=(-allowProvisioningUpdates DEVELOPMENT_TEAM="$TEAM" CODE_SIGN_STYLE=Automatic)
+else
+  echo "warning: no DEVELOPMENT_TEAM (COPAKY_TEAM or Copaky.local.xcconfig): building unsigned — the App Group container will be absent and clipboard tests cannot pass" >&2
+  SIGNING_ARGS=(CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO)
+fi
 XCB_ARGS=(
   -project "$PROJECT"
   -scheme CopakyUITests
@@ -123,8 +171,7 @@ XCB_ARGS=(
   -derivedDataPath "$DERIVED_DATA"
   -destination "id=$UDID"
   -only-testing:"$TEST_ID"
-  CODE_SIGNING_ALLOWED=NO
-  CODE_SIGNING_REQUIRED=NO
+  "${SIGNING_ARGS[@]}"
 )
 
 # The requested UDID must be booted in a visible Simulator session.
@@ -135,17 +182,17 @@ xcrun simctl bootstatus "$UDID" -b
 # Field tests need the local fixture; iOS 26 ignores Safari's -u launch argument.
 bash "$REPO_DIR/scripts/serve_test_page.sh" --daemon
 
-# Build the UI runner once; --fresh-install separately rebuilds/signs only the host app below.
+# Build the UI runner (and the signed host app) once; --fresh-install re-installs that host app below.
 xcodebuild build-for-testing "${XCB_ARGS[@]}"
 
 if [[ "$FRESH_INSTALL" == 1 ]]; then
-  # App Group creation requires a signed host app; the UI runner itself remains unsigned below.
-  TEAM="${COPAKY_TEAM:-$(sed -n 's/^[[:space:]]*DEVELOPMENT_TEAM[[:space:]]*=[[:space:]]*//p' "$REPO_DIR/Copaky.local.xcconfig" 2>/dev/null | sed -n '1p' || true)}"
+  # App Group creation requires a signed host app: same signing settings as the runner build above,
+  # so this explicit build is a no-op re-check, never a re-link with different entitlements.
   [[ -n "$TEAM" ]] || die "--fresh-install requires COPAKY_TEAM or Copaky.local.xcconfig"
   xcodebuild build \
     -project "$PROJECT" -scheme MainApp -configuration "$CONFIGURATION" \
     -derivedDataPath "$DERIVED_DATA" -destination "id=$UDID" \
-    -allowProvisioningUpdates DEVELOPMENT_TEAM="$TEAM" CODE_SIGN_STYLE=Automatic
+    "${SIGNING_ARGS[@]}"
 
   # Xcode can retain an unchanged installed app, so install and launch this exact build explicitly.
   FRESH_APP="$DERIVED_DATA/Build/Products/$CONFIGURATION-iphonesimulator/azooKey.app"
@@ -168,13 +215,32 @@ fi
 
 if [[ -n "$CLIPBOARD_LANG" ]]; then
   # Clipboard tab/history seeding requires the App Group container created by a prior app launch.
-  bash "$REPO_DIR/scripts/seed_sim_clipboard.sh" --lang "$CLIPBOARD_LANG" --udid "$UDID"
+  if [[ "$AUTO_CLIPBOARD_SEED" == 1 ]]; then
+    if CLIPBOARD_SEED_OUTPUT="$(bash "$REPO_DIR/scripts/seed_sim_clipboard.sh" --lang "$CLIPBOARD_LANG" --udid "$UDID" 2>&1)"; then
+      printf '%s\n' "$CLIPBOARD_SEED_OUTPUT"
+      CLIPBOARD_PRESEEDED=1
+    elif [[ "$CLIPBOARD_SEED_OUTPUT" == *"App Group container 'group.com.pettipol.copaky' not found"* ]]; then
+      printf '%s\n' "$CLIPBOARD_SEED_OUTPUT" >&2
+      echo "warning: test55 App Group prerequisite unavailable; the UI test will apply its explicit skip gate" >&2
+    else
+      printf '%s\n' "$CLIPBOARD_SEED_OUTPUT" >&2
+      die "test55 clipboard seeding failed for a reason other than the allowed missing-App-Group prerequisite"
+    fi
+  else
+    bash "$REPO_DIR/scripts/seed_sim_clipboard.sh" --lang "$CLIPBOARD_LANG" --udid "$UDID"
+    CLIPBOARD_PRESEEDED=1
+  fi
 fi
 
 # Apply campaign defaults and user --seed overrides last, after clipboard seeding's roman-layout write.
 # A fresh signed install must expose its App Group container; fail closed if that mirror is absent.
+SEED_SCRIPT_ARGS=(--udid "$UDID" --keep-keyboard)
+for key in ${DELETE_KEYS[@]+"${DELETE_KEYS[@]}"}; do
+  SEED_SCRIPT_ARGS+=(--delete "$key")
+done
+SEED_SCRIPT_ARGS+=("${SEEDS[@]}")
 COPAKY_SEED_REQUIRE_CONTAINER="$FRESH_INSTALL" \
-  bash "$REPO_DIR/scripts/seed_sim_settings.sh" --udid "$UDID" --keep-keyboard "${SEEDS[@]}"
+  bash "$REPO_DIR/scripts/seed_sim_settings.sh" "${SEED_SCRIPT_ARGS[@]}"
 
 # 20th session, measured: on a container created moments earlier the direct plist writes can lose
 # against a cfprefsd cache flush on the app's next launch — mirror read-back said OK, yet at test
@@ -192,15 +258,24 @@ if [[ "$FRESH_INSTALL" == 1 ]]; then
       key="${pair%%=*}"
       /usr/libexec/PlistBuddy -c "Print :$key" "$SHARED_PLIST" >/dev/null 2>&1 || { SEEDS_LOST=1; echo "seed lost after app launch: $key" >&2; }
     done
+    for key in ${DELETE_KEYS[@]+"${DELETE_KEYS[@]}"}; do
+      /usr/libexec/PlistBuddy -c "Print :$key" "$SHARED_PLIST" >/dev/null 2>&1 \
+        && { SEEDS_LOST=1; echo "deleted key returned after app launch: $key" >&2; }
+    done
     [[ "$SEEDS_LOST" == 0 ]] && break
     [[ "$attempt" == 2 ]] && die "seeded keys vanished from the shared App Group container twice — aborting instead of testing an unseeded state"
     echo "re-seeding the shared container once (cfprefsd race on fresh container)" >&2
     COPAKY_SEED_REQUIRE_CONTAINER=1 \
-      bash "$REPO_DIR/scripts/seed_sim_settings.sh" --udid "$UDID" --keep-keyboard "${SEEDS[@]}"
+      bash "$REPO_DIR/scripts/seed_sim_settings.sh" "${SEED_SCRIPT_ARGS[@]}"
   done
 fi
 
 unset TEST_RUNNER_COPAKY_PASTEBOARD_PRESEEDED || true
+unset TEST_RUNNER_COPAKY_CLIPBOARD_PRESEEDED || true
+if [[ "$CLIPBOARD_PRESEEDED" == 1 ]]; then
+  # Once the real tab/history seed succeeded, a missing Clipboard tab is a regression, not a skip.
+  export TEST_RUNNER_COPAKY_CLIPBOARD_PRESEEDED=1
+fi
 if [[ -n "$PBSEED_BYTES" ]]; then
   # Seed simulator-wide pasteboard; TEST_RUNNER_ forwards provenance into XCUITest.
   /usr/bin/python3 -c 'import sys; sys.stdout.write("COPAKY_OVERSIZED_SEED_" + "X" * int(sys.argv[1]))' "$PBSEED_BYTES" \

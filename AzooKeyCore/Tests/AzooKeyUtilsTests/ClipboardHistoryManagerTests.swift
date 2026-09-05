@@ -283,6 +283,24 @@ final class ClipboardHistoryManagerTests: XCTestCase {
         }
     }
 
+    private func validLargeText(identifier: String, byteCount: Int) -> String {
+        let unit = "👨‍👩‍👧‍👦"
+        let prefix = "\(identifier)-"
+        let remainingBytes = byteCount - prefix.utf8.count
+        let unitCount = remainingBytes / unit.utf8.count
+        let remainder = remainingBytes % unit.utf8.count
+        return prefix + String(repeating: unit, count: unitCount) + String(repeating: "x", count: remainder)
+    }
+
+    private func protectionType(at url: URL) throws -> FileProtectionType? {
+        try FileManager.default.attributesOfItem(atPath: url.path)[.protectionKey] as? FileProtectionType
+    }
+
+    private func writeLegacyHistory(to url: URL) throws {
+        let item = ClipboardHistoryItem(content: .text("legacy-protected"), createdData: Date())
+        try JSONEncoder().encode([item]).write(to: url)
+    }
+
     @MainActor
     func testRoundTripEnvelopeFormat() throws {
         let dir = makeTempSaveDirectory()
@@ -295,7 +313,7 @@ final class ClipboardHistoryManagerTests: XCTestCase {
 
         SemiStaticStates.shared.setHasFullAccess(true)
         defer { SemiStaticStates.shared.setHasFullAccess(false) }
-        try ClipboardHistoryManager.save([item1, item2, item3], config: config)
+        _ = try ClipboardHistoryManager.save([item1, item2, item3], config: config)
 
         let encoded = try Data(contentsOf: historyFileURL(in: dir))
         let topLevel = try JSONSerialization.jsonObject(with: encoded)
@@ -325,11 +343,76 @@ final class ClipboardHistoryManagerTests: XCTestCase {
 
         SemiStaticStates.shared.setHasFullAccess(true)
         defer { SemiStaticStates.shared.setHasFullAccess(false) }
-        try ClipboardHistoryManager.save(loaded, config: config)
+        _ = try ClipboardHistoryManager.save(loaded, config: config)
 
         let migratedEncoded = try Data(contentsOf: historyFileURL(in: dir))
         let migratedTopLevel = try JSONSerialization.jsonObject(with: migratedEncoded)
         XCTAssertNotNil(migratedTopLevel as? [String: Any], "Dopo un save il file deve migrare all'envelope (dizionario), non restare un array nudo")
+    }
+
+    @MainActor
+    func testSaveExcludesHistoryFromBackup() throws {
+        let dir = makeTempSaveDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let config = MockClipboardHistoryManagerConfiguration(saveDirectory: dir)
+        let item = ClipboardHistoryItem(content: .text("device-only"), createdData: Date())
+
+        SemiStaticStates.shared.setHasFullAccess(true)
+        defer { SemiStaticStates.shared.setHasFullAccess(false) }
+        _ = try ClipboardHistoryManager.save([item], config: config)
+
+        let values = try historyFileURL(in: dir).resourceValues(forKeys: [.isExcludedFromBackupKey])
+        XCTAssertEqual(values.isExcludedFromBackup, true, "Clipboard history must be excluded from backups")
+    }
+
+    @MainActor
+    func testSaveAppliesCompleteUnlessOpenProtection() throws {
+        let dir = makeTempSaveDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let config = MockClipboardHistoryManagerConfiguration(saveDirectory: dir)
+        let item = ClipboardHistoryItem(content: .text("protected"), createdData: Date())
+
+        SemiStaticStates.shared.setHasFullAccess(true)
+        defer { SemiStaticStates.shared.setHasFullAccess(false) }
+        _ = try ClipboardHistoryManager.save([item], config: config)
+
+        guard let protection = try protectionType(at: historyFileURL(in: dir)) else {
+            throw XCTSkip("This test platform does not report FileAttributeKey.protectionKey")
+        }
+        XCTAssertEqual(protection, .completeUnlessOpen)
+    }
+
+    @MainActor
+    func testLoadExcludesLegacyHistoryFromBackup() throws {
+        let dir = makeTempSaveDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let config = MockClipboardHistoryManagerConfiguration(saveDirectory: dir)
+        var legacyURL = historyFileURL(in: dir)
+        try writeLegacyHistory(to: legacyURL)
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = false
+        try legacyURL.setResourceValues(values)
+
+        _ = try ClipboardHistoryManager.load(config: config)
+
+        let hardenedValues = try legacyURL.resourceValues(forKeys: [.isExcludedFromBackupKey])
+        XCTAssertEqual(hardenedValues.isExcludedFromBackup, true, "A successfully read legacy history must be excluded from backups")
+    }
+
+    @MainActor
+    func testLoadAppliesProtectionToLegacyHistory() throws {
+        let dir = makeTempSaveDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let config = MockClipboardHistoryManagerConfiguration(saveDirectory: dir)
+        let legacyURL = historyFileURL(in: dir)
+        try writeLegacyHistory(to: legacyURL)
+
+        _ = try ClipboardHistoryManager.load(config: config)
+
+        guard let protection = try protectionType(at: legacyURL) else {
+            throw XCTSkip("This test platform does not report FileAttributeKey.protectionKey")
+        }
+        XCTAssertEqual(protection, .completeUnlessOpen)
     }
 
     @MainActor
@@ -407,15 +490,463 @@ final class ClipboardHistoryManagerTests: XCTestCase {
     }
 
     @MainActor
-    func testOversizedRawFileYieldsEmpty() throws {
+    func testRawFileCapStaysWithinExtensionMemoryBudget() {
+        // Copaky [G-38]: the keyboard extension lives under a 50 MB ceiling (AGENTS §4) and decodes +
+        // re-encodes this file in-process, so the raw cap stays at 4 MiB. maxCount × maxItemByteCount
+        // exceeds it ON PURPOSE: coherence comes from prune-on-save, never from a larger cap.
+        XCTAssertEqual(ClipboardHistoryManager.maxRawFileBytes, 4 * 1024 * 1024)
+        XCTAssertGreaterThan(
+            ClipboardHistoryManagerConfig().maxCount * ClipboardHistoryManager.maxItemByteCount,
+            ClipboardHistoryManager.maxRawFileBytes,
+            "If this ever flips, re-check testSavePrunesOldestUnpinnedAndSynchronizesMemory: prune-on-save is the coherence mechanism"
+        )
+    }
+
+    @MainActor
+    func testLegitimateHistoryNearTheCapLoadsCompletely() throws {
         let dir = makeTempSaveDirectory()
         defer { try? FileManager.default.removeItem(at: dir) }
         let config = MockClipboardHistoryManagerConfiguration(saveDirectory: dir)
-        // La guardia anti-tamper controlla la size dei byte grezzi PRIMA del decode: non serve JSON valido.
+        let base = Date()
+        let items = (0..<14).map { index in
+            ClipboardHistoryItem(
+                content: .text(validLargeText(identifier: "large-\(index)", byteCount: 250 * 1024)),
+                createdData: base.addingTimeInterval(Double(index))
+            )
+        }
+
+        SemiStaticStates.shared.setHasFullAccess(true)
+        defer { SemiStaticStates.shared.setHasFullAccess(false) }
+        _ = try ClipboardHistoryManager.save(items, config: config)
+
+        let fileBytes = try Data(contentsOf: historyFileURL(in: dir)).count
+        XCTAssertGreaterThan(fileBytes, 3 * 1024 * 1024, "The fixture must sit just under the cap so the guard is exercised, not skipped")
+        XCTAssertLessThanOrEqual(fileBytes, ClipboardHistoryManager.maxRawFileBytes)
+        XCTAssertEqual(Set(try ClipboardHistoryManager.load(config: config)), Set(items), "Every valid item in a near-cap history must load intact")
+    }
+
+    @MainActor
+    func testOversizedRawFileCollapsesAndIsPreserved() throws {
+        let dir = makeTempSaveDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let config = MockClipboardHistoryManagerConfiguration(saveDirectory: dir)
+        // Copaky [G-38]: the raw-byte guard runs before decoding, so valid JSON is unnecessary here.
         let oversizedBytes = Data(repeating: 0x20, count: ClipboardHistoryManager.maxRawFileBytes + 1)
         try oversizedBytes.write(to: historyFileURL(in: dir))
 
-        let loaded = try ClipboardHistoryManager.load(config: config)
-        XCTAssertTrue(loaded.isEmpty, "Un file oltre maxRawFileBytes deve restituire [] senza lanciare")
+        XCTAssertThrowsError(try ClipboardHistoryManager.load(config: config)) { error in
+            guard case ClipboardHistoryManager.IOError.rawFileOversized(let bytes, let limit) = error else {
+                XCTFail("Expected IOError.rawFileOversized, got \(error)")
+                return
+            }
+            XCTAssertEqual(bytes, oversizedBytes.count)
+            XCTAssertEqual(limit, ClipboardHistoryManager.maxRawFileBytes)
+        }
+
+        var manager = ClipboardHistoryManager(config: config, clipboardSource: FakeClipboardSource(hasStrings: false, string: nil))
+        XCTAssertTrue(manager.items.isEmpty)
+        SemiStaticStates.shared.setHasFullAccess(true)
+        defer { SemiStaticStates.shared.setHasFullAccess(false) }
+        manager.save()
+        XCTAssertEqual(manager.captureProvidedText("volatile", isSecureEntry: false), .rejectedHistoryUnavailable)
+
+        XCTAssertEqual(try Data(contentsOf: historyFileURL(in: dir)), oversizedBytes, "A collapsed manager must not clobber an oversized file")
+    }
+
+    @MainActor
+    func testFreshCaptureSurvivesAFullyPinnedHistory() {
+        // Copaky [G-38]: with maxCount pinned entries, a new capture used to be evicted on the spot.
+        var manager = makeManager(maxCount: 3)
+        let base = Date()
+        manager.items = (0..<3).map { index in
+            let created = base.addingTimeInterval(Double(index))
+            return ClipboardHistoryItem(content: .text("pinned-\(index)"), createdData: created, pinnedDate: created)
+        }
+
+        XCTAssertEqual(manager.captureProvidedText("fresh-1", isSecureEntry: false, now: base.addingTimeInterval(10)), .captured)
+        XCTAssertTrue(texts(manager.items).contains("fresh-1"), "The capture that was just reported must be in the history")
+        XCTAssertEqual(manager.items.count, 4, "Only one unpinned item may exceed maxCount when everything else is pinned")
+
+        XCTAssertEqual(manager.captureProvidedText("fresh-2", isSecureEntry: false, now: base.addingTimeInterval(20)), .captured)
+        XCTAssertTrue(texts(manager.items).contains("fresh-2"))
+        XCTAssertFalse(texts(manager.items).contains("fresh-1"), "The previous unpinned capture is the one evicted")
+        XCTAssertEqual(manager.items.count, 4)
+        XCTAssertEqual(manager.items.filter { $0.pinnedDate != nil }.count, 3, "Pinned entries are never evicted automatically")
+
+        // The reported capture must also survive persistence and the next launch (counter-review BLOCKER, 05/09).
+        let dir = makeTempSaveDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let config = MockClipboardHistoryManagerConfiguration(saveDirectory: dir, maxCount: 3)
+        SemiStaticStates.shared.setHasFullAccess(true)
+        defer { SemiStaticStates.shared.setHasFullAccess(false) }
+        _ = try? ClipboardHistoryManager.save(manager.items, config: config)
+        let reloaded = try? ClipboardHistoryManager.load(config: config)
+        XCTAssertEqual(reloaded.map(texts)?.contains("fresh-2"), true, "load() must keep the unpinned slot next to maxCount pins")
+        XCTAssertEqual(reloaded?.filter { $0.pinnedDate != nil }.count, 3)
+    }
+
+    @MainActor
+    func testCaptureIsRejectedWhenPinsSaturateTheFileBudget() throws {
+        // Copaky [G-38]: pins close to the 4 MiB budget — a fresh 250 KiB capture cannot be persisted, so the
+        // manager must say so instead of reporting `.captured` and dropping it at save time.
+        let dir = makeTempSaveDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let config = MockClipboardHistoryManagerConfiguration(saveDirectory: dir)
+        var manager = ClipboardHistoryManager(config: config, clipboardSource: FakeClipboardSource(hasStrings: false, string: nil))
+        let base = Date()
+        // 16 × 250 KiB ≈ 4.10 MB of pins: just under the 4 MiB budget; one more 250 KiB entry cannot fit.
+        manager.items = (0..<16).map { index in
+            let created = base.addingTimeInterval(Double(index))
+            return ClipboardHistoryItem(content: .text(validLargeText(identifier: "pin-\(index)", byteCount: 250 * 1024)), createdData: created, pinnedDate: created)
+        }
+        SemiStaticStates.shared.setHasFullAccess(true)
+        defer { SemiStaticStates.shared.setHasFullAccess(false) }
+        manager.save()
+        let bytesBefore = try Data(contentsOf: historyFileURL(in: dir))
+        XCTAssertLessThanOrEqual(bytesBefore.count, ClipboardHistoryManager.maxRawFileBytes)
+        XCTAssertGreaterThan(bytesBefore.count, ClipboardHistoryManager.maxRawFileBytes - 300 * 1024, "fixture must sit just under the budget")
+
+        let result = manager.captureProvidedText(validLargeText(identifier: "fresh", byteCount: 250 * 1024), isSecureEntry: false, now: base.addingTimeInterval(100))
+        XCTAssertEqual(result, .rejectedHistoryFull)
+        XCTAssertEqual(manager.items.count, 16, "A rejected capture must not linger in memory")
+        XCTAssertFalse(texts(manager.items).contains(where: { $0.hasPrefix("fresh-") }))
+        manager.save()
+        // save() re-sorts, so compare content, not bytes: the pins on disk are exactly the ones from before.
+        XCTAssertEqual(Set(try ClipboardHistoryManager.load(config: config)), Set(manager.items), "Nothing changes on disk after a rejected capture")
+        XCTAssertLessThanOrEqual(try Data(contentsOf: historyFileURL(in: dir)).count, ClipboardHistoryManager.maxRawFileBytes)
+    }
+
+    @MainActor
+    func testCollapsedManagerRejectsCapturesInsteadOfFakingThem() throws {
+        let dir = makeTempSaveDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let config = MockClipboardHistoryManagerConfiguration(saveDirectory: dir)
+        let oversizedBytes = Data(repeating: 0x20, count: ClipboardHistoryManager.maxRawFileBytes + 1)
+        try oversizedBytes.write(to: historyFileURL(in: dir))
+        var manager = ClipboardHistoryManager(config: config, clipboardSource: FakeClipboardSource(hasStrings: false, string: nil))
+        SemiStaticStates.shared.setHasFullAccess(true)
+        defer { SemiStaticStates.shared.setHasFullAccess(false) }
+        XCTAssertEqual(manager.captureProvidedText("volatile", isSecureEntry: false), .rejectedHistoryUnavailable)
+        XCTAssertTrue(manager.items.isEmpty)
+        XCTAssertEqual(try Data(contentsOf: historyFileURL(in: dir)), oversizedBytes)
+    }
+
+    @MainActor
+    func testRepairOversizedHistoryShrinksAValidBuild8File() throws {
+        // Copaky [G-38]: a VALID envelope above the budget (build-8 growth) collapses the extension's load;
+        // the container app repairs it with the shared capacity policy and the extension can read it again.
+        let dir = makeTempSaveDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let config = MockClipboardHistoryManagerConfiguration(saveDirectory: dir)
+        let base = Date()
+        let items = (0..<18).map { index -> ClipboardHistoryItem in
+            let created = base.addingTimeInterval(Double(index))
+            return ClipboardHistoryItem(content: .text(validLargeText(identifier: "big-\(index)", byteCount: 250 * 1024)), createdData: created, pinnedDate: index < 2 ? created : nil)
+        }
+        let envelope = try JSONEncoder().encode(ClipboardHistoryManager.HistoryFile(schemaVersion: ClipboardHistoryManager.currentSchemaVersion, items: items))
+        XCTAssertGreaterThan(envelope.count, ClipboardHistoryManager.maxRawFileBytes, "fixture must exceed the budget")
+        try envelope.write(to: historyFileURL(in: dir))
+
+        XCTAssertThrowsError(try ClipboardHistoryManager.load(config: config)) { error in
+            guard case ClipboardHistoryManager.IOError.rawFileOversized = error else { return XCTFail("expected rawFileOversized, got \(error)") }
+        }
+        XCTAssertEqual(ClipboardHistoryManager.repairUnreadableHistory(config: config), .shrunk)
+        let repaired = try ClipboardHistoryManager.load(config: config)
+        XCTAssertLessThanOrEqual(try Data(contentsOf: historyFileURL(in: dir)).count, ClipboardHistoryManager.maxRawFileBytes)
+        XCTAssertEqual(repaired.filter { $0.pinnedDate != nil }.count, 2, "Pinned entries survive the repair")
+        XCTAssertTrue(texts(repaired).contains(where: { $0.hasPrefix("big-17-") }), "The newest unpinned entry survives")
+        XCTAssertFalse(texts(repaired).contains(where: { $0.hasPrefix("big-2-") }), "The oldest unpinned entry is pruned first")
+        XCTAssertEqual(ClipboardHistoryManager.repairUnreadableHistory(config: config), .notNeeded, "A fitting file is a no-op")
+    }
+
+    @MainActor
+    func testLegacyOversizedFileIsProtectedAndExcludedBeforeTheSizeGate() throws {
+        let dir = makeTempSaveDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let config = MockClipboardHistoryManagerConfiguration(saveDirectory: dir)
+        var url = historyFileURL(in: dir)
+        try Data(repeating: 0x20, count: ClipboardHistoryManager.maxRawFileBytes + 1).write(to: url)
+        var values = URLResourceValues(); values.isExcludedFromBackup = false
+        try url.setResourceValues(values)
+        XCTAssertThrowsError(try ClipboardHistoryManager.load(config: config))
+        XCTAssertEqual(try url.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup, true, "Hardening must happen before the size gate")
+    }
+
+    @MainActor
+    func testCaptureOlderThanTheExistingEntrySurvivesWithMaxCountOne() {
+        // Counter-review N1 (05/09): a clock moved backwards sorts the fresh entry last; the count policy
+        // must still keep the entry that was just reported as captured.
+        var manager = makeManager(maxCount: 1)
+        let base = Date()
+        manager.items = [ClipboardHistoryItem(content: .text("future"), createdData: base.addingTimeInterval(100))]
+        XCTAssertEqual(manager.captureProvidedText("fresh", isSecureEntry: false, now: base), .captured)
+        XCTAssertEqual(texts(manager.items), ["fresh"], "The captured entry keeps its slot; the older unpinned one is evicted")
+    }
+
+    @MainActor
+    func testRejectedCaptureLeavesPreexistingHistoryUntouched() throws {
+        // Counter-review N2 (05/09): a capture rejected by the byte budget must be a no-op — the count
+        // policy alone would have evicted the old unpinned entry.
+        let dir = makeTempSaveDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let config = MockClipboardHistoryManagerConfiguration(saveDirectory: dir, maxCount: 17)
+        var manager = ClipboardHistoryManager(config: config, clipboardSource: FakeClipboardSource(hasStrings: false, string: nil))
+        let base = Date()
+        var items = (0..<16).map { index -> ClipboardHistoryItem in
+            let created = base.addingTimeInterval(Double(index))
+            return ClipboardHistoryItem(content: .text(validLargeText(identifier: "pin-\(index)", byteCount: 250 * 1024)), createdData: created, pinnedDate: created)
+        }
+        items.append(ClipboardHistoryItem(content: .text("old-unpinned"), createdData: base.addingTimeInterval(-1000)))
+        items.sort(by: >)
+        manager.items = items
+        let before = manager.items
+        XCTAssertEqual(manager.captureProvidedText(validLargeText(identifier: "fresh", byteCount: 250 * 1024), isSecureEntry: false, now: base.addingTimeInterval(100)), .rejectedHistoryFull)
+        XCTAssertEqual(manager.items, before, "A rejected capture must not touch the pre-existing history")
+        XCTAssertTrue(texts(manager.items).contains("old-unpinned"))
+    }
+
+    @MainActor
+    func testSaveAppliesTheCountPolicy() throws {
+        // Counter-review N3 (05/09): an unpin can leave maxCount + 1 entries in memory; save() must apply
+        // the same count policy as load() so the next launch does not silently drop one.
+        let dir = makeTempSaveDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let config = MockClipboardHistoryManagerConfiguration(saveDirectory: dir, maxCount: 3)
+        var manager = ClipboardHistoryManager(config: config, clipboardSource: FakeClipboardSource(hasStrings: false, string: nil))
+        let base = Date()
+        manager.items = [
+            ClipboardHistoryItem(content: .text("pin-a"), createdData: base, pinnedDate: base),
+            ClipboardHistoryItem(content: .text("pin-b"), createdData: base.addingTimeInterval(1), pinnedDate: base.addingTimeInterval(1)),
+            ClipboardHistoryItem(content: .text("pin-c"), createdData: base.addingTimeInterval(2), pinnedDate: base.addingTimeInterval(2)),
+            ClipboardHistoryItem(content: .text("new-unpinned"), createdData: base.addingTimeInterval(10)),
+            ClipboardHistoryItem(content: .text("old-unpinned"), createdData: base.addingTimeInterval(-10)),
+        ]
+        SemiStaticStates.shared.setHasFullAccess(true)
+        defer { SemiStaticStates.shared.setHasFullAccess(false) }
+        manager.save()
+        XCTAssertEqual(manager.items.count, 4, "3 pins + the one unpinned slot")
+        XCTAssertTrue(texts(manager.items).contains("new-unpinned"))
+        XCTAssertFalse(texts(manager.items).contains("old-unpinned"))
+        XCTAssertEqual(Set(try ClipboardHistoryManager.load(config: config)), Set(manager.items), "Disk and memory agree after save()")
+    }
+
+    @MainActor
+    func testRepairDropsOldestPinsOnlyAsLastResort() throws {
+        // Counter-review N4 (05/09): pins alone above the budget must not leave the history unreadable forever.
+        let dir = makeTempSaveDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let config = MockClipboardHistoryManagerConfiguration(saveDirectory: dir)
+        let base = Date()
+        let items = (0..<18).map { index -> ClipboardHistoryItem in
+            let created = base.addingTimeInterval(Double(index))
+            return ClipboardHistoryItem(content: .text(validLargeText(identifier: "pin-\(index)", byteCount: 250 * 1024)), createdData: created, pinnedDate: created)
+        }
+        try JSONEncoder().encode(ClipboardHistoryManager.HistoryFile(schemaVersion: ClipboardHistoryManager.currentSchemaVersion, items: items)).write(to: historyFileURL(in: dir))
+        XCTAssertThrowsError(try ClipboardHistoryManager.load(config: config))
+        XCTAssertEqual(ClipboardHistoryManager.repairUnreadableHistory(config: config), .shrunk)
+        let repaired = try ClipboardHistoryManager.load(config: config)
+        XCTAssertTrue(repaired.allSatisfy { $0.pinnedDate != nil })
+        XCTAssertTrue(texts(repaired).contains(where: { $0.hasPrefix("pin-17-") }), "The newest pins survive")
+        XCTAssertFalse(texts(repaired).contains(where: { $0.hasPrefix("pin-0-") }), "The oldest pin is the one sacrificed")
+    }
+
+    @MainActor
+    func testRepairMovesAsideAMalformedOrAbsurdlyLargeFile() throws {
+        let dir = makeTempSaveDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let config = MockClipboardHistoryManagerConfiguration(saveDirectory: dir)
+        try Data("{not json".utf8).write(to: historyFileURL(in: dir))
+        XCTAssertEqual(ClipboardHistoryManager.repairUnreadableHistory(config: config), .movedAside)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: historyFileURL(in: dir).path))
+        let asides = try FileManager.default.contentsOfDirectory(atPath: dir.path).filter { $0.hasPrefix("clipboard_history.unreadable-") }
+        XCTAssertEqual(asides.count, 1, "The unreadable bytes are preserved next to the history")
+        XCTAssertEqual(try ClipboardHistoryManager.load(config: config), [], "The keyboard restarts from an empty history")
+
+        try Data(repeating: 0x20, count: ClipboardHistoryManager.repairReadLimit + 1).write(to: historyFileURL(in: dir))
+        XCTAssertEqual(ClipboardHistoryManager.repairUnreadableHistory(config: config), .movedAside, "Beyond the read limit nothing is decoded")
+    }
+
+    @MainActor
+    func testCaptureAfterUnpinAllKeepsTheNewestUnpinnedEntry() {
+        // Counter-review N3 (05/09): «unpin all» concatenates groups without re-sorting; the count policy
+        // must see a normalized order or it evicts the newest unpinned entry.
+        var manager = makeManager(maxCount: 3)
+        let base = Date()
+        manager.items = [
+            ClipboardHistoryItem(content: .text("older-ex-pin"), createdData: base.addingTimeInterval(-50)),
+            ClipboardHistoryItem(content: .text("newest-ex-pin"), createdData: base.addingTimeInterval(-10)),
+            ClipboardHistoryItem(content: .text("oldest"), createdData: base.addingTimeInterval(-500)),
+        ]
+        XCTAssertEqual(manager.captureProvidedText("fresh", isSecureEntry: false, now: base), .captured)
+        XCTAssertEqual(texts(manager.items), ["fresh", "newest-ex-pin", "older-ex-pin"], "Sorted newest-first; the oldest is the one evicted")
+    }
+
+    @MainActor
+    func testRepairLeavesAFutureSchemaUntouched() throws {
+        // Counter-review N4 (05/09): a newer build's file is not malformed — it must not be moved aside.
+        let dir = makeTempSaveDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let config = MockClipboardHistoryManagerConfiguration(saveDirectory: dir)
+        let future = Data(#"{"schemaVersion":99,"items":[]}"#.utf8)
+        try future.write(to: historyFileURL(in: dir))
+        XCTAssertEqual(ClipboardHistoryManager.repairUnreadableHistory(config: config), .notNeeded)
+        XCTAssertEqual(try Data(contentsOf: historyFileURL(in: dir)), future, "A future-schema file is preserved byte for byte")
+    }
+
+    @MainActor
+    func testRepairLeavesAFutureSchemaWithADifferentShapeUntouched() throws {
+        // Counter-review n.4, N4 (05/09): a newer build may change the shape of `items`; only the version matters.
+        let dir = makeTempSaveDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let config = MockClipboardHistoryManagerConfiguration(saveDirectory: dir)
+        let future = Data(#"{"schemaVersion":99,"items":{"newFormat":[]}}"#.utf8)
+        try future.write(to: historyFileURL(in: dir))
+        XCTAssertEqual(ClipboardHistoryManager.repairUnreadableHistory(config: config), .notNeeded)
+        XCTAssertEqual(try Data(contentsOf: historyFileURL(in: dir)), future, "A future-schema file is preserved byte for byte")
+        let asides = try FileManager.default.contentsOfDirectory(atPath: dir.path).filter { $0.hasPrefix("clipboard_history.unreadable-") }
+        XCTAssertTrue(asides.isEmpty, "Nothing is moved aside")
+        XCTAssertThrowsError(try ClipboardHistoryManager.load(config: config)) { error in
+            guard case ClipboardHistoryManager.IOError.unsupportedSchemaVersion(99) = error else {
+                return XCTFail("Expected unsupportedSchemaVersion(99), got \(error)")
+            }
+        }
+    }
+
+    @MainActor
+    func testRepairHardensAValidFileItLeavesInPlace() throws {
+        // Counter-review n.4, G-22 (05/09): the container app can run before the extension's next load();
+        // a valid build-8 history must not stay backup-eligible until then.
+        let dir = makeTempSaveDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let config = MockClipboardHistoryManagerConfiguration(saveDirectory: dir)
+        var url = historyFileURL(in: dir)
+        let item = ClipboardHistoryItem(content: .text("build-8"), createdData: Date())
+        try JSONEncoder().encode(ClipboardHistoryManager.HistoryFile(schemaVersion: ClipboardHistoryManager.currentSchemaVersion, items: [item])).write(to: url)
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = false
+        try url.setResourceValues(values)
+
+        XCTAssertEqual(ClipboardHistoryManager.repairUnreadableHistory(config: config), .notNeeded)
+
+        let hardened = try url.resourceValues(forKeys: [.isExcludedFromBackupKey])
+        XCTAssertEqual(hardened.isExcludedFromBackup, true, "A valid history left in place is excluded from backups by the repair itself")
+        if let protection = try protectionType(at: url) {
+            XCTAssertEqual(protection, .completeUnlessOpen)
+        }
+        XCTAssertEqual(texts(try ClipboardHistoryManager.load(config: config)), ["build-8"], "The file content is untouched")
+    }
+
+    @MainActor
+    func testSaveReportsFailureWhenPinsAloneExceedTheBudget() throws {
+        // Counter-review n.4 (05/09): nil from the static save means nothing was written — not a success.
+        let dir = makeTempSaveDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let config = MockClipboardHistoryManagerConfiguration(saveDirectory: dir)
+        let base = Date()
+        var manager = ClipboardHistoryManager(config: config, clipboardSource: FakeClipboardSource(hasStrings: false, string: nil))
+        manager.items = (0..<18).map { index in
+            let created = base.addingTimeInterval(Double(index))
+            return ClipboardHistoryItem(content: .text(validLargeText(identifier: "pin-\(index)", byteCount: 250 * 1024)), createdData: created, pinnedDate: created)
+        }
+        SemiStaticStates.shared.setHasFullAccess(true)
+        defer { SemiStaticStates.shared.setHasFullAccess(false) }
+        XCTAssertFalse(manager.save(), "Nothing was written: the caller must not be told the history is safe on disk")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: historyFileURL(in: dir).path), "No file is created when nothing can be persisted")
+        XCTAssertEqual(manager.items.count, 18, "Memory is untouched when nothing is persisted")
+    }
+
+    @MainActor
+    func testPinningAtTheExactBudgetKeepsThePreviousFileAndReportsFailure() throws {
+        // Counter-review n. 5 (05/09): 15 pins + 1 unpinned entry filling the budget to the byte; pinning the
+        // last one exceeds it with nothing left to prune. Nothing is written, the previous file survives and the
+        // caller is told — the tab now persists every pin/unpin/delete and shows the toast.
+        let dir = makeTempSaveDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let config = MockClipboardHistoryManagerConfiguration(saveDirectory: dir)
+        let base = Date()
+        var items = (0..<15).map { index -> ClipboardHistoryItem in
+            let created = base.addingTimeInterval(Double(index))
+            return ClipboardHistoryItem(content: .text(validLargeText(identifier: "pin-\(index)", byteCount: 262_120)), createdData: created, pinnedDate: created)
+        }
+        let probeBytes = 100
+        let probe = ClipboardHistoryItem(content: .text(validLargeText(identifier: "last", byteCount: probeBytes)), createdData: base.addingTimeInterval(15))
+        let overhead = try XCTUnwrap(ClipboardHistoryManager.encodedByteCount(items + [probe]))
+        let lastBytes = probeBytes + (ClipboardHistoryManager.maxRawFileBytes - 4 - overhead)
+        XCTAssertLessThan(lastBytes, ClipboardHistoryManager.maxItemByteCount, "The filler must stay under the per-item cap")
+        let last = ClipboardHistoryItem(content: .text(validLargeText(identifier: "last", byteCount: lastBytes)), createdData: base.addingTimeInterval(15))
+        items.append(last)
+        let total = try XCTUnwrap(ClipboardHistoryManager.encodedByteCount(items))
+        XCTAssertLessThanOrEqual(total, ClipboardHistoryManager.maxRawFileBytes, "The fixture fits the budget")
+        XCTAssertGreaterThan(total + 20, ClipboardHistoryManager.maxRawFileBytes, "The fixture sits right under the budget")
+
+        var manager = ClipboardHistoryManager(config: config, clipboardSource: FakeClipboardSource(hasStrings: false, string: nil))
+        manager.items = items
+        SemiStaticStates.shared.setHasFullAccess(true)
+        defer { SemiStaticStates.shared.setHasFullAccess(false) }
+        XCTAssertTrue(manager.save(), "The exact-budget history is written")
+
+        let index = try XCTUnwrap(manager.items.firstIndex(where: { $0.content == last.content }))
+        manager.items[index].pinnedDate = base.addingTimeInterval(16)
+        XCTAssertFalse(manager.save(), "All pinned and over the budget: nothing can be written, and that is reported")
+
+        let onDisk = try ClipboardHistoryManager.load(config: config)
+        XCTAssertEqual(onDisk.count, 16, "The previous file is preserved")
+        XCTAssertNil(onDisk.first(where: { $0.content == last.content })?.pinnedDate, "The unpersisted pin is not on disk")
+    }
+
+    func testPruneToRawFileBudgetIsLinearOnManyTinyEntries() {
+        // Counter-review N5 (05/09): thousands of tiny pinned entries must prune in a few passes.
+        let base = Date()
+        var items = (0..<40_000).map { index -> ClipboardHistoryItem in
+            let created = base.addingTimeInterval(Double(index))
+            return ClipboardHistoryItem(content: .text("pin-\(index)-" + String(repeating: "x", count: 100)), createdData: created, pinnedDate: created)
+        }
+        let start = Date()
+        XCTAssertTrue(ClipboardHistoryManager.pruneToRawFileBudget(&items, evictingPinnedAsLastResort: true))
+        XCTAssertLessThan(Date().timeIntervalSince(start), 10, "Pruning must not be quadratic")
+        XCTAssertLessThanOrEqual(ClipboardHistoryManager.encodedByteCount(items) ?? .max, ClipboardHistoryManager.maxRawFileBytes)
+        XCTAssertTrue(items.contains(where: { $0.createdData == base.addingTimeInterval(39_999) }), "The newest pin survives")
+    }
+
+    @MainActor
+    func testSavePrunesOldestUnpinnedAndSynchronizesMemory() throws {
+        let dir = makeTempSaveDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let config = MockClipboardHistoryManagerConfiguration(saveDirectory: dir)
+        let base = Date()
+        let originalItems = (0..<70).reversed().map { index in
+            let created = base.addingTimeInterval(Double(index))
+            return ClipboardHistoryItem(
+                content: .text(validLargeText(identifier: "item-\(index)", byteCount: ClipboardHistoryManager.maxItemByteCount - 1_024)),
+                createdData: created,
+                pinnedDate: index < 2 ? created : nil
+            )
+        }
+        var manager = ClipboardHistoryManager(config: config, clipboardSource: FakeClipboardSource(hasStrings: false, string: nil))
+        manager.items = originalItems
+
+        SemiStaticStates.shared.setHasFullAccess(true)
+        defer { SemiStaticStates.shared.setHasFullAccess(false) }
+        manager.save()
+
+        let writtenBytes = try Data(contentsOf: historyFileURL(in: dir)).count
+        XCTAssertLessThanOrEqual(writtenBytes, ClipboardHistoryManager.maxRawFileBytes)
+        XCTAssertLessThan(manager.items.count, originalItems.count, "The oversized state must be pruned before persistence")
+        XCTAssertTrue(texts(manager.items).contains(where: { $0.hasPrefix("item-0-") }), "Pinned oldest item 0 must remain")
+        XCTAssertTrue(texts(manager.items).contains(where: { $0.hasPrefix("item-1-") }), "Pinned oldest item 1 must remain")
+        XCTAssertFalse(texts(manager.items).contains(where: { $0.hasPrefix("item-2-") }), "The oldest unpinned item must be pruned first")
+        XCTAssertTrue(texts(manager.items).contains(where: { $0.hasPrefix("item-69-") }), "The newest unpinned item must remain")
+        XCTAssertEqual(Set(try ClipboardHistoryManager.load(config: config)), Set(manager.items), "Memory must match the persisted pruned state")
+
+        let sentinelBytes = Data("existing-history-must-survive".utf8)
+        try sentinelBytes.write(to: historyFileURL(in: dir))
+        manager.items = originalItems.map { item in
+            var pinnedItem = item
+            pinnedItem.pinnedDate = item.createdData
+            return pinnedItem
+        }
+        manager.save()
+        XCTAssertEqual(manager.items.count, originalItems.count, "An all-pinned oversized state must remain intact in memory")
+        XCTAssertEqual(try Data(contentsOf: historyFileURL(in: dir)), sentinelBytes, "An all-pinned oversized state must not clobber the existing file")
     }
 }

@@ -8,6 +8,27 @@ All notable changes to **Copaky** (an independent project based on azooKey). For
 
 ## [Unreleased] — pre-release (v0.1)
 
+- **Clipboard-history persistence hardening** (G-38): an oversized history file is now preserved
+  instead of being mistaken for an empty history and overwritten; saves prune the oldest unpinned
+  entries to fit the 4 MiB file budget (kept small on purpose: the keyboard extension runs under a
+  50 MB memory ceiling) and never discard pinned items automatically.
+- **Protected clipboard-history storage** (G-22): from build 9, the history file uses
+  `completeUnlessOpen` data protection and is excluded from iCloud and computer backups.
+- **System-style Shift by default** (G-01): fresh installs use bottom-left Shift with one-shot
+  uppercase, long-press/double-tap Caps Lock, and matching layouts across supported iOS versions.
+- **Flick clipboard shortcut by default** (G-04): fresh installs can long-press both Latin `123`
+  and Japanese-flick `☆123` to open Clipboard history; existing saved slot choices are preserved.
+- **Number-row long-press variants** (G-05): real QWERTY digits now offer superscripts and common
+  fractions; Japanese also offers the corresponding full-width digit first.
+- **Settings from the language key** (G-03): the language-key long-press menu now ends with a
+  shortcut that opens Copaky directly on its Settings tab.
+- **Focused clipboard options** (G-07): clipboard long-press shortcut choices now live on a
+  dedicated details screen below the main history switch.
+- **Clearer language scope in Settings** (G-08): live conversion, Latin autocorrect and Italian
+  accents now explain where they act, and the shared Latin layout is labelled English and Italian.
+- **Localized legal links** (G-26): Privacy Policy and Terms links now open the Italian, Japanese
+  or English page selected from the user's first preferred system language.
+
 ### Added
 - **Apple-familiar Latin bottom row** (F-07): language 1.25 / access key 1.25 / space 5.0 / return 2.5 —
   a wide space bar, the return key as the ↵ icon in the plain-newline state, and no period key beside
@@ -28,8 +49,8 @@ All notable changes to **Copaky** (an independent project based on azooKey). For
   filtered out of the candidates, the winner is re-validated by a second oracle query, frequency-attested
   Italian words are never touched, and capitalized words are excluded from the general path.
 - **Clipboard history in one gesture** (A-11, refined by F-06): with «Save clipboard history» on, a long
-  press opens the Clipboard-history tab directly from the `123` key by default; the `#+=` (Latin tabs) and
-  `☆123` (Japanese flick) keys can be added as long-press openers in Settings. A small badge marks the
+  press opens the Clipboard-history tab directly from the `123` key (and, since build 9 — G-04 — from the
+  Japanese-flick `☆123` key) by default; the `#+=` (Latin tabs) key can be added as a long-press opener in Settings. A small badge marks the
   enabled keys; with the slot (or the history) off the long press keeps toggling the tab bar. The decision is evaluated at press time (`NumbersSlotLongPressDecision`,
   unit-tested), the layout is unchanged; the back key of the history tab returns to the previous tab and its long
   press opens the tab bar. The candidate-bar Copaky button is now hidden by default (Settings ▸ «Show the Copaky

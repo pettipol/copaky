@@ -62,6 +62,7 @@ final class ClipboardHistoryFuzzTests: XCTestCase {
         case items(Int)
         case malformedHistoryFile
         case unsupportedSchemaVersion
+        case rawFileOversized
         case otherError(String)
 
         var description: String {
@@ -69,6 +70,7 @@ final class ClipboardHistoryFuzzTests: XCTestCase {
             case .items(let n): return "items(\(n))"
             case .malformedHistoryFile: return "malformedHistoryFile"
             case .unsupportedSchemaVersion: return "unsupportedSchemaVersion"
+            case .rawFileOversized: return "rawFileOversized"
             case .otherError(let detail): return "altroErrore(\(detail))"
             }
         }
@@ -132,7 +134,9 @@ final class ClipboardHistoryFuzzTests: XCTestCase {
                     XCTAssertLessThanOrEqual(s.utf8.count, ClipboardHistoryManager.maxItemByteCount, "P2 (cap byte) violato in \(name)")
                 }
             }
-            XCTAssertLessThanOrEqual(items.count, config.maxCount, "P3 (maxCount) violato in \(name)")
+            // Copaky [G-38/G-39]: pinned entries are never evicted and the newest unpinned keeps one slot.
+            let pinned = items.filter { $0.pinnedDate != nil }.count
+            XCTAssertLessThanOrEqual(items.count, max(config.maxCount, pinned + 1), "P3 (maxCount) violato in \(name)")
             if items.count > 1 {
                 for i in 0..<(items.count - 1) {
                     XCTAssertFalse(items[i] < items[i + 1], "P4 (ordinamento non-crescente) violato in \(name)")
@@ -143,6 +147,8 @@ final class ClipboardHistoryFuzzTests: XCTestCase {
             outcome = .malformedHistoryFile
         } catch ClipboardHistoryManager.IOError.unsupportedSchemaVersion(_) {
             outcome = .unsupportedSchemaVersion
+        } catch ClipboardHistoryManager.IOError.rawFileOversized(_, _) {
+            outcome = .rawFileOversized
         } catch {
             outcome = .otherError(String(describing: error))
         }
@@ -392,18 +398,21 @@ final class ClipboardHistoryFuzzTests: XCTestCase {
         XCTAssertEqual(overByteContent.utf8.count, ClipboardHistoryManager.maxItemByteCount + 1, "fixture al confine byte+1 non calibrata")
         cases.append(("item-byte-cap-256KiB-plus-1-dropped", singleItemEnvelope(content: overByteContent)))
 
-        // Confine cap FILE GREZZO (maxRawFileBytes = 4 MiB).
-        let exact4MiB = exactSizeEnvelope(targetBytes: ClipboardHistoryManager.maxRawFileBytes)
-        XCTAssertEqual(exact4MiB.count, ClipboardHistoryManager.maxRawFileBytes, "fixture 4 MiB esatta non calibrata")
-        cases.append(("raw-file-exactly-4MiB", exact4MiB))
-        let over4MiB = exactSizeEnvelope(targetBytes: ClipboardHistoryManager.maxRawFileBytes + 1)
-        XCTAssertEqual(over4MiB.count, ClipboardHistoryManager.maxRawFileBytes + 1, "fixture 4 MiB+1 non calibrata")
-        cases.append(("raw-file-4MiB-plus-1", over4MiB))
+        // Copaky [G-38]: raw-file boundary follows the production cap (4 MiB; coherence via prune-on-save).
+        let exactRawLimit = exactSizeEnvelope(targetBytes: ClipboardHistoryManager.maxRawFileBytes)
+        XCTAssertEqual(exactRawLimit.count, ClipboardHistoryManager.maxRawFileBytes, "Exact raw-limit fixture is not calibrated")
+        cases.append(("raw-file-exactly-at-limit", exactRawLimit))
+        let overRawLimit = exactSizeEnvelope(targetBytes: ClipboardHistoryManager.maxRawFileBytes + 1)
+        XCTAssertEqual(overRawLimit.count, ClipboardHistoryManager.maxRawFileBytes + 1, "Raw-limit-plus-one fixture is not calibrated")
+        cases.append(("raw-file-over-limit", overRawLimit))
 
-        // Array con molti item minuscoli, sotto il cap file: 200.000 item minimi (~46 byte/item) non
-        // ci stanno in 4 MiB (≈9.2 MB stimati) — riduco al conteggio che effettivamente ci sta.
+        // Large array of tiny items below the file cap; derive the fitting count from encoded samples
+        // so the fixture remains calibrated if maxRawFileBytes changes again.
         let requestedLargeArrayCount = 200_000
-        let fittingLargeArrayCount = fittingItemCount(targetBytes: ClipboardHistoryManager.maxRawFileBytes)
+        let fittingLargeArrayCount = min(
+            requestedLargeArrayCount,
+            fittingItemCount(targetBytes: ClipboardHistoryManager.maxRawFileBytes)
+        )
         if fittingLargeArrayCount < requestedLargeArrayCount {
             print("FUZZ DEVIATION: large-array case ridotto da \(requestedLargeArrayCount) a \(fittingLargeArrayCount) item per rispettare maxRawFileBytes (\(ClipboardHistoryManager.maxRawFileBytes) byte)")
         }
@@ -423,8 +432,8 @@ final class ClipboardHistoryFuzzTests: XCTestCase {
         XCTAssertEqual(outcomes["item-multibyte-3byte-100000-chars-300KB-dropped"], .items(0), "100.000 caratteri multibyte (300 KB): oltre il cap byte, deve cadere")
         XCTAssertEqual(outcomes["item-byte-cap-exactly-256KiB-kept"], .items(1), "256*1024 byte esatti: al confine, deve restare")
         XCTAssertEqual(outcomes["item-byte-cap-256KiB-plus-1-dropped"], .items(0), "256*1024+1 byte: oltre il cap byte, deve cadere")
-        XCTAssertEqual(outcomes["raw-file-4MiB-plus-1"], .items(0), "file oltre maxRawFileBytes: guardia anti-tamper, ritorna [] senza decodificare")
-        XCTAssertEqual(outcomes["raw-file-exactly-4MiB"], .items(20), "file esattamente a maxRawFileBytes: la guardia non scatta, i 20 item baseline sopravvivono (il filler enorme viene scartato dal cap per-item)")
+        XCTAssertEqual(outcomes["raw-file-over-limit"], .rawFileOversized, "A file over maxRawFileBytes must collapse without decoding")
+        XCTAssertEqual(outcomes["raw-file-exactly-at-limit"], .items(20), "At maxRawFileBytes the guard must not fire; the 20 valid baseline items survive")
         XCTAssertEqual(outcomes["legacy-bare-array-valid"], .items(2), "array legacy nudo valido: entrambi gli item devono sopravvivere")
         XCTAssertEqual(outcomes["legacy-bare-array-with-corrupted-item"], .items(2), "array legacy con un item corrotto: l'item corrotto decade, i 2 validi restano")
 
@@ -462,7 +471,7 @@ final class ClipboardHistoryFuzzTests: XCTestCase {
             ("reload-schemaVersion-1e999", Data(#"{"schemaVersion":1e999,"items":[]}"#.utf8)),
             ("reload-items-object-not-array", Data(#"{"schemaVersion":1,"items":{}}"#.utf8)),
             ("reload-invalid-utf8-mid-string", invalidUTF8MidStringCase()),
-            ("reload-raw-file-4MiB-plus-1", exactSizeEnvelope(targetBytes: ClipboardHistoryManager.maxRawFileBytes + 1)),
+            ("reload-raw-file-over-limit", exactSizeEnvelope(targetBytes: ClipboardHistoryManager.maxRawFileBytes + 1)),
         ]
 
         for (name, data) in selected {
