@@ -489,10 +489,16 @@ public struct ClipboardHistoryManager {
         for _ in 0..<2 {
             excludeFromBackup(url)
             if (try? url.resourceValues(forKeys: [.isExcludedFromBackupKey]))?.isExcludedFromBackup == true {
+                #if DEBUG
+                os_log(.info, log: clipboardProbeLog, "[G-22] isExcludedFromBackup confirmed=true file=%{public}@", url.lastPathComponent)
+                #endif
                 return
             }
         }
         // Fail closed: the bytes are on disk, but the caller must know the exclusion is not confirmed.
+        #if DEBUG
+        os_log(.info, log: clipboardProbeLog, "[G-22] isExcludedFromBackup confirmed=false file=%{public}@", url.lastPathComponent)
+        #endif
         throw IOError.backupExclusionNotConfirmed
     }
 

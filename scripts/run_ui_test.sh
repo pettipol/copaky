@@ -175,7 +175,10 @@ XCB_ARGS=(
 )
 
 # The requested UDID must be booted in a visible Simulator session.
-open -a Simulator
+# Xcode 27 ships no Simulator.app: DeviceHub hosts the simulator windows. Override with COPAKY_SIMULATOR_APP.
+# Xcode 27 には Simulator.app が無く DeviceHub が代替。COPAKY_SIMULATOR_APP で上書き可。
+SIM_APP="${COPAKY_SIMULATOR_APP:-Simulator}"
+open -a "$SIM_APP" 2>/dev/null || open -a DeviceHub 2>/dev/null || echo "⚠ no simulator host app found (tried $SIM_APP, DeviceHub)" >&2
 xcrun simctl boot "$UDID" 2>/dev/null || true
 xcrun simctl bootstatus "$UDID" -b
 

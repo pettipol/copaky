@@ -101,10 +101,13 @@ struct EditingGridFitCustardView: CancelableEditor {
         self._manager = manager
         self.shouldJustDimiss = path == nil
         self._path = path ?? .constant([])
-        self.baseSelectionSheetState = .init(hasShown: editingItem != nil)  // 編集の場合はすでにbase選択は終わったと考える
         self.base = editingItem ?? Self.emptyItem
         self._editingItem = State(initialValue: self.base)
         self.isNewItem = editingItem == nil
+        // Copaky (Xcode 27): initialise the wrapper's storage directly — assigning the wrapped value in init goes
+        // through the setter on `self` before every stored property is initialised, which the iOS 27 SDK compiler rejects.
+        // Copaky（Xcode 27）：init内でwrapped valueに代入するとselfの初期化前にsetterが呼ばれるため、State(initialValue:)で直接初期化する。
+        self._baseSelectionSheetState = State(initialValue: .init(hasShown: editingItem != nil))  // 編集の場合はすでにbase選択は終わったと考える
     }
 
     private func isCovered(at position: (x: Int, y: Int)) -> Bool {

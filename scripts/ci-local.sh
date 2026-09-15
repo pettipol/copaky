@@ -10,7 +10,7 @@
 # is macos-15, billed 10x. On a private single-developer repo with a capable Mac, local is the gate.
 set -uo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SIM='platform=iOS Simulator,name=iPhone 17'
+SIM="${COPAKY_CI_SIM:-platform=iOS Simulator,name=iPhone 17}"
 FAST=0; [ "${1:-}" = "--fast" ] && FAST=1
 fail=0
 
