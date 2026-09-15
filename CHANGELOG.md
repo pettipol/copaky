@@ -17,11 +17,12 @@ All notable changes to **Copaky** (an independent project based on azooKey). For
 - **QWERTY bottom row without the trailing period** (G-40): the «.» key at the end of the second row
   (bottom-left Shift layout) is removed and the nine letters are centered like the system keyboard;
   «, ! ? ' "» stay on the symbols tab.
-- **Three fixes ported by hand from azooKey upstream** (H-22): a tap released right at the long-press
-  threshold no longer loses the character (upstream 111e78d7); deleting a user-dictionary entry from the
-  context menu is now saved like the swipe delete (4b5417bc); emoji with a presentation selector (U+FE0F)
-  are stored unchanged in the user dictionary while the denylist check still ignores the selector
-  (8acebd79).
+- **Two dictionary fixes ported by hand from azooKey upstream** (H-22): deleting a user-dictionary entry
+  from the context menu is now saved like the swipe delete (4b5417bc); emoji with a presentation selector
+  (U+FE0F) are stored unchanged in the user dictionary while the denylist check still ignores the selector
+  (8acebd79). The third upstream fix (111e78d7, a tap released right at the long-press threshold) is
+  deferred to v0.2: the counter-review found a race between the gesture's lifecycle state and the long-press
+  action that this tranche did not resolve.
 - **Fail-soft App Group and guarded KVC lookup** (H-21/H-23): the App Group UserDefaults suite no longer
   force-unwraps (falls back to standard defaults with a logged fault); the private KVC lookup of the active
   keyboard identifier is guarded.
@@ -30,7 +31,7 @@ All notable changes to **Copaky** (an independent project based on azooKey). For
   from 17.6 to 18.0 (no iOS 17.x/18.x simulator runtime is available to verify older releases).
 - **Test harness for Xcode 27**: `run_ui_test.sh` works without Simulator.app by detaching the simulated
   hardware keyboard through `scripts/sim_hw_keyboard.m`; new `run_device_test.sh` for real-device runs; new
-  UI tests test56/test57/test61 and unit tests for the dictionary fixes.
+  UI tests test56/test57 and unit tests for the dictionary fixes.
 - **Clipboard-history persistence hardening** (G-38): an oversized history file is now preserved
   instead of being mistaken for an empty history and overwritten; saves prune the oldest unpinned
   entries to fit the 4 MiB file budget (kept small on purpose: the keyboard extension runs under a

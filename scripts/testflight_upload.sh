@@ -7,6 +7,15 @@
 #   - ASC API key env at ~/.config/copaky/asc.env (ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_PATH);
 #   - a UNIQUE CURRENT_PROJECT_VERSION per upload (ASC rejects reuse).
 # Never touches "Add for Review" — upload only.
+#
+# Optional env vars (default behaviour unchanged if unset):
+#   - COPAKY_ARCHIVE_ONLY=1 stops right after the archive step and prints the
+#     keyboard extension's privacy manifest (gate H-01: expects
+#     NSPrivacyAccessedAPICategorySystemBootTime / 35F9.1) — no export/upload;
+#   - COPAKY_EXISTING_ARCHIVE=/path/to/X.xcarchive skips the archive step and
+#     reuses that archive for export+upload (must already exist).
+# COPAKY_ARCHIVE_ONLYはアーカイブ後に停止しプライバシーマニフェストを表示、
+# COPAKY_EXISTING_ARCHIVEは既存アーカイブを再利用する（どちらも既定動作は不変）。
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -34,13 +43,32 @@ if [ ! -f "$ASC_KEY_PATH" ]; then echo "FATAL: ASC key file not found at $ASC_KE
 
 mkdir -p "$OUT_DIR"
 
-echo "== 1/3 archive (Release, generic iOS) → $ARCHIVE"
-xcodebuild archive \
-  -project "$REPO_DIR/azooKey.xcodeproj" -scheme MainApp \
-  -destination 'generic/platform=iOS' \
-  -archivePath "$ARCHIVE" \
-  -allowProvisioningUpdates \
-  DEVELOPMENT_TEAM="$TEAM" -quiet
+if [ -n "${COPAKY_EXISTING_ARCHIVE:-}" ]; then
+  ARCHIVE="$COPAKY_EXISTING_ARCHIVE"
+  if [ ! -d "$ARCHIVE" ]; then
+    echo "FATAL: COPAKY_EXISTING_ARCHIVE not found at $ARCHIVE" >&2
+    exit 1
+  fi
+  echo "== 1/3 skipped — using existing archive: $ARCHIVE"
+else
+  echo "== 1/3 archive (Release, generic iOS) → $ARCHIVE"
+  xcodebuild archive \
+    -project "$REPO_DIR/azooKey.xcodeproj" -scheme MainApp \
+    -destination 'generic/platform=iOS' \
+    -archivePath "$ARCHIVE" \
+    -allowProvisioningUpdates \
+    DEVELOPMENT_TEAM="$TEAM" -quiet
+fi
+
+if [ -n "${COPAKY_ARCHIVE_ONLY:-}" ]; then
+  PRIVACY_MANIFEST="$ARCHIVE/Products/Applications/azooKey.app/PlugIns/Keyboard.appex/PrivacyInfo.xcprivacy"
+  echo "== archive only: $ARCHIVE"
+  echo "Privacy manifest: $PRIVACY_MANIFEST"
+  if [ -f "$PRIVACY_MANIFEST" ]; then
+    plutil -p "$PRIVACY_MANIFEST"
+  fi
+  exit 0
+fi
 
 # Export options live OUTSIDE the repo: they carry the team id, which stays untracked.
 #

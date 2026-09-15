@@ -721,13 +721,34 @@ class CopakyCampaignTests: XCTestCase {
         shot("03-mainapp-home")
         openSettingsTab()
         shot("03-settings-tab")
+
+        // Copaky [F02]: "Cronologia appunti" only appears in the short "Essenziali" list when
+        // "Mostra tutte le impostazioni" is OFF — with it left ON (e.g. state carried over from an
+        // earlier test) the row can be genuinely absent instead of merely scrolled out of view.
+        // Copaky [F02]: 「クロノロジア appunti」は「すべての設定を表示」がOFFの短い「Essenziali」
+        // リストにのみ表示される。ONのままだと（前のテストの状態が残っている場合など）行が単に
+        // スクロール外ではなく本当に存在しないことがある。
+        let showAll = mainApp.switches.matching(NSPredicate(format: "label IN %@", L.showAllSettings)).firstMatch
+        if showAll.exists, (showAll.value as? String) == "1" {
+            var attempts = 0
+            while (showAll.value as? String) != "0", attempts < 3 {
+                showAll.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
+                RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+                attempts += 1
+            }
+        }
+        shot("03-settings-tab-short")
+
         guard let toggle = firstMatch(in: mainApp, labels: L.clipboardToggle, timeout: 6) else {
             // scroll and retry once — the clipboard section may be below the fold
             mainApp.swipeUp()
             let t2 = firstMatch(in: mainApp, labels: L.clipboardToggle, timeout: 4)
-            if t2 == nil { dump(mainApp, "03-no-toggle") }
-            XCTAssertNotNil(t2, "Clipboard history toggle not found in MainApp settings")
-            t2!.tap()
+            guard let t2 else {
+                dump(mainApp, "03-no-toggle")
+                XCTFail("Clipboard history toggle not found in MainApp settings")
+                return
+            }
+            t2.tap()
             shot("03-toggle-tapped-noFA")
             return
         }
@@ -4576,10 +4597,23 @@ class CopakyCampaignTests: XCTestCase {
 
         let todayHeader = safari.staticTexts.matching(NSPredicate(format: "label == %@", today)).firstMatch
         XCTAssertTrue(todayHeader.waitForExistence(timeout: 4), "G-09: localized Today header '\(today)' is missing")
-        let relativeTimestamp = safari.staticTexts
-            .matching(NSPredicate(format: "label MATCHES[c] %@", relativePattern)).firstMatch
-        XCTAssertTrue(relativeTimestamp.waitForExistence(timeout: 4),
-                      "G-09: no StaticText exposes a relative timestamp matching \(relativePattern)")
+
+        // Copaky [F05]: the tile is a single accessible element (children: .ignore, restored after the
+        // counter-review), so the relative timestamp lives in the tile's own `value`, not in a separate
+        // child StaticText.
+        // Copaky [F05]: タイルは単一のアクセシビリティ要素（children: .ignore、レビュー後に復元）なので、
+        // 相対タイムスタンプは子のStaticTextではなくタイル自身のvalueに含まれる。
+        var timestampFound = false
+        for index in 0..<tiles.count {
+            let tile = tiles.element(boundBy: index)
+            guard tile.exists, let value = tile.value as? String else { continue }
+            if value.range(of: relativePattern, options: [.regularExpression, .caseInsensitive]) != nil {
+                timestampFound = true
+                break
+            }
+        }
+        XCTAssertTrue(timestampFound,
+                      "G-09: no Clipboard tile value exposes a relative timestamp matching \(relativePattern)")
 
         let back = safari.descendants(matching: .any)
             .matching(NSPredicate(format: "identifier == %@", "copaky_clipboard_back")).firstMatch
@@ -4673,47 +4707,6 @@ class CopakyCampaignTests: XCTestCase {
             return
         }
         shot("58-number-row-variations")
-    }
-
-    // MARK: - 61 · Short/long-press boundary
-
-    /// A release at the normal 0.400 s long-press threshold must be classified by the lifecycle
-    /// state that actually fired: if the long-press task has not run yet, the ordinary letter is kept.
-    func test61_shortLongPressBoundaryKeepsInput() throws {
-        let field = activatePreNavigatedField("plain-text")
-        switchToCopaky(in: safari)
-        dismissCopakyNotice(in: safari)
-        guard switchToLatinQwertyTab(in: safari) else {
-            dump(safari, "61-latin-tab-missing")
-            shot("61-latin-tab-missing")
-            XCTFail("Could not establish Latin QWERTY for the short/long-press boundary probe")
-            return
-        }
-        clearFocusedField(field, placeholder: "plain-text", in: safari)
-
-        let letter = safari.staticTexts
-            .matching(NSPredicate(format: "label IN %@", ["e", "E"]))
-            .firstMatch
-        guard letter.waitForExistence(timeout: 4), letter.frame.height > 1 else {
-            dump(safari, "61-letter-key-missing")
-            shot("61-letter-key-missing")
-            XCTFail("Letter key 'e'/'E' not found on the Copaky Latin keyboard")
-            return
-        }
-
-        let expected = letter.label
-        let keyFrame = letter.frame
-        let appFrame = safari.frame
-        let coordinate = safari.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(
-            dx: keyFrame.midX - appFrame.minX,
-            dy: keyFrame.midY - appFrame.minY
-        ))
-        coordinate.press(forDuration: 0.400)
-
-        XCTAssertTrue(
-            waitForFieldValue(field, expected, timeout: 3),
-            "A release at the 0.400 s boundary lost '\(expected)'; got '\((field.value as? String) ?? "")'"
-        )
     }
 
     // MARK: - 50 · Accessibility audit inventory across the Settings screens

@@ -254,7 +254,11 @@ if [[ "$SKIP_BUILD" == 1 ]]; then
   log "--skip-build: salto build-for-testing"
 else
   log "build-for-testing (configuration=$CONFIGURATION)"
-  run xcodebuild "${BUILD_ARGS[@]}"
+  # Copaky [F07]: senza controllo esplicito dell'exit code lo script proseguiva anche a build fallita,
+  # bastava un azooKey.app residuo di una build precedente perché il controllo su APP_PATH passasse.
+  # Copaky [F07]: 明示的なexit code確認が無いとビルド失敗後もスクリプトが続行し、以前のビルドの
+  # azooKey.appが残っているだけでAPP_PATHの確認を通過してしまっていた。
+  run xcodebuild "${BUILD_ARGS[@]}" || die "build-for-testing fallita (xcodebuild exit $?)"
 fi
 
 APP_PATH="$DERIVED_DATA/Build/Products/$CONFIGURATION-iphoneos/azooKey.app"
@@ -268,7 +272,7 @@ for TEST in "${TESTS[@]}"; do
   run xcrun devicectl device uninstall app --device "$UDID" "$RUNNER_BUNDLE"
 
   log "installo azooKey.app da DerivedData su $UDID"
-  run xcrun devicectl device install app --device "$UDID" "$APP_PATH"
+  run xcrun devicectl device install app --device "$UDID" "$APP_PATH" || die "$TEST: installazione fallita (devicectl exit $?)"
 
   log "termino il processo dell'estensione tastiera se presente (no-op se assente)"
   # `devicectl device process` NON ha un sottocomando `list` (solo awaitTermination/launch/openURL/
@@ -331,17 +335,32 @@ for TEST in "${TESTS[@]}"; do
 
   [[ -d "$RESULT_BUNDLE" ]] || die "$TEST: nessun result bundle in $RESULT_BUNDLE"
   SUMMARY_JSON="$(xcrun xcresulttool get test-results summary --path "$RESULT_BUNDLE" --compact 2>/dev/null)"
-  EXECUTED="$(echo "$SUMMARY_JSON" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("totalTestCount", 0))' 2>/dev/null || echo 0)"
-  echo "Executed $EXECUTED tests"
+  # Copaky [F07]: il riepilogo distingue PASS/FAIL/SKIP dal result bundle invece di un solo verdetto
+  # (un TEST_STATUS binario nascondeva gli skip e non separava un fallimento da uno skip).
+  # Copaky [F07]: 単一の判定ではなくresult bundleからPASS/FAIL/SKIPを区別する（バイナリの
+  # TEST_STATUSではskipが隠れ、失敗とskipが区別できなかった）。
+  read -r EXECUTED PASSED FAILED SKIPPED <<<"$(echo "$SUMMARY_JSON" | python3 -c '
+import json, sys
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    d = {}
+print(d.get("totalTestCount", 0), d.get("passedTests", 0), d.get("failedTests", 0), d.get("skippedTests", 0))
+' 2>/dev/null || echo "0 0 0 0")"
+  echo "Executed $EXECUTED tests — PASS $PASSED / FAIL $FAILED / SKIP $SKIPPED"
   if [[ "$EXECUTED" -eq 0 ]]; then
     echo "✘ $TEST: 0 test eseguiti (runner stantio? -only-testing non ha trovato la classe)" >&2
     exit 1
   fi
-  if [[ "$TEST_STATUS" != 0 ]]; then
-    echo "✘ $TEST fallito (xcodebuild exit $TEST_STATUS)" >&2
+  if [[ "$TEST_STATUS" != 0 || "$FAILED" -gt 0 ]]; then
+    echo "✘ $TEST fallito (xcodebuild exit $TEST_STATUS, FAIL $FAILED)" >&2
     exit 1
   fi
-  echo "✓ $TEST: $EXECUTED test eseguiti, xcodebuild ok"
+  if [[ "$SKIPPED" -gt 0 ]]; then
+    echo "⚠ $TEST: $EXECUTED test eseguiti, PASS $PASSED / SKIP $SKIPPED, nessun FAIL"
+  else
+    echo "✓ $TEST: $EXECUTED test eseguiti, PASS $PASSED, xcodebuild ok"
+  fi
 done
 
 echo "✓ tutti i test richiesti eseguiti"

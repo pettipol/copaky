@@ -192,16 +192,21 @@ struct EnableAzooKeyView: View {
     private func checkActiveKeyboardIsAzooKey() -> Bool {
         // キーボードが開いた時
         // 参考：https://stackoverflow.com/questions/26153336/how-do-i-find-out-the-current-keyboard-used-on-ios8
-        let currentKeyboardIdentifier = NSArray(array: UITextInputMode.activeInputModes)
-            .filtered(using: NSPredicate(format: "isDisplayed = YES"))
-            .first
-            .flatMap { mode -> String? in
-                guard let mode = mode as? UITextInputMode else {
-                    return nil
+        // Copaky [H-23]: both `isDisplayed` and `identifier` below are private KVC keys inherited from
+        // upstream (not NSPredicate, which relied on the same unprotected KVC internally); each access
+        // is guarded so a missing accessor degrades to "not detected" instead of crashing.
+        // Copaky [H-23]: 以下の`isDisplayed`と`identifier`はいずれも上流由来の非公開KVCキー（旧NSPredicate
+        // も内部的に同じ非保護KVCに依存していた）。各アクセスをガードし、アクセサが無ければクラッシュせず
+        // 「未検出」に留める。
+        let currentKeyboardIdentifier = UITextInputMode.activeInputModes
+            .first { mode in
+                guard mode.responds(to: Selector(("isDisplayed"))),
+                      let displayed = mode.value(forKey: "isDisplayed") as? Bool else {
+                    return false
                 }
-                // Copaky [H-23]: private KVC key inherited from upstream; guarded so a missing accessor
-                // degrades to "not detected" instead of crashing.
-                // Copaky [H-23]: 上流由来の非公開KVCキー。アクセサが無ければクラッシュせず「未検出」に留める。
+                return displayed
+            }
+            .flatMap { mode -> String? in
                 guard mode.responds(to: Selector(("identifier"))) else {
                     return nil
                 }

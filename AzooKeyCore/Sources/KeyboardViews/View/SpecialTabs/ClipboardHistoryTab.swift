@@ -499,7 +499,7 @@ private struct ClipboardTileView<Extension: ApplicationSpecificKeyboardViewExten
                     Label("削除", systemImage: "trash")
                 }
             }
-            .accessibilityElement(children: .contain)
+            .accessibilityElement(children: .ignore)
             .accessibilityAddTraits(.isButton)
             .accessibilityLabel(Text(verbatim: accessibilityPreviewText))
             .accessibilityValue(Text(verbatim: accessibilityTimestamp))
