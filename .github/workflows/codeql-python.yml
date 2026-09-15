@@ -38,7 +38,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         # No submodules: the python scripts under scripts/ do not need them, and fetching the
         # dictionary submodules would cost minutes for nothing.
 
