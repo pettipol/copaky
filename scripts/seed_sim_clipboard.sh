@@ -15,13 +15,14 @@
 # keyboard SILENTLY fall back to the default (no clipboard tab), so the format
 # here must match exactly.
 #
-# Usage: seed_sim_clipboard.sh --lang en|ja [--udid <UDID>]
+# Usage: seed_sim_clipboard.sh --lang en|ja|it [--udid <UDID>] [--include-yesterday]
 # Exits non-zero (with a clear message) if the container does not exist — that
 # means the keyboard extension has never run, so run the warmup first.
 
 set -euo pipefail
 
 LANG_ARG="en"
+INCLUDE_YESTERDAY=0
 UDID="${COPAKY_UDID:-E0552C62-FFDB-4DF6-9040-2734DB5B2458}"
 GROUP_ID="group.com.pettipol.copaky"
 KB_BUNDLE="com.pettipol.copaky.keyboard"
@@ -30,6 +31,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --lang) LANG_ARG="$2"; shift 2 ;;
     --udid) UDID="$2"; shift 2 ;;
+    --include-yesterday) INCLUDE_YESTERDAY=1; shift ;;
     *) echo "Unknown arg: $1" >&2; exit 2 ;;
   esac
 done
@@ -86,12 +88,14 @@ HISTORY_FILE="$CONTAINER/clipboard_history.json"
 
 # --- write the two files with correct, round-trip-verified JSON -----------------
 COPAKY_LANG="$LANG_ARG" \
+COPAKY_INCLUDE_YESTERDAY="$INCLUDE_YESTERDAY" \
 COPAKY_TABBAR="$TABBAR_FILE" \
 COPAKY_HISTORY="$HISTORY_FILE" \
 /usr/bin/python3 - <<'PY'
-import json, os, time
+import datetime, json, os, time
 
 lang = os.environ["COPAKY_LANG"]
+include_yesterday = os.environ["COPAKY_INCLUDE_YESTERDAY"] == "1"
 tabbar_path = os.environ["COPAKY_TABBAR"]
 history_path = os.environ["COPAKY_HISTORY"]
 
@@ -141,6 +145,19 @@ else:
         ("Let's catch up over coffee this week.", 260, None),
     ]
 
+if include_yesterday:
+    yesterday_text = {
+        "ja": "昨日のメモ",
+        "it": "Promemoria di ieri",
+        "en": "Yesterday's note",
+    }[lang]
+    local_now = datetime.datetime.now().astimezone()
+    local_yesterday_noon = (local_now - datetime.timedelta(days=1)).replace(
+        hour=12, minute=0, second=0, microsecond=0
+    )
+    yesterday_age = time.time() - local_yesterday_noon.timestamp()
+    entries.append((yesterday_text, yesterday_age, None))
+
 items = []
 for text, created_age, pinned_age in entries:
     it = {"content": {"text": {"_0": text}}, "createdData": ref - created_age}
@@ -154,7 +171,7 @@ with open(history_path, "w", encoding="utf-8") as f:
     json.dump(items, f, ensure_ascii=False)
 
 print("wrote", tabbar_path)
-print("wrote", history_path, "(%d items, lang=%s)" % (len(items), lang))
+print("wrote", history_path, "(%d items, lang=%s, yesterday=%s)" % (len(items), lang, include_yesterday))
 PY
 
 # The Latin/English tab must be the QWERTY for the store shots — the default is FLICK

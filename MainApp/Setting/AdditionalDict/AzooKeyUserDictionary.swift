@@ -17,31 +17,43 @@ import struct KanaKanjiConverterModule.DateTemplateLiteral
 import SwiftUIUtils
 import SwiftUtils
 
-private final class UserDictManagerVariables: ObservableObject {
+final class UserDictManagerVariables: ObservableObject {
     @Published var items: [UserDictionaryData] = [
         UserDictionaryData(ruby: "こぱきー", word: "Copaky", isVerb: false, isPersonName: true, isPlaceName: false, id: 0)
     ]
     @Published var mode: Mode = .list
     @Published var selectedItem: EditableUserDictionaryData?
     @Published var templates = TemplateData.load()
+    private let persistenceOverride: (([UserDictionaryData], [TemplateData]) -> Void)?
 
     enum Mode {
         case list, details
     }
 
-    init() {
+    init(persistenceOverride: (([UserDictionaryData], [TemplateData]) -> Void)? = nil) {
+        self.persistenceOverride = persistenceOverride
         if let userDictionary = UserDictionary.get() {
             self.items = userDictionary.items
         }
     }
 
     @MainActor func save() {
+        if let persistenceOverride {
+            persistenceOverride(self.items, self.templates)
+            return
+        }
         TemplateData.save(templates)
 
         let userDictionary = UserDictionary(items: self.items)
         userDictionary.save()
 
         AdditionalDictManager().userDictUpdate()
+    }
+
+    @MainActor func delete(ids: [Int]) {
+        let ids = Set(ids)
+        self.items.removeAll(where: { ids.contains($0.id) })
+        self.save()
     }
 }
 
@@ -96,7 +108,7 @@ private struct UserDictionaryDataListView: View {
                             }
                             .contextMenu {
                                 Button(role: .destructive) {
-                                    variables.items.removeAll(where: {$0.id == data.id})
+                                    variables.delete(ids: [data.id])
                                 } label: {
                                     Label("削除", systemImage: "trash")
                                 }
@@ -146,8 +158,8 @@ private struct UserDictionaryDataListView: View {
             let sortedIndices = indices.sorted {
                 variables.items[$0].id < variables.items[$1].id
             }
-            variables.items.remove(atOffsets: IndexSet(offsets.map {sortedIndices[$0]}))
-            variables.save()
+            let ids = offsets.map { variables.items[sortedIndices[$0]].id }
+            variables.delete(ids: ids)
         }
     }
 }

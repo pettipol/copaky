@@ -141,7 +141,7 @@ private enum L {
 }
 
 @MainActor
-final class CopakyCampaignTests: XCTestCase {
+class CopakyCampaignTests: XCTestCase {
 
     let settings = XCUIApplication(bundleIdentifier: "com.apple.Preferences")
     let mainApp = XCUIApplication(bundleIdentifier: "com.pettipol.copaky")
@@ -279,7 +279,7 @@ final class CopakyCampaignTests: XCTestCase {
     /// existing frame each sample.
     /// カスタムキーボードはXCUIのKeyboard要素を持たない（30/08実測）。UIKitのinputView識別子を
     /// 使い、遷移中は複製があるため毎回最も高いフレームを選ぶ。
-    private func keyboardInputViewFrame(of app: XCUIApplication) -> CGRect? {
+    func keyboardInputViewFrame(of app: XCUIApplication) -> CGRect? {
         let query = app.descendants(matching: .other)
             .matching(NSPredicate(format: "identifier == 'inputView'"))
         var best: CGRect?
@@ -421,7 +421,7 @@ final class CopakyCampaignTests: XCTestCase {
     /// keyboard UI on every keyboard load (後で only defers, it does not persist). Dismiss all of them
     /// with 後で ("later"); never tap 追加/更新 (those would open the containing app).
     /// They can animate in with a short delay, so wait-and-retry a few rounds.
-    private func dismissCopakyNotice(in app: XCUIApplication) {
+    func dismissCopakyNotice(in app: XCUIApplication) {
         var quiet = 0
         for _ in 0..<12 {
             // 4 notices stack at the same position → the query matches multiple; ALWAYS use firstMatch
@@ -440,7 +440,7 @@ final class CopakyCampaignTests: XCTestCase {
     }
 
     /// Switch the active keyboard to Copaky via the globe key (long-press picker, then tap fallback).
-    private func switchToCopaky(in app: XCUIApplication) {
+    func switchToCopaky(in app: XCUIApplication) {
         if copakyActive(in: app) { return }
         let kb = keyboard(of: app)
         // custom keyboards may not vend a Keyboard element; accept either signal before proceeding.
@@ -1318,7 +1318,7 @@ final class CopakyCampaignTests: XCTestCase {
     /// Simulator only the orchestrator can set it — the App Group is not provisioned, so the app's own
     /// switch never reaches the extension (`scripts/seed_sim_settings.sh keyboard_type=flick`).
     /// A Japanese tab that comes up as QWERTY is therefore reported as the setup problem it is.
-    private func switchToJapaneseFlickTab(in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
+    func switchToJapaneseFlickTab(in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
         dismissCopakyNotice(in: app)
         if flickKanaVisible(in: app, timeout: 2) { return }
 
@@ -1524,7 +1524,7 @@ final class CopakyCampaignTests: XCTestCase {
 
     /// Reach the Latin letters tab even when the extension restored a language-less or Japanese tab.
     /// Copaky: 言語なしタブや日本語タブが復元されても、ラテン文字タブまで明示的に戻す。
-    private func switchToLatinQwertyTab(in app: XCUIApplication) -> Bool {
+    func switchToLatinQwertyTab(in app: XCUIApplication) -> Bool {
         if latinQwertyVisible(in: app, timeout: 0.5) { return true }
         switchToEnglishTab(in: app)
         if !latinQwertyVisible(in: app, timeout: 2) {
@@ -1612,7 +1612,7 @@ final class CopakyCampaignTests: XCTestCase {
 
     /// Focus a field on a page the ORCHESTRATOR already opened in Safari via `simctl openurl`
     /// (iOS 26 gotcha: the "-u" launch argument opens the Start Page instead of navigating).
-    private func activatePreNavigatedField(_ placeholder: String) -> XCUIElement {
+    func activatePreNavigatedField(_ placeholder: String) -> XCUIElement {
         safari.activate()
         let web = safari.webViews.firstMatch
         XCTAssertTrue(web.waitForExistence(timeout: 10), "Safari webview did not load (page must be pre-opened via simctl openurl)")
@@ -4467,6 +4467,134 @@ final class CopakyCampaignTests: XCTestCase {
         shot("55-flick-star123-clipboard-open")
     }
 
+    // MARK: - 56 · Centered Latin second row without trailing period
+
+    /// Copaky [G-40]: with the Apple-like bottom-left Shift layout, row two contains only a…l,
+    /// centered by half a key. Query StaticText leaves so the key container cannot shadow labels.
+    func test56_latinRowTwoHasNoTrailingDot() throws {
+        let field = activatePreNavigatedField("plain-text")
+        switchToCopaky(in: safari)
+        dismissCopakyNotice(in: safari)
+        guard switchToLatinQwertyTab(in: safari) else {
+            dump(safari, "56-latin-tab-missing")
+            shot("56-latin-tab-missing")
+            XCTFail("Could not establish Latin QWERTY for the centered second-row gate")
+            return
+        }
+        clearFocusedField(field, placeholder: "plain-text", in: safari)
+        RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+
+        guard let keyboardFrame = waitForKeyboardInputViewFrame(of: safari, timeout: 6) else {
+            dump(safari, "56-keyboard-root-missing")
+            shot("56-keyboard-root-missing")
+            XCTFail("G-40 geometry gate requires the keyboard inputView frame")
+            return
+        }
+        func rowKey(_ label: String) -> XCUIElement? {
+            let matches = safari.staticTexts.matching(NSPredicate(format: "label == %@", label))
+            _ = matches.firstMatch.waitForExistence(timeout: 4)
+            for index in 0..<min(matches.count, 12) {
+                let candidate = matches.element(boundBy: index)
+                guard candidate.exists else { continue }
+                let frame = candidate.frame
+                if keyboardFrame.intersection(frame).height >= frame.height * 0.5 {
+                    return candidate
+                }
+            }
+            return nil
+        }
+        guard let q = rowKey("q"), let a = rowKey("a"), let l = rowKey("l") else {
+            dump(safari, "56-row-letters-missing")
+            shot("56-row-letters-missing")
+            XCTFail("Latin row anchors q/a/l are not all visible")
+            return
+        }
+
+        let dots = safari.staticTexts.matching(NSPredicate(format: "label == %@", "."))
+        var sameRowDots: [CGRect] = []
+        for index in 0..<min(dots.count, 20) {
+            let dot = dots.element(boundBy: index)
+            guard dot.exists else { continue }
+            if abs(dot.frame.midY - a.frame.midY) < a.frame.height / 2 {
+                sameRowDots.append(dot.frame)
+            }
+        }
+        XCTAssertTrue(sameRowDots.isEmpty,
+                      "G-40: no '.' StaticText may share the a…l row; found frames \(sameRowDots)")
+        XCTAssertGreaterThanOrEqual(
+            a.frame.minX - q.frame.minX,
+            q.frame.width * 0.25,
+            "G-40: the 'a' key must begin at least one quarter-key to the right of 'q'"
+        )
+        XCTAssertGreaterThan(l.frame.midX, a.frame.midX, "G-40: the second row must retain a…l order")
+        shot("g40_after")
+    }
+
+    // MARK: - 57 · Compact Clipboard history with relative timestamps
+
+    /// Copaky [G-09]: the seeded Clipboard panel keeps touch targets at least 44 pt high, groups
+    /// local-day history, exposes relative timestamps, and retains the back-key accessibility hook.
+    func test57_clipboardPanelCompactWithTimestamps() throws {
+        _ = activatePreNavigatedField("plain-text")
+        switchToCopaky(in: safari)
+        dismissCopakyNotice(in: safari)
+        guard switchToLatinQwertyTab(in: safari) else {
+            dump(safari, "57-latin-tab-missing")
+            shot("57-latin-tab-missing")
+            XCTFail("Could not establish Latin QWERTY before opening Clipboard history")
+            return
+        }
+        try openClipboardTab()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+
+        let language = Locale.preferredLanguages.first ?? "en"
+        let today: String
+        let yesterday: String
+        switch language.prefix(2) {
+        case "it":
+            today = "Oggi"
+            yesterday = "Ieri"
+        case "ja":
+            today = "今日"
+            yesterday = "昨日"
+        case "en":
+            today = "Today"
+            yesterday = "Yesterday"
+        default:
+            throw XCTSkip("Device language \(language) is not one Copaky localizes — nothing to assert")
+        }
+
+        let tiles = safari.buttons.matching(NSPredicate(format: "identifier == %@", "copaky_clipboard_text_tile"))
+        XCTAssertGreaterThan(tiles.count, 0, "G-09: the seeded Clipboard history contains no text tiles")
+        let relativePattern = ".*(ago|fa|前|now|adesso|ora|今).*"
+        for index in 0..<tiles.count {
+            let tile = tiles.element(boundBy: index)
+            guard tile.exists else { continue }
+            XCTAssertGreaterThanOrEqual(tile.frame.height, 44, "G-09: tile \(index) is below the 44 pt touch minimum")
+            XCTAssertLessThanOrEqual(tile.frame.height, 56, "G-09: tile \(index) exceeds the compact 56 pt ceiling")
+        }
+
+        let todayHeader = safari.staticTexts.matching(NSPredicate(format: "label == %@", today)).firstMatch
+        XCTAssertTrue(todayHeader.waitForExistence(timeout: 4), "G-09: localized Today header '\(today)' is missing")
+        let relativeTimestamp = safari.staticTexts
+            .matching(NSPredicate(format: "label MATCHES[c] %@", relativePattern)).firstMatch
+        XCTAssertTrue(relativeTimestamp.waitForExistence(timeout: 4),
+                      "G-09: no StaticText exposes a relative timestamp matching \(relativePattern)")
+
+        let back = safari.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier == %@", "copaky_clipboard_back")).firstMatch
+        XCTAssertTrue(back.waitForExistence(timeout: 4),
+                      "G-09: Clipboard back key lost identifier copaky_clipboard_back")
+
+        if ProcessInfo.processInfo.environment["COPAKY_CLIPBOARD_YESTERDAY_PRESEEDED"] == "1" {
+            let yesterdayHeader = safari.staticTexts
+                .matching(NSPredicate(format: "label == %@", yesterday)).firstMatch
+            XCTAssertTrue(yesterdayHeader.waitForExistence(timeout: 4),
+                          "G-09: seeded yesterday entry did not produce header '\(yesterday)'")
+        }
+        shot("g09_after")
+    }
+
     // MARK: - 58 · Real number-row digit variations
 
     /// Copaky [G-05]: a held real-row 1 inserts its first superscript variation; a tap on 2 remains 2.
@@ -4545,6 +4673,47 @@ final class CopakyCampaignTests: XCTestCase {
             return
         }
         shot("58-number-row-variations")
+    }
+
+    // MARK: - 61 · Short/long-press boundary
+
+    /// A release at the normal 0.400 s long-press threshold must be classified by the lifecycle
+    /// state that actually fired: if the long-press task has not run yet, the ordinary letter is kept.
+    func test61_shortLongPressBoundaryKeepsInput() throws {
+        let field = activatePreNavigatedField("plain-text")
+        switchToCopaky(in: safari)
+        dismissCopakyNotice(in: safari)
+        guard switchToLatinQwertyTab(in: safari) else {
+            dump(safari, "61-latin-tab-missing")
+            shot("61-latin-tab-missing")
+            XCTFail("Could not establish Latin QWERTY for the short/long-press boundary probe")
+            return
+        }
+        clearFocusedField(field, placeholder: "plain-text", in: safari)
+
+        let letter = safari.staticTexts
+            .matching(NSPredicate(format: "label IN %@", ["e", "E"]))
+            .firstMatch
+        guard letter.waitForExistence(timeout: 4), letter.frame.height > 1 else {
+            dump(safari, "61-letter-key-missing")
+            shot("61-letter-key-missing")
+            XCTFail("Letter key 'e'/'E' not found on the Copaky Latin keyboard")
+            return
+        }
+
+        let expected = letter.label
+        let keyFrame = letter.frame
+        let appFrame = safari.frame
+        let coordinate = safari.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(
+            dx: keyFrame.midX - appFrame.minX,
+            dy: keyFrame.midY - appFrame.minY
+        ))
+        coordinate.press(forDuration: 0.400)
+
+        XCTAssertTrue(
+            waitForFieldValue(field, expected, timeout: 3),
+            "A release at the 0.400 s boundary lost '\(expected)'; got '\((field.value as? String) ?? "")'"
+        )
     }
 
     // MARK: - 50 · Accessibility audit inventory across the Settings screens

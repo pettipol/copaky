@@ -156,6 +156,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				MainAppUITests.swift,
+				CopakyBenchmarkTests.swift,
 				CopakyScreenshotTests.swift,
 				CopakyAssetCaptureTests.swift,
 			);

@@ -10,6 +10,65 @@ import SwiftUI
 import SwiftUIUtils
 import SwiftUtils
 
+private enum ClipboardHistoryDayGroup: CaseIterable, Hashable, Identifiable {
+    case today
+    case yesterday
+    case earlier
+
+    var id: Self { self }
+
+    var title: LocalizedStringKey {
+        switch self {
+        case .today: "今日"
+        case .yesterday: "昨日"
+        case .earlier: "以前"
+        }
+    }
+
+    func contains(_ date: Date, calendar: Calendar, now: Date) -> Bool {
+        switch self {
+        case .today:
+            calendar.isDate(date, inSameDayAs: now)
+        case .yesterday:
+            calendar.isDateInYesterday(date)
+        case .earlier:
+            !calendar.isDate(date, inSameDayAs: now) && !calendar.isDateInYesterday(date)
+        }
+    }
+}
+
+private struct IndexedClipboardHistoryItem: Identifiable {
+    let index: Int
+    let item: ClipboardHistoryItem
+
+    var id: Int { index }
+}
+
+private struct ClipboardHistoryDaySection: Identifiable {
+    let group: ClipboardHistoryDayGroup
+    let items: [IndexedClipboardHistoryItem]
+
+    var id: ClipboardHistoryDayGroup { group }
+}
+
+private enum ClipboardHistoryDateFormatting {
+    /// SwiftUI's localized keys resolve through the main bundle. Use that same selected language
+    /// for relative dates instead of independently guessing from the keyboard typing language.
+    static var uiLocale: Locale {
+        guard let localization = Bundle.main.preferredLocalizations.first else {
+            return .current
+        }
+        return Locale(identifier: localization)
+    }
+
+    static func relativeTimestamp(for date: Date, relativeTo referenceDate: Date = .now) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.locale = uiLocale
+        formatter.unitsStyle = .short
+        return formatter.localizedString(for: date, relativeTo: referenceDate)
+    }
+}
+
 private final class ClipboardHistory: ObservableObject {
     @Published private(set) var pinnedItems: [ClipboardHistoryItem] = []
     @Published private(set) var notPinnedItems: [ClipboardHistoryItem] = []
@@ -46,6 +105,16 @@ private final class ClipboardHistory: ObservableObject {
         self.pinnedItems.sort(by: >)
         self.notPinnedItems.sort(by: >)
         debug("reload", manager.items)
+    }
+
+    func notPinnedDaySections(calendar: Calendar = .current, now: Date = .now) -> [ClipboardHistoryDaySection] {
+        let indexedItems = self.notPinnedItems.enumerated().map {
+            IndexedClipboardHistoryItem(index: $0.offset, item: $0.element)
+        }
+        return ClipboardHistoryDayGroup.allCases.compactMap { group in
+            let items = indexedItems.filter { group.contains($0.item.createdData, calendar: calendar, now: now) }
+            return items.isEmpty ? nil : ClipboardHistoryDaySection(group: group, items: items)
+        }
     }
 }
 
@@ -174,17 +243,19 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
 
     @ViewBuilder
     private var tileGridView: some View {
-        // ピン留めがない場合は縦スクロールを無効にする
-        let scrollAxes: Axis.Set = self.target.pinnedItems.isEmpty ? [] : .vertical
+        let daySections = self.target.notPinnedDaySections()
 
-        ScrollView(scrollAxes) {
-            VStack(spacing: 12) {
+        ScrollView(.vertical) {
+            VStack(spacing: 8) {
                 captureBar
                 if !self.target.pinnedItems.isEmpty {
                     ClipboardSection(
                         title: "ピン留め",
-                        items: self.target.pinnedItems,
+                        items: self.target.pinnedItems.enumerated().map {
+                            IndexedClipboardHistoryItem(index: $0.offset, item: $0.element)
+                        },
                         isPinned: true,
+                        showsMenu: true,
                         tileView: tileView,
                         menuView: {
                             Menu("詳細", systemImage: "ellipsis") {
@@ -211,37 +282,40 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
                 if self.target.notPinnedItems.isEmpty {
                     EmptyHistoryView()
                 } else {
-                    ClipboardSection(
-                        title: "履歴",
-                        items: self.target.notPinnedItems,
-                        isPinned: false,
-                        tileView: tileView,
-                        menuView: {
-                            Menu("詳細", systemImage: "ellipsis") {
-                                Button("全て削除", systemImage: "trash", role: .destructive) {
-                                    self.target.updateNotPinnedItems(manager: &variableStates.clipboardHistoryManager) {
-                                        $0.removeAll()
+                    ForEach(daySections) { section in
+                        ClipboardSection(
+                            title: section.group.title,
+                            items: section.items,
+                            isPinned: false,
+                            showsMenu: section.id == daySections.first?.id,
+                            tileView: tileView,
+                            menuView: {
+                                Menu("詳細", systemImage: "ellipsis") {
+                                    Button("全て削除", systemImage: "trash", role: .destructive) {
+                                        self.target.updateNotPinnedItems(manager: &variableStates.clipboardHistoryManager) {
+                                            $0.removeAll()
+                                        }
+                                        self.persistMutation()
                                     }
-                                    self.persistMutation()
                                 }
+                                .labelStyle(.iconOnly)
                             }
-                            .labelStyle(.iconOnly)
-                        }
-                    )
+                        )
+                    }
                 }
             }
-            .padding(.vertical, 12)
+            .padding(.vertical, 8)
         }
     }
 
-    private func enterKey(_ design: TabDependentDesign) -> some View {
-        SimpleKeyView<Extension>(model: SimpleEnterKeyModel<Extension>(), tabDesign: design)
+    private func enterKey(width: CGFloat, height: CGFloat) -> some View {
+        SimpleKeyView<Extension>(model: ClipboardEnterKeyModel<Extension>(), width: width, height: height)
     }
-    private func deleteKey(_ design: TabDependentDesign) -> some View {
-        SimpleKeyView<Extension>(model: SimpleKeyModel<Extension>(keyLabelType: .image("delete.left", accessibilityLabel: "削除"), unpressedKeyColorType: .special, pressActions: [.delete(1)], longPressActions: .init(repeat: [.delete(1)])), tabDesign: design)
+    private func deleteKey(width: CGFloat, height: CGFloat) -> some View {
+        SimpleKeyView<Extension>(model: SimpleKeyModel<Extension>(keyLabelType: .image("delete.left", accessibilityLabel: "削除"), unpressedKeyColorType: .special, pressActions: [.delete(1)], longPressActions: .init(repeat: [.delete(1)])), width: width, height: height)
     }
-    private func backTabKey(_ design: TabDependentDesign) -> some View {
-        SimpleKeyView<Extension>(model: SimpleKeyModel<Extension>(keyLabelType: .localizedText("戻る"), unpressedKeyColorType: .special, pressActions: [.moveTab(.system(.last_tab))], longPressActions: .init(start: [.setTabBar(.toggle)])), tabDesign: design)
+    private func backTabKey(width: CGFloat, height: CGFloat) -> some View {
+        SimpleKeyView<Extension>(model: SimpleKeyModel<Extension>(keyLabelType: .image("chevron.backward", accessibilityLabel: "戻る"), unpressedKeyColorType: .special, pressActions: [.moveTab(.system(.last_tab))], longPressActions: .init(start: [.setTabBar(.toggle)])), width: width, height: height)
             .accessibilityLabel(Text("戻る"))
             // Copaky-only hook for liveness probes: with the system paste control ON this panel
             // shows NO other Copaky-specific label (the capture bar becomes Apple's capsule and
@@ -251,30 +325,30 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
             .accessibilityIdentifier("copaky_clipboard_back")
     }
 
-    var body: some View {
-        Group {
-            switch variableStates.keyboardOrientation {
-            case .vertical:
-                VStack {
-                    tileGridView
-                    HStack {
-                        let design = TabDependentDesign(width: 3, height: 7, interfaceSize: variableStates.interfaceSize, orientation: .vertical)
-                        backTabKey(design)
-                        enterKey(design)
-                        deleteKey(design)
-                    }
-                }
-            case .horizontal:
-                HStack {
-                    tileGridView
-                    VStack {
-                        let design = TabDependentDesign(width: 8, height: 3, interfaceSize: variableStates.interfaceSize, orientation: .horizontal)
-                        backTabKey(design)
-                        deleteKey(design)
-                        enterKey(design)
-                    }
-                }
+    private var compactToolbar: some View {
+        GeometryReader { geometry in
+            let spacing: CGFloat = 6
+            let horizontalPadding: CGFloat = 6
+            let keyHeight: CGFloat = 40
+            let keyWidth = max(
+                44,
+                (geometry.size.width - horizontalPadding * 2 - spacing * 2) / 3
+            )
+            HStack(spacing: spacing) {
+                backTabKey(width: keyWidth, height: keyHeight)
+                deleteKey(width: keyWidth, height: keyHeight)
+                enterKey(width: keyWidth, height: keyHeight)
             }
+            .padding(.horizontal, horizontalPadding)
+            .frame(maxWidth: .infinity, minHeight: 40, maxHeight: 40)
+        }
+        .frame(height: 40)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            tileGridView
+            compactToolbar
         }
         .font(Design.fonts.resultViewFont(theme: theme, userSizePrefrerence: Extension.SettingProvider.resultViewFontSize))
         .foregroundStyle(theme.resultTextColor.color)
@@ -308,6 +382,39 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
     }
 }
 
+private struct ClipboardEnterKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: SimpleKeyModelProtocol {
+    let unpressedKeyColorType: SimpleUnpressedKeyColorType = .enter
+
+    func pressActions(variableStates: VariableStates) -> [ActionType] {
+        switch variableStates.enterKeyState {
+        case .complete:
+            [.enter]
+        case .return:
+            [.input("\n")]
+        }
+    }
+
+    func longPressActions(variableStates: VariableStates) -> LongpressActionType {
+        .none
+    }
+
+    func label(width: CGFloat, states: VariableStates) -> KeyLabel<Extension> {
+        KeyLabel(
+            .image("arrow.turn.down.left", accessibilityLabel: Design.language.getEnterKeyText(states.enterKeyState)),
+            width: width
+        )
+    }
+
+    func feedback(variableStates: VariableStates) {
+        switch variableStates.enterKeyState {
+        case .complete:
+            KeyboardFeedback<Extension>.tabOrOtherKey()
+        case .return:
+            KeyboardFeedback<Extension>.click()
+        }
+    }
+}
+
 private struct ClipboardTileView<Extension: ApplicationSpecificKeyboardViewExtension>: View {
     let item: ClipboardHistoryItem
     let index: Int?
@@ -328,6 +435,18 @@ private struct ClipboardTileView<Extension: ApplicationSpecificKeyboardViewExten
         }
     }
 
+    private var relativeTimestamp: String {
+        ClipboardHistoryDateFormatting.relativeTimestamp(for: item.createdData)
+    }
+
+    private var accessibilityTimestamp: String {
+        guard pinned else {
+            return relativeTimestamp
+        }
+        let pinnedLabel = String(localized: "固定済み", bundle: .main)
+        return "\(relativeTimestamp), \(pinnedLabel)"
+    }
+
     var body: some View {
         let tile = RoundedRectangle(cornerRadius: 8)
             .strokeAndFill(
@@ -339,10 +458,15 @@ private struct ClipboardTileView<Extension: ApplicationSpecificKeyboardViewExten
             .overlay {
                 switch item.content {
                 case .text(let string):
-                    TextTileContent(string: string, textColor: textColor)
+                    TextTileContent(
+                        string: string,
+                        relativeTimestamp: relativeTimestamp,
+                        pinned: pinned,
+                        textColor: textColor
+                    )
                 }
             }
-            .frame(width: 140, height: 80)
+            .frame(width: 140, height: 52)
             .onTapGesture {
                 onTap()
             }
@@ -375,9 +499,11 @@ private struct ClipboardTileView<Extension: ApplicationSpecificKeyboardViewExten
                     Label("削除", systemImage: "trash")
                 }
             }
-            .accessibilityElement(children: .ignore)
+            .accessibilityElement(children: .contain)
             .accessibilityAddTraits(.isButton)
             .accessibilityLabel(Text(verbatim: accessibilityPreviewText))
+            .accessibilityValue(Text(verbatim: accessibilityTimestamp))
+            .accessibilityIdentifier("copaky_clipboard_text_tile")
             .accessibilityAction(named: pinned ? Text("固定解除") : Text("固定")) {
                 guard let index else {
                     return
@@ -395,11 +521,7 @@ private struct ClipboardTileView<Extension: ApplicationSpecificKeyboardViewExten
                 onDelete(index)
             }
 
-        if pinned {
-            tile.accessibilityValue(Text("固定済み"))
-        } else {
-            tile
-        }
+        tile
     }
 }
 
@@ -408,24 +530,42 @@ private struct TextTileContent: View {
     /// scalare con la lunghezza memorizzata (fino a 50k). L'input alla pressione usa `item.content` intero.
     static let displayPreviewLimit = 280
     let string: String
+    let relativeTimestamp: String
+    let pinned: Bool
     let textColor: Color
 
     var body: some View {
-        Text(String(string.prefix(Self.displayPreviewLimit)))
-            .font(.system(size: 12))
-            .foregroundStyle(textColor)
-            .lineLimit(5)
-            .multilineTextAlignment(.leading)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .padding(8)
-            .frame(height: 80)
+        VStack(alignment: .leading, spacing: 2) {
+            Text(String(string.prefix(Self.displayPreviewLimit)))
+                .font(.system(size: 13))
+                .foregroundStyle(textColor)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+            HStack(spacing: 4) {
+                Text(verbatim: relativeTimestamp)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                if pinned {
+                    Image(systemName: "pin.fill")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .frame(height: 52)
     }
 }
 
 private struct ClipboardSection<TileView: View, MenuView: View>: View {
     let title: LocalizedStringKey
-    let items: [ClipboardHistoryItem]
+    let items: [IndexedClipboardHistoryItem]
     let isPinned: Bool
+    let showsMenu: Bool
     let tileView: (ClipboardHistoryItem, Int?, Bool) -> TileView
     let menuView: () -> MenuView
 
@@ -434,7 +574,9 @@ private struct ClipboardSection<TileView: View, MenuView: View>: View {
             HStack {
                 Text(title)
                 Spacer()
-                menuView()
+                if showsMenu {
+                    menuView()
+                }
             }
             .font(.system(size: 13, weight: .medium))
             .foregroundStyle(.secondary)
@@ -442,9 +584,8 @@ private struct ClipboardSection<TileView: View, MenuView: View>: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 10) {
-                    ForEach(items.indices, id: \.self) { index in
-                        let item = items[index]
-                        tileView(item, index, isPinned)
+                    ForEach(items) { indexedItem in
+                        tileView(indexedItem.item, indexedItem.index, isPinned)
                     }
                 }
                 .padding(.horizontal, 12)

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-  echo "Usage: $0 [--fresh-install] [--seed k=v]... [--seed-clipboard en|ja|it] [--pbseed-bytes N] TEST" >&2
+  echo "Usage: $0 [--fresh-install] [--seed k=v]... [--seed-clipboard en|ja|it] [--pbseed-bytes N] [--bench-tsv PATH] TEST" >&2
 }
 
 die() {
@@ -12,7 +12,9 @@ die() {
 
 FRESH_INSTALL=0
 CLIPBOARD_LANG=""
+CLIPBOARD_INCLUDE_YESTERDAY=0
 PBSEED_BYTES=""
+BENCH_TSV=""
 TEST=""
 USER_SEEDS=()
 DELETE_KEYS=()
@@ -61,6 +63,11 @@ while [[ $# -gt 0 ]]; do
       PBSEED_BYTES="$2"
       shift 2
       ;;
+    --bench-tsv)
+      [[ $# -ge 2 ]] || die "--bench-tsv requires a readable TSV path"
+      BENCH_TSV="$2"
+      shift 2
+      ;;
     -h|--help)
       usage
       exit 0
@@ -77,7 +84,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ -n "$TEST" ]] || { usage; exit 2; }
-[[ "$TEST" != */* ]] || die "pass the bare CopakyCampaignTests method name"
+[[ "$TEST" != */* ]] || die "pass the bare UI-test method name"
+[[ -z "$BENCH_TSV" || -r "$BENCH_TSV" ]] || die "benchmark TSV is not readable: $BENCH_TSV"
 
 # Copaky [F-09]: test47's drag distances are calibrated on the SLOW (1.0x key width) threshold.
 # The product default is now medium (0.7x), so the test pins slow here — an explicit --seed
@@ -125,8 +133,23 @@ case "$TEST" in
       AUTO_CLIPBOARD_SEED=1
     fi
     ;;
+  test56_latinRowTwoHasNoTrailingDot)
+    SEEDS+=(keyboard_type_en=roman use_shift_key=true keep_deprecated_shift_key_behavior=false enable_latin_auto_capitalization=false)
+    ;;
+  test57_clipboardPanelCompactWithTimestamps)
+    SEEDS+=(keyboard_type_en=roman enable_clipboard_history_manager_tab=true use_system_paste_control=false display_tab_bar_button=true use_shift_key=true)
+    CLIPBOARD_INCLUDE_YESTERDAY=1
+    if [[ -z "$CLIPBOARD_LANG" ]]; then
+      CLIPBOARD_LANG=it
+      AUTO_CLIPBOARD_SEED=1
+    fi
+    ;;
   test58_numberRowDigitLongPressVariations)
     SEEDS+=(enable_qwerty_number_row=true enable_qwerty_number_row_hints=false hide_empty_candidate_bar_on_latin=false use_shift_key=true)
+    ;;
+  test60_benchDecoder)
+    # Accent gestures use the same deterministic ordering as test30; explicit user seeds still win.
+    SEEDS+=(enable_qwerty_number_row_hints=false)
     ;;
 esac
 if [[ "$TEST" == "test39_longPressNumbersKeyOpensClipboardHistory" ]]; then
@@ -142,7 +165,13 @@ SEEDS+=(${USER_SEEDS[@]+"${USER_SEEDS[@]}"})
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 UDID="${COPAKY_UDID:-E0552C62-FFDB-4DF6-9040-2734DB5B2458}"
 PROJECT="$REPO_DIR/azooKey.xcodeproj"
-TEST_ID="azooKeyUITests/CopakyCampaignTests/$TEST"
+TEST_CLASS="CopakyCampaignTests"
+case "$TEST" in
+  test59_keyboardGeometryBaseline|test60_benchDecoder)
+    TEST_CLASS="CopakyBenchmarkTests"
+    ;;
+esac
+TEST_ID="azooKeyUITests/$TEST_CLASS/$TEST"
 CONFIGURATION="${COPAKY_CONFIGURATION:-Debug}"
 DERIVED_DATA="${COPAKY_DERIVED_DATA_PATH:-$HOME/Library/Developer/Xcode/DerivedData/CopakySingleUITest}"
 APP_BUNDLE="com.pettipol.copaky"
@@ -173,6 +202,30 @@ XCB_ARGS=(
   -only-testing:"$TEST_ID"
   "${SIGNING_ARGS[@]}"
 )
+
+if [[ -n "$BENCH_TSV" ]]; then
+  BENCH_TSV_DIR="$(cd "$(dirname "$BENCH_TSV")" && pwd)"
+  BENCH_TSV="$BENCH_TSV_DIR/$(basename "$BENCH_TSV")"
+  BENCH_OUT="${TEST_RUNNER_COPAKY_BENCH_OUT:-${COPAKY_BENCH_OUT:-${TMPDIR:-/tmp}/copaky-bench-out}}"
+  mkdir -p "$BENCH_OUT"
+  export TEST_RUNNER_COPAKY_BENCH_TSV="$BENCH_TSV"
+  export TEST_RUNNER_COPAKY_BENCH_OUT="$BENCH_OUT"
+fi
+if [[ "$TEST_CLASS" == "CopakyBenchmarkTests" ]]; then
+  BENCH_OUT="${TEST_RUNNER_COPAKY_BENCH_OUT:-${COPAKY_BENCH_OUT:-${TMPDIR:-/tmp}/copaky-bench-out}}"
+  mkdir -p "$BENCH_OUT"
+  export TEST_RUNNER_COPAKY_BENCH_OUT="$BENCH_OUT"
+  export TEST_RUNNER_COPAKY_BENCH_COMMIT="$(git -C "$REPO_DIR" rev-parse --short HEAD 2>/dev/null || true)"
+  if [[ "${TEST_RUNNER_COPAKY_BENCH_KEYBOARD:-copaky}" == "copaky" ]]; then
+    BENCH_AUTOCORRECT=""
+    for pair in "${SEEDS[@]}"; do
+      if [[ "${pair%%=*}" == "enable_latin_autocorrect" ]]; then
+        BENCH_AUTOCORRECT="${pair#*=}"
+      fi
+    done
+    [[ -z "$BENCH_AUTOCORRECT" ]] || export TEST_RUNNER_COPAKY_BENCH_AUTOCORRECT="$BENCH_AUTOCORRECT"
+  fi
+fi
 
 # The requested UDID must be booted in a visible Simulator session.
 # Xcode 27 ships no Simulator.app: DeviceHub hosts the simulator windows. Override with COPAKY_SIMULATOR_APP.
@@ -231,19 +284,23 @@ fi
 
 if [[ -n "$CLIPBOARD_LANG" ]]; then
   # Clipboard tab/history seeding requires the App Group container created by a prior app launch.
+  CLIPBOARD_SEED_ARGS=(--lang "$CLIPBOARD_LANG" --udid "$UDID")
+  if [[ "$CLIPBOARD_INCLUDE_YESTERDAY" == 1 ]]; then
+    CLIPBOARD_SEED_ARGS+=(--include-yesterday)
+  fi
   if [[ "$AUTO_CLIPBOARD_SEED" == 1 ]]; then
-    if CLIPBOARD_SEED_OUTPUT="$(bash "$REPO_DIR/scripts/seed_sim_clipboard.sh" --lang "$CLIPBOARD_LANG" --udid "$UDID" 2>&1)"; then
+    if CLIPBOARD_SEED_OUTPUT="$(bash "$REPO_DIR/scripts/seed_sim_clipboard.sh" "${CLIPBOARD_SEED_ARGS[@]}" 2>&1)"; then
       printf '%s\n' "$CLIPBOARD_SEED_OUTPUT"
       CLIPBOARD_PRESEEDED=1
     elif [[ "$CLIPBOARD_SEED_OUTPUT" == *"App Group container 'group.com.pettipol.copaky' not found"* ]]; then
       printf '%s\n' "$CLIPBOARD_SEED_OUTPUT" >&2
-      echo "warning: test55 App Group prerequisite unavailable; the UI test will apply its explicit skip gate" >&2
+      echo "warning: Clipboard App Group prerequisite unavailable; the UI test will apply its explicit skip gate" >&2
     else
       printf '%s\n' "$CLIPBOARD_SEED_OUTPUT" >&2
-      die "test55 clipboard seeding failed for a reason other than the allowed missing-App-Group prerequisite"
+      die "clipboard seeding failed for a reason other than the allowed missing-App-Group prerequisite"
     fi
   else
-    bash "$REPO_DIR/scripts/seed_sim_clipboard.sh" --lang "$CLIPBOARD_LANG" --udid "$UDID"
+    bash "$REPO_DIR/scripts/seed_sim_clipboard.sh" "${CLIPBOARD_SEED_ARGS[@]}"
     CLIPBOARD_PRESEEDED=1
   fi
 fi
@@ -288,9 +345,13 @@ fi
 
 unset TEST_RUNNER_COPAKY_PASTEBOARD_PRESEEDED || true
 unset TEST_RUNNER_COPAKY_CLIPBOARD_PRESEEDED || true
+unset TEST_RUNNER_COPAKY_CLIPBOARD_YESTERDAY_PRESEEDED || true
 if [[ "$CLIPBOARD_PRESEEDED" == 1 ]]; then
   # Once the real tab/history seed succeeded, a missing Clipboard tab is a regression, not a skip.
   export TEST_RUNNER_COPAKY_CLIPBOARD_PRESEEDED=1
+  if [[ "$CLIPBOARD_INCLUDE_YESTERDAY" == 1 ]]; then
+    export TEST_RUNNER_COPAKY_CLIPBOARD_YESTERDAY_PRESEEDED=1
+  fi
 fi
 if [[ -n "$PBSEED_BYTES" ]]; then
   # Seed simulator-wide pasteboard; TEST_RUNNER_ forwards provenance into XCUITest.

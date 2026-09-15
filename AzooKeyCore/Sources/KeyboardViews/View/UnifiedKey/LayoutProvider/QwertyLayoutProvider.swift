@@ -451,24 +451,6 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
             let variations = [digit] + (accent?.variations ?? [])
             return (.init(x: x, y: 0), QwertyGeneralKeyModel(labelType: .textWithUpperHint(t, digit), pressActions: { _ in [.input(t)] }, longPressActions: { _ in .none }, variations: variations.map(v), direction: direction, showsTapBubble: true, role: .normal))
         }
-        func dotKey() -> any UnifiedKeyModelProtocol<Extension> {
-            QwertyGeneralKeyModel(
-                labelType: .text("."),
-                pressActions: { _ in [.input(".")] },
-                longPressActions: { _ in .none },
-                variations: [
-                    .init(label: .text("."), actions: [.input(".")]),
-                    .init(label: .text(","), actions: [.input(",")]),
-                    .init(label: .text("!"), actions: [.input("!")]),
-                    .init(label: .text("?"), actions: [.input("?")]),
-                    .init(label: .text("'"), actions: [.input("'")]),
-                    .init(label: .text("\""), actions: [.input("\"")]),
-                ],
-                direction: .left,
-                showsTapBubble: true,
-                role: .normal
-            )
-        }
         var dict: [UnifiedPositionSpecifier: any UnifiedKeyModelProtocol<Extension>] = [:]
         // Row 0
         for (i, c) in ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"].enumerated() {
@@ -480,12 +462,11 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
         let shiftBehavior = shiftBehaviorPreference()
         switch shiftBehavior {
         case .leftbottom:
-            // No shift on row1; place core letters and dot key at end
+            // Apple-like second row: nine letters centered by half a key, with no trailing period.
             for (i, c) in core {
-                let (pos, mdl) = accentKey(Double(i), 1, c)
+                let (pos, mdl) = accentKey(Double(i) + 0.5, 1, c)
                 dict[pos] = mdl
             }
-            dict[.init(x: 9, y: 1)] = dotKey()
         case .left:
             dict[.init(x: 0, y: 1)] = QwertyShiftKeyModel<Extension>()
             for (i, c) in core {

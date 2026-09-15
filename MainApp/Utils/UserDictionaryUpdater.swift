@@ -34,6 +34,15 @@ struct UserDictionaryUpdater {
         self.denylist = denylist
     }
 
+    static func filteredStoredWord(_ word: String, denylist: Set<String>) -> String? {
+        // Ignore VS16 only while matching the denylist; persist the source spelling unchanged.
+        let denylistCheckTarget = String(word.unicodeScalars.filter { $0.value != 0xFE0F })
+        guard denylistCheckTarget.allSatisfy({ !denylist.contains(String($0)) }) else {
+            return nil
+        }
+        return word
+    }
+
     func loadUserDictInfo() -> (paths: [String], useradds: [UserDictionaryData], hotfixDictionary: [HotfixDictionaryV1.Entry]) {
 
         // データファイル名
@@ -146,10 +155,7 @@ struct UserDictionaryUpdater {
                 }
                 let ruby = items[0]
                 let rawWord = items[1]
-                // variation selector を除去
-                let normalizedWord = String(rawWord.unicodeScalars.filter { $0.value != 0xFE0F })
-                // denylist フィルタ
-                guard normalizedWord.allSatisfy({ !self.denylist.contains(String($0)) }) else {
+                guard let storedWord = Self.filteredStoredWord(rawWord, denylist: self.denylist) else {
                     continue
                 }
 
@@ -158,7 +164,7 @@ struct UserDictionaryUpdater {
                 let mid = Int(items[4]) ?? 0
                 let value = PValue(items[5]) ?? -30.0
                 let entry = DicdataElement(
-                    word: normalizedWord,
+                    word: storedWord,
                     ruby: ruby,
                     lcid: lcid,
                     rcid: rcid,
@@ -166,7 +172,7 @@ struct UserDictionaryUpdater {
                     value: value
                 )
                 // templateが含まれる場合ショートカット扱いする
-                let isShortcut = Candidate.parseTemplate(normalizedWord) != normalizedWord
+                let isShortcut = Candidate.parseTemplate(storedWord) != storedWord
                 if isShortcut {
                     shortcutEntries.append(entry)
                 } else {

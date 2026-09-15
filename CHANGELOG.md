@@ -8,6 +8,29 @@ All notable changes to **Copaky** (an independent project based on azooKey). For
 
 ## [Unreleased] — pre-release (v0.1)
 
+- **Privacy-manifest coverage for the double-space shortcut** (H-01): the keyboard extension's privacy
+  manifest now declares the required-reason API category SystemBootTime (reason 35F9.1) for the
+  `ProcessInfo.systemUptime` used by the double-space shortcut.
+- **Redesigned clipboard-history panel** (G-09): compact 52-pt rows show the item text on two lines, a
+  relative timestamp («2 min ago»), a pin glyph on pinned entries, day groups Today / Yesterday / Earlier,
+  and a 40-pt icon toolbar (back, delete, return).
+- **QWERTY bottom row without the trailing period** (G-40): the «.» key at the end of the second row
+  (bottom-left Shift layout) is removed and the nine letters are centered like the system keyboard;
+  «, ! ? ' "» stay on the symbols tab.
+- **Three fixes ported by hand from azooKey upstream** (H-22): a tap released right at the long-press
+  threshold no longer loses the character (upstream 111e78d7); deleting a user-dictionary entry from the
+  context menu is now saved like the swipe delete (4b5417bc); emoji with a presentation selector (U+FE0F)
+  are stored unchanged in the user dictionary while the denylist check still ignores the selector
+  (8acebd79).
+- **Fail-soft App Group and guarded KVC lookup** (H-21/H-23): the App Group UserDefaults suite no longer
+  force-unwraps (falls back to standard defaults with a logged fault); the private KVC lookup of the active
+  keyboard identifier is guarded.
+- **Toolchain moved to Xcode 27** (H-18/Q-23): built with Xcode 27.0 (SDK iOS 27); two upstream files
+  adjusted to compile under the iOS 27 SDK (StrokeAndFill, EditingGridFitCustardView); minimum iOS raised
+  from 17.6 to 18.0 (no iOS 17.x/18.x simulator runtime is available to verify older releases).
+- **Test harness for Xcode 27**: `run_ui_test.sh` works without Simulator.app by detaching the simulated
+  hardware keyboard through `scripts/sim_hw_keyboard.m`; new `run_device_test.sh` for real-device runs; new
+  UI tests test56/test57/test61 and unit tests for the dictionary fixes.
 - **Clipboard-history persistence hardening** (G-38): an oversized history file is now preserved
   instead of being mistaken for an empty history and overwritten; saves prune the oldest unpinned
   entries to fit the 4 MiB file budget (kept small on purpose: the keyboard extension runs under a
