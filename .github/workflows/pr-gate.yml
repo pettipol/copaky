@@ -38,9 +38,10 @@ jobs:
     name: gitleaks (secret scan)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
+          persist-credentials: false
       # gitleaks/gitleaks-action, tag v2.3.9 pinned to its commit SHA (resolved via
       # `gh api repos/gitleaks/gitleaks-action/git/ref/tags/v2.3.9`).
       # No GITLEAKS_LICENSE needed: pettipol/copaky is a personal-account repo, not an
@@ -53,7 +54,9 @@ jobs:
     name: zizmor (workflow security)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
       # zizmorcore/zizmor-action, tag v0.6.3 pinned to its commit SHA (resolved via
       # `gh api repos/zizmorcore/zizmor-action/git/ref/tags/v0.6.3`).
       # advanced-security is left OFF on purpose: its SARIF upload to the Security tab needs a
@@ -70,7 +73,9 @@ jobs:
     name: guard — no pull_request_target
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
       - name: fail if pull_request_target is used as a trigger anywhere in workflows
         run: |
           # Anchored on the YAML trigger key itself ("<indent>pull_request_target:"), not on

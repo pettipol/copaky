@@ -5,6 +5,9 @@ on:
   # branch (heaviest cost). Replaced by local scripts/ci-local.sh. (was: push + pull_request)
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Xcode Build
@@ -12,17 +15,18 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           submodules: true
+          persist-credentials: false
 
       - name: Set up Xcode
-        uses: maxim-lobanov/setup-xcode@v1
+        uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1
         with:
           xcode-version: "latest-stable"
 
       - name: Cache DerivedData
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/Library/Developer/Xcode/DerivedData
           key: ${{ runner.os }}-derived-data-${{ hashFiles('**/project.pbxproj') }}
