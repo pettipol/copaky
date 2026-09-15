@@ -782,7 +782,7 @@
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = MainApp/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -816,7 +816,7 @@
 				"GCC_OPTIMIZATION_LEVEL[arch=*]" = s;
 				INFOPLIST_FILE = MainApp/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -940,7 +940,7 @@
 				GCC_OPTIMIZATION_LEVEL = fast;
 				GCC_WARN_UNUSED_PARAMETER = YES;
 				INFOPLIST_FILE = Keyboard/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -973,7 +973,7 @@
 				GCC_OPTIMIZATION_LEVEL = fast;
 				GCC_WARN_UNUSED_PARAMETER = YES;
 				INFOPLIST_FILE = Keyboard/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
