@@ -38,7 +38,7 @@ jobs:
     name: gitleaks (secret scan)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       # gitleaks/gitleaks-action, tag v2.3.9 pinned to its commit SHA (resolved via
@@ -53,7 +53,7 @@ jobs:
     name: zizmor (workflow security)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # zizmorcore/zizmor-action, tag v0.6.3 pinned to its commit SHA (resolved via
       # `gh api repos/zizmorcore/zizmor-action/git/ref/tags/v0.6.3`).
       # advanced-security is left OFF on purpose: its SARIF upload to the Security tab needs a
@@ -70,7 +70,7 @@ jobs:
     name: guard — no pull_request_target
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: fail if pull_request_target is used as a trigger anywhere in workflows
         run: |
           # Anchored on the YAML trigger key itself ("<indent>pull_request_target:"), not on
