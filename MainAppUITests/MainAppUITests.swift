@@ -722,20 +722,29 @@ class CopakyCampaignTests: XCTestCase {
         openSettingsTab()
         shot("03-settings-tab")
 
-        // Copaky [F02]: "Cronologia appunti" only appears in the short "Essenziali" list when
-        // "Mostra tutte le impostazioni" is OFF — with it left ON (e.g. state carried over from an
-        // earlier test) the row can be genuinely absent instead of merely scrolled out of view.
-        // Copaky [F02]: 「クロノロジア appunti」は「すべての設定を表示」がOFFの短い「Essenziali」
-        // リストにのみ表示される。ONのままだと（前のテストの状態が残っている場合など）行が単に
-        // スクロール外ではなく本当に存在しないことがある。
-        let showAll = mainApp.switches.matching(NSPredicate(format: "label IN %@", L.showAllSettings)).firstMatch
-        if showAll.exists, (showAll.value as? String) == "1" {
-            var attempts = 0
-            while (showAll.value as? String) != "0", attempts < 3 {
-                showAll.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
-                RunLoop.current.run(until: Date().addingTimeInterval(0.8))
-                attempts += 1
-            }
+        // Copaky [F02]: "Cronologia appunti" is present in BOTH lists (SettingTab.swift:107 and
+        // :175) — but not at the same position. In the short "Essenziali" list it sits near the
+        // top; in the full list (shown when "Mostra tutte le impostazioni" is ON) it is much
+        // further down, in the "バー" section, well beyond what a search without scrolling can
+        // reach. So leaving the switch ON (e.g. state carried over from an earlier test) does not
+        // make the row absent — it makes it unreachable without scrolling first.
+        // Copaky [F02]: 「Cronologia appunti」は両方のリスト（SettingTab.swift:107 と :175）に
+        // 存在するが、位置が異なる。短い「Essenziali」リストでは上のほうにあり、「すべての設定を
+        // 表示」がONの完全なリストでは「バー」セクションのずっと下、スクロールなしの検索では
+        // 届かない位置にある。つまりスイッチをONのままにしても行が消えるわけではなく、
+        // スクロールしないと届かなくなるだけである。
+        func showAllSwitch() -> XCUIElement? {
+            let byLabel = mainApp.switches.matching(NSPredicate(format: "label IN %@", L.showAllSettings)).firstMatch
+            if byLabel.waitForExistence(timeout: 2) { return byLabel }
+            // SwiftUI may expose the Toggle's cell instead of a bare Switch: fall back to any element with the label
+            let cell = mainApp.descendants(matching: .any).matching(NSPredicate(format: "label IN %@", L.showAllSettings)).firstMatch
+            return cell.waitForExistence(timeout: 2) ? cell : nil
+        }
+        var attempts = 0
+        while attempts < 3, let showAll = showAllSwitch(), showAll.exists, (showAll.value as? String) == "1" {
+            showAll.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+            attempts += 1
         }
         shot("03-settings-tab-short")
 
@@ -4416,8 +4425,24 @@ class CopakyCampaignTests: XCTestCase {
         }
         let settingsTab = mainApp.descendants(matching: .any)
             .matching(NSPredicate(format: "identifier == %@", "main-tab-settings")).firstMatch
-        guard settingsTab.waitForExistence(timeout: 8),
-              firstMatch(in: mainApp, labels: L.showAllSettings, timeout: 8) != nil else {
+        // [26th session: F-harness] The "Show all settings" switch sits below the fold in the short
+        // settings list and never entered the accessibility tree without scrolling (26th-session UI dump), so we
+        // verify the route selected the Settings tab instead — its own tab or nav bar, not that switch.
+        // 「すべての設定を表示」は短い設定リストでは折り返し線の下にあり、スクロールしないとアクセシビリティツリーに現れない（第26セッションのUIダンプで確認）。
+        // そのスイッチではなく、Settingsタブへの遷移自体（タブ選択またはナビゲーションバー）を検証する。
+        let settingsTitles = ["Impostazioni", "Settings", "設定"]
+        let settingsNavBar = mainApp.navigationBars
+            .matching(NSPredicate(format: "identifier IN %@ OR label IN %@", settingsTitles, settingsTitles))
+        let settingsRouteDeadline = Date().addingTimeInterval(8)
+        var settingsRouteSelected = false
+        repeat {
+            if (settingsTab.exists && settingsTab.isSelected) || settingsNavBar.firstMatch.exists {
+                settingsRouteSelected = true
+                break
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+        } while Date() < settingsRouteDeadline
+        guard settingsRouteSelected else {
             dump(mainApp, "54-settings-route-missing")
             shot("54-settings-route-missing")
             XCTFail("copaky://settings opened the app without selecting the Settings tab")
