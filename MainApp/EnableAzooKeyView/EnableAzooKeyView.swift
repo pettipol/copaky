@@ -195,7 +195,18 @@ struct EnableAzooKeyView: View {
         let currentKeyboardIdentifier = NSArray(array: UITextInputMode.activeInputModes)
             .filtered(using: NSPredicate(format: "isDisplayed = YES"))
             .first
-            .flatMap {($0 as? UITextInputMode)?.value(forKey: "identifier") as? String}
+            .flatMap { mode -> String? in
+                guard let mode = mode as? UITextInputMode else {
+                    return nil
+                }
+                // Copaky [H-23]: private KVC key inherited from upstream; guarded so a missing accessor
+                // degrades to "not detected" instead of crashing.
+                // Copaky [H-23]: 上流由来の非公開KVCキー。アクセサが無ければクラッシュせず「未検出」に留める。
+                guard mode.responds(to: Selector(("identifier"))) else {
+                    return nil
+                }
+                return mode.value(forKey: "identifier") as? String
+            }
         return currentKeyboardIdentifier?.hasPrefix(SharedStore.bundleName) == true
     }
 }

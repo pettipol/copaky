@@ -12,7 +12,15 @@ import enum AzooKeyUtils.SharedStore
 
 extension SharedStore {
     @MainActor static func checkKeyboardActivation() -> Bool {
-        let keyboards = UITextInputMode.activeInputModes.compactMap {$0.value(forKey: "identifier") as? String}
+        // Copaky [H-23]: private KVC key inherited from upstream; guarded so a missing accessor
+        // degrades to "not detected" instead of crashing.
+        // Copaky [H-23]: 上流由来の非公開KVCキー。アクセサが無ければクラッシュせず「未検出」に留める。
+        let keyboards = UITextInputMode.activeInputModes.compactMap { mode -> String? in
+            guard mode.responds(to: Selector(("identifier"))) else {
+                return nil
+            }
+            return mode.value(forKey: "identifier") as? String
+        }
         return keyboards.contains { $0.hasPrefix(SharedStore.bundleName) }
     }
 }

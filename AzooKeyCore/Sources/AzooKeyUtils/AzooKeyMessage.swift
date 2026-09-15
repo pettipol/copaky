@@ -49,7 +49,9 @@ public enum MessageIdentifier: String, CaseIterable, MessageIdentifierProtocol {
 public enum AzooKeyMessageProvider: ApplicationSpecificKeyboardViewMessageProvider {
     public typealias MessageID = MessageIdentifier
 
-    public static var userDefaults: UserDefaults { UserDefaults(suiteName: SharedStore.appGroupKey)! }
+    // Copaky [H-21]: never crash on a lost App Group; fall back via SharedStore.groupUserDefaults.
+    // Copaky [H-21]: App Group 喪失時にクラッシュさせない — SharedStore.groupUserDefaults 経由でフォールバックする。
+    public static var userDefaults: UserDefaults { SharedStore.groupUserDefaults(suiteName: SharedStore.appGroupKey) }
 
     public static var messages: [MessageData<MessageIdentifier>] {
         [
@@ -109,6 +111,8 @@ public enum AzooKeyMessageProvider: ApplicationSpecificKeyboardViewMessageProvid
 
 public extension MessageManager where ID == MessageIdentifier {
     @MainActor init() {
-        self.init(necessaryMessages: AzooKeyMessageProvider.messages, userDefaults: UserDefaults(suiteName: SharedStore.appGroupKey)!)
+        // Copaky [H-21]: never crash on a lost App Group; fall back via SharedStore.groupUserDefaults.
+        // Copaky [H-21]: App Group 喪失時にクラッシュさせない — SharedStore.groupUserDefaults 経由でフォールバックする。
+        self.init(necessaryMessages: AzooKeyMessageProvider.messages, userDefaults: SharedStore.groupUserDefaults(suiteName: SharedStore.appGroupKey))
     }
 }

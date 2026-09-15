@@ -182,6 +182,19 @@ open -a "$SIM_APP" 2>/dev/null || open -a DeviceHub 2>/dev/null || echo "⚠ no 
 xcrun simctl boot "$UDID" 2>/dev/null || true
 xcrun simctl bootstatus "$UDID" -b
 
+# Without Simulator.app nobody detaches the simulated hardware keyboard, and iOS parks the software
+# keyboard below the screen (only the accessory bar shows, no globe key). Detach it explicitly through
+# the SimulatorKit private API wrapped by scripts/sim_hw_keyboard.m (compiled on first use).
+# Simulator.app が無いと仮想ハードウェアキーボードが接続されたままになり、ソフトウェアキーボードが画面外に退避する。
+# scripts/sim_hw_keyboard.m（初回にコンパイル）で明示的に切断する。
+HWKB_BIN="${COPAKY_HWKB_BIN:-$HOME/Library/Developer/Xcode/DerivedData/CopakySingleUITest/sim_hw_keyboard}"
+if [[ ! -x "$HWKB_BIN" || "$REPO_DIR/scripts/sim_hw_keyboard.m" -nt "$HWKB_BIN" ]]; then
+  mkdir -p "$(dirname "$HWKB_BIN")"
+  clang -fobjc-arc -framework Foundation "$REPO_DIR/scripts/sim_hw_keyboard.m" -o "$HWKB_BIN" \
+    || echo "⚠ could not build sim_hw_keyboard (hardware keyboard may stay attached)" >&2
+fi
+[[ -x "$HWKB_BIN" ]] && "$HWKB_BIN" "$UDID" off
+
 # Field tests need the local fixture; iOS 26 ignores Safari's -u launch argument.
 bash "$REPO_DIR/scripts/serve_test_page.sh" --daemon
 

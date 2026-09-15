@@ -8,11 +8,26 @@
 
 import Foundation
 import SwiftUtils
+import os
+
+private let sharedStoreLog = OSLog(subsystem: "com.pettipol.copaky", category: "SharedStore")
 
 public enum SharedStore {
-    @MainActor public static let userDefaults = UserDefaults(suiteName: Self.appGroupKey)!
+    @MainActor public static let userDefaults = Self.groupUserDefaults(suiteName: Self.appGroupKey)
     public static let bundleName = "com.pettipol.copaky.keyboard"
     public static let appGroupKey = "group.com.pettipol.copaky"
+
+    /// Copaky [H-21]: the App Group suite must never crash the extension — a lost entitlement or
+    /// provisioning-profile mismatch falls back to `.standard` and is reported via os_log.
+    /// Copaky [H-21]: App Group はエクステンションをクラッシュさせてはならない — 権限や
+    /// プロビジョニングプロファイルの不整合時は `.standard` にフォールバックし、os_log で報告する。
+    public static func groupUserDefaults(suiteName: String) -> UserDefaults {
+        if let defaults = UserDefaults(suiteName: suiteName) {
+            return defaults
+        }
+        os_log(.fault, log: sharedStoreLog, "[H-21] App Group UserDefaults unavailable for suite %{public}@; falling back to standard defaults", suiteName)
+        return .standard
+    }
 
     private static var appVersionString: String? {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
