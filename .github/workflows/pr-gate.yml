@@ -1,0 +1,83 @@
+# Hosted PR gate — secret scanning + workflow-security static analysis.
+#
+# Why Linux-only: this is an iOS/UIKit app, so it cannot build here — the build/test gate stays
+# local-first (`scripts/ci-local.sh`, see CONTRIBUTING.md) and hosted macOS CI is a separate,
+# opt-in decision (see docs/collaboration/proposta_github/README.md, item "week 1"). What CAN
+# run cheaply and safely on every fork PR is secret scanning and Actions-workflow auditing —
+# both are Linux jobs, cost nothing extra on a public repo, and are exactly the checks that must
+# run on untrusted fork code before a human ever looks at it.
+#
+# Why no secrets are needed: with the exception of the default `GITHUB_TOKEN`, GitHub does not
+# pass repository secrets to workflows triggered from a fork's pull request. This workflow is
+# built to work with that: it never reads a secret, so a malicious fork PR gains nothing by
+# tampering with it. Anything that *does* need a secret (TestFlight signing/upload) lives in a
+# separate workflow gated to `push` on `main`/tags, never on `pull_request`.
+#
+# Why `pull_request` and not `pull_request_target`: `pull_request_target` runs with the base
+# repo's permissions and secrets against the PR's (possibly hostile) code — GitHub's own docs
+# warn this "may lead to security vulnerabilities ... cache poisoning and granting unintended
+# access to write privileges or secrets". This workflow never uses it, and the last job below
+# fails the run if that string ever appears anywhere under .github/workflows.
+
+name: PR gate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-gate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gitleaks:
+    name: gitleaks (secret scan)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # gitleaks/gitleaks-action, tag v2.3.9 pinned to its commit SHA (resolved via
+      # `gh api repos/gitleaks/gitleaks-action/git/ref/tags/v2.3.9`).
+      # No GITLEAKS_LICENSE needed: pettipol/copaky is a personal-account repo, not an
+      # organization — the license requirement only applies to organization-owned repos.
+      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  zizmor:
+    name: zizmor (workflow security)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # zizmorcore/zizmor-action, tag v0.6.3 pinned to its commit SHA (resolved via
+      # `gh api repos/zizmorcore/zizmor-action/git/ref/tags/v0.6.3`).
+      # advanced-security is left OFF on purpose: its SARIF upload to the Security tab needs a
+      # `security-events: write` permission, which this workflow deliberately does not grant
+      # (top-level permissions stay `contents: read` for every job, fork PRs included) —
+      # annotations are enough for a PR check.
+      - uses: zizmorcore/zizmor-action@70fb788f84895a7701f5643d103d587e460b5c99 # v0.6.3
+        with:
+          inputs: .github/workflows
+          advanced-security: "false"
+          annotations: "true"
+
+  no-pull-request-target:
+    name: guard — no pull_request_target
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: fail if pull_request_target is used as a trigger anywhere in workflows
+        run: |
+          # Anchored on the YAML trigger key itself ("<indent>pull_request_target:"), not on
+          # the bare word — otherwise this guard would trip on its own name and on the
+          # explanatory comments above, which mention the trigger without declaring it.
+          if grep -R --include='*.yml' --include='*.yaml' -nE '^[[:space:]]*pull_request_target[[:space:]]*:' .github/workflows; then
+            echo "::error::pull_request_target trigger found in .github/workflows — see the header comment in pr-gate.yml for why this is forbidden."
+            exit 1
+          fi
+          echo "OK: no pull_request_target trigger found."

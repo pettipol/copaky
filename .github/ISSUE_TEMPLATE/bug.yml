@@ -1,0 +1,153 @@
+name: Bug report
+description: Something in Copaky isn't working as expected (バグ報告 / segnalazione di un bug)
+title: "bug: <short description>"
+labels: ["bug", "needs-triage"]
+body:
+  - type: checkboxes
+    id: existing-search
+    attributes:
+      label: Have you searched existing issues?
+      description: >
+        Please check the open and closed issues before filing a new one — it saves everyone time.
+        （既存の issue を検索しましたか？ / hai già cercato tra gli issue esistenti?）
+      options:
+        - label: I searched and did not find an existing issue about this.
+          required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug. 何が起きましたか？ / cosa è successo?
+      placeholder: "Example: the space key does not slide the cursor on the Italian QWERTY layout."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered steps, as exact as you can make them. 再現手順 / passi per riprodurlo.
+      placeholder: |
+        1. Open Notes
+        2. Switch to Copaky
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen instead? 期待した動作 / cosa ti aspettavi succedesse.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: iphone-model
+    attributes:
+      label: iPhone model
+      description: iPhone のモデル / modello di iPhone
+      options:
+        - iPhone 17 Pro Max
+        - iPhone 17 Pro
+        - iPhone 17
+        - iPhone Air
+        - iPhone 16 Pro Max
+        - iPhone 16 Pro
+        - iPhone 16 Plus
+        - iPhone 16
+        - iPhone 16e
+        - iPhone 15 Pro Max
+        - iPhone 15 Pro
+        - iPhone 15 Plus
+        - iPhone 15
+        - iPhone 14 Pro Max
+        - iPhone 14 Pro
+        - iPhone 14 Plus
+        - iPhone 14
+        - iPhone 13 Pro Max
+        - iPhone 13 Pro
+        - iPhone 13 mini
+        - iPhone 13
+        - other (say which, below)
+    validations:
+      required: true
+
+  - type: input
+    id: ios-version
+    attributes:
+      label: iOS version
+      description: Settings ▸ General ▸ About ▸ Software Version. iOS のバージョン / versione di iOS.
+      placeholder: "26.5"
+    validations:
+      required: true
+
+  - type: input
+    id: copaky-build
+    attributes:
+      label: Copaky build
+      description: >
+        Settings ▸ About in the Copaky app, or the TestFlight app's entry for Copaky.
+        Copaky のビルド番号 / build di Copaky.
+      placeholder: "0.1 (8) — Settings ▸ About / TestFlight"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: keyboard-language
+    attributes:
+      label: Keyboard language in use
+      description: 使用していたキーボードの言語 / lingua della tastiera in uso.
+      options:
+        - Japanese (flick)
+        - Japanese (romaji)
+        - English
+        - Italian
+        - other
+    validations:
+      required: false
+
+  - type: dropdown
+    id: full-access
+    attributes:
+      label: Full Access
+      description: >
+        Settings ▸ Keyboards ▸ Copaky ▸ Allow Full Access.
+        フルアクセスの設定 / Accesso completo attivo?
+      options:
+        - "on"
+        - "off"
+        - unsure
+    validations:
+      required: false
+
+  - type: dropdown
+    id: host-app
+    attributes:
+      label: App you were typing in
+      description: どのアプリで入力していましたか？ / in quale app stavi scrivendo?
+      options:
+        - Notes
+        - Safari
+        - Messages
+        - Mail
+        - other (say which, below)
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Anything else — screenshots, related issues, when it started. その他の情報 / altro contesto utile.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: can-help
+    attributes:
+      label: Follow-up
+      options:
+        - label: I can help reproduce this or verify a fix (optional).
+          required: false

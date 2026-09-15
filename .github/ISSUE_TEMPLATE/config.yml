@@ -1,5 +1,14 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Discussions (雑談・質問)
-    url: https://github.com/pettipol/copaky/discussions
-    about: General questions and discussion that don't fit a bug report or feature request.
+  - name: Feature ideas (機能のアイデア / idee per funzionalità)
+    url: https://github.com/pettipol/copaky/discussions/categories/ideas
+    about: Propose a feature and vote on others' ideas — this is not a bug report.
+  - name: Questions (質問 / domande)
+    url: https://github.com/pettipol/copaky/discussions/categories/q-a
+    about: Ask anything about using or building Copaky.
+  - name: Security vulnerability (脆弱性 / vulnerabilità di sicurezza)
+    url: https://github.com/pettipol/copaky/security/advisories/new
+    about: Please do NOT open a public issue for a security problem — report it privately here (see SECURITY.md).
+  - name: Beta access (ベータ版への参加 / accesso alla beta)
+    url: https://github.com/pettipol/copaky/discussions/categories/q-a
+    about: The beta is internal-only for now — ask in Q&A; a public TestFlight link will be announced here when it opens.

@@ -1,0 +1,96 @@
+name: TestFlight beta feedback
+description: General feedback from using a TestFlight build (not a specific bug) — TestFlight フィードバック / feedback da tester TestFlight
+title: "beta: <one-line summary>"
+labels: ["testflight-feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: >
+        Thank you for testing Copaky. This form is for general impressions — for a specific broken
+        behavior, please use the **Bug report** form instead, it collects the fields needed to
+        reproduce it. TestFlight を試していただきありがとうございます。 / grazie per aver provato
+        Copaky in beta.
+
+  - type: input
+    id: copaky-build
+    attributes:
+      label: Copaky build
+      description: TestFlight app ▸ Copaky, or Settings ▸ About in the app.
+      placeholder: "0.1 (8)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: iphone-model
+    attributes:
+      label: iPhone model
+      options:
+        - iPhone 17 Pro Max
+        - iPhone 17 Pro
+        - iPhone 17
+        - iPhone Air
+        - iPhone 16 Pro Max
+        - iPhone 16 Pro
+        - iPhone 16 Plus
+        - iPhone 16
+        - iPhone 16e
+        - iPhone 15 Pro Max
+        - iPhone 15 Pro
+        - iPhone 15 Plus
+        - iPhone 15
+        - iPhone 14 Pro Max
+        - iPhone 14 Pro
+        - iPhone 14 Plus
+        - iPhone 14
+        - iPhone 13 Pro Max
+        - iPhone 13 Pro
+        - iPhone 13 mini
+        - iPhone 13
+        - other (say which, below)
+    validations:
+      required: true
+
+  - type: input
+    id: ios-version
+    attributes:
+      label: iOS version
+      placeholder: "26.5"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: keyboard-language
+    attributes:
+      label: Keyboard language you mostly tested
+      options:
+        - Japanese (flick)
+        - Japanese (romaji)
+        - English
+        - Italian
+        - a mix of several
+    validations:
+      required: false
+
+  - type: textarea
+    id: worked
+    attributes:
+      label: What worked well?
+      description: 良かった点 / cosa ha funzionato bene?
+    validations:
+      required: false
+
+  - type: textarea
+    id: did-not-work
+    attributes:
+      label: What did not work, or felt off?
+      description: 気になった点 / cosa non ha funzionato o ti è sembrato strano?
+    validations:
+      required: false
+
+  - type: textarea
+    id: one-improvement
+    attributes:
+      label: If you could change one thing, what would it be?
+      description: 一つだけ改善するなら？ / se potessi cambiare una sola cosa?
+    validations:
+      required: false

@@ -1,0 +1,162 @@
+name: Crash report
+description: Copaky (the app or the keyboard) crashed or force-closed (クラッシュ報告 / segnalazione di un crash)
+title: "bug: crash — <short description>"
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: >
+        If you are a TestFlight tester, you can also send a crash report directly from the
+        **TestFlight app** (open Copaky's entry ▸ Send Beta Feedback) — that report reaches the
+        maintainer through App Store Connect and does not need an issue here. Use this form if you
+        prefer to describe it in your own words, or if it is not a TestFlight build.
+        TestFlight アプリからもクラッシュ報告を送信できます。 / puoi inviare il report anche
+        dall'app TestFlight.
+
+  - type: checkboxes
+    id: existing-search
+    attributes:
+      label: Have you searched existing issues?
+      description: 既存の issue を検索しましたか？ / hai già cercato tra gli issue esistenti?
+      options:
+        - label: I searched and did not find an existing issue about this crash.
+          required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened, and what were you doing?
+      description: >
+        Describe the crash and what you were doing right before it (typing, switching keyboard,
+        opening Settings...). 何をしていてクラッシュしましたか？ / cosa stavi facendo quando è avvenuto?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce (if you found a reliable trigger)
+      description: 再現手順（分かれば） / passi per riprodurlo, se li conosci.
+    validations:
+      required: false
+
+  - type: textarea
+    id: crash-log
+    attributes:
+      label: Crash log (if you have one)
+      description: >
+        On device: Settings ▸ Privacy & Security ▸ Analytics & Improvements ▸ Analytics Data, look
+        for an entry starting with `Copaky` or `MainApp` close to the time of the crash, and paste
+        its text (or attach it as a file below). クラッシュログ / registro di crash.
+      render: text
+    validations:
+      required: false
+
+  - type: dropdown
+    id: iphone-model
+    attributes:
+      label: iPhone model
+      description: iPhone のモデル / modello di iPhone
+      options:
+        - iPhone 17 Pro Max
+        - iPhone 17 Pro
+        - iPhone 17
+        - iPhone Air
+        - iPhone 16 Pro Max
+        - iPhone 16 Pro
+        - iPhone 16 Plus
+        - iPhone 16
+        - iPhone 16e
+        - iPhone 15 Pro Max
+        - iPhone 15 Pro
+        - iPhone 15 Plus
+        - iPhone 15
+        - iPhone 14 Pro Max
+        - iPhone 14 Pro
+        - iPhone 14 Plus
+        - iPhone 14
+        - iPhone 13 Pro Max
+        - iPhone 13 Pro
+        - iPhone 13 mini
+        - iPhone 13
+        - other (say which, below)
+    validations:
+      required: true
+
+  - type: input
+    id: ios-version
+    attributes:
+      label: iOS version
+      description: Settings ▸ General ▸ About ▸ Software Version. iOS のバージョン / versione di iOS.
+      placeholder: "26.5"
+    validations:
+      required: true
+
+  - type: input
+    id: copaky-build
+    attributes:
+      label: Copaky build
+      description: >
+        Settings ▸ About in the Copaky app, or the TestFlight app's entry for Copaky.
+        Copaky のビルド番号 / build di Copaky.
+      placeholder: "0.1 (8) — Settings ▸ About / TestFlight"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: keyboard-language
+    attributes:
+      label: Keyboard language in use
+      description: 使用していたキーボードの言語 / lingua della tastiera in uso.
+      options:
+        - Japanese (flick)
+        - Japanese (romaji)
+        - English
+        - Italian
+        - other
+    validations:
+      required: false
+
+  - type: dropdown
+    id: full-access
+    attributes:
+      label: Full Access
+      description: >
+        Settings ▸ Keyboards ▸ Copaky ▸ Allow Full Access.
+        フルアクセスの設定 / Accesso completo attivo?
+      options:
+        - "on"
+        - "off"
+        - unsure
+    validations:
+      required: false
+
+  - type: dropdown
+    id: host-app
+    attributes:
+      label: App you were typing in
+      description: どのアプリで入力していましたか？ / in quale app stavi scrivendo?
+      options:
+        - Notes
+        - Safari
+        - Messages
+        - Mail
+        - other (say which, below)
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Anything else that might help. その他の情報 / altro contesto utile.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: can-help
+    attributes:
+      label: Follow-up
+      options:
+        - label: I can help reproduce this or verify a fix (optional).
+          required: false

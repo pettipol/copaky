@@ -75,12 +75,24 @@ The workflows in `.github/workflows/` are intentionally set to **`workflow_dispa
 avoid burning Actions minutes on macOS runners. Maintainers run them from the Actions tab when needed
 (e.g. a full matrix or CodeQL pass before a release). Dependabot runs **monthly**.
 
+### The PR gate (runs automatically)
+
+Unlike the manual workflows above, `.github/workflows/pr-gate.yml` runs on every pull request and
+every push to `main` — it is a Linux job (free even on `macos-latest`-style minute accounting,
+since it never touches a macOS runner) that scans for committed secrets
+([gitleaks](https://github.com/gitleaks/gitleaks)) and audits the Actions workflows themselves for
+unsafe patterns ([zizmor](https://docs.zizmor.sh/)). It needs no secrets and grants none to fork
+PRs, by design. A red PR gate blocks merge; it does not replace `scripts/ci-local.sh`, which stays
+the build/test source of truth.
+
 ## Conventions
 
 - Match the style of the surrounding code.
 - Keep the **keyboard extension offline** — no network APIs in `Keyboard/` or shared extension code
   (the offline invariant; `scripts/audit_network_calls.py` helps check it). This invariant backs the
   App Store privacy label ("Data Not Collected") and is non-negotiable.
+  The full list of structural privacy invariants — what they mean, how each is checked, and what
+  a PR touching one must state — is in [docs/PRIVACY_INVARIANTS.md](docs/PRIVACY_INVARIANTS.md).
 - Keep clipboard capture **user-initiated** (never read the pasteboard value without explicit intent).
 - User-facing **strings are trilingual**: Japanese (the catalog's source language), English and Italian in
   `Resources/Localizable.xcstrings` — a new string needs all three. Repository **documents stay bilingual**
@@ -89,6 +101,14 @@ avoid burning Actions minutes on macOS runners. Maintainers run them from the Ac
   *functional label* (enter, space, next candidate, tab "back") whose payload is a catalog key; `.text(_:)`
   marks a character that is inserted as-is and must never be localized.
 - Preserve azooKey and third-party **credits** (see [CREDITS.md](./CREDITS.md)).
+- Issues and pull requests use a small label set — `bug`, `needs-triage`, `needs-repro`,
+  `good first issue`, `help wanted`, `privacy-sensitive`, `area:*`, `lang:*`,
+  `testflight-feedback`, `regression`. `good first issue` and `help wanted` are the ones worth
+  filtering on if you are looking for where to start.
+- Bug reports, crash reports and TestFlight feedback each have a dedicated issue form under
+  `.github/ISSUE_TEMPLATE/` — please use them instead of a blank issue (blank issues are disabled;
+  feature ideas and questions go to [Discussions](https://github.com/pettipol/copaky/discussions)
+  instead of an issue).
 
 ## Known test debt
 
