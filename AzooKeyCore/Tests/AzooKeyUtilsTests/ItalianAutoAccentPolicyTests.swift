@@ -56,8 +56,9 @@ final class ItalianAutoAccentPolicyTests: XCTestCase {
             UITextChecker.availableLanguages.contains(where: { $0.hasPrefix("it") }),
             "no Italian spell-check dictionary on this runtime"
         )
-        // "cosi" is deliberately absent: the system dictionary accepts it (plural of "coso"), so the
-        // oracle correctly refuses to turn it into "così" — a lost fix, never a wrong one.
+        // Copaky: UIKit's treatment of "cosi" varies; H-46 tests its preservation separately.
+        // This raw observer must keep reporting the dictionary's actual answer.
+        // Copaky:「cosi」のUIKit判定は環境に依存するため、H-46の保持テストと生の辞書判定を分ける。
         for word in ["perche", "piu", "citta", "puo"] {
             XCTAssertTrue(ItalianAutoAccentPolicy.systemFlagsAsMisspelledItalian(word), "\(word) must be flagged")
         }
@@ -80,5 +81,27 @@ final class ItalianAutoAccentPolicyTests: XCTestCase {
         // A flagged word whose guesses do not contain our candidate must not be replaced.
         XCTAssertFalse(ItalianAutoAccentPolicy.systemConfirmsAccentFix(forTyped: "perche", fix: "città"))
     }
-}
 
+    // Copaky: H-46 preserves the valid plain word even when UIKit proposes an accent.
+    // Copaky: H-46ではUIKitがアクセントを提案しても、有効な無アクセント語を保持する。
+    @MainActor func testH46DoesNotConfirmAccentForCosi() {
+        for (typed, fix) in [("cosi", "così"), ("Cosi", "Così")] {
+            XCTAssertFalse(
+                ItalianAutoAccentPolicy.systemConfirmsAccentFix(forTyped: typed, fix: fix),
+                "H-46: \(typed) must remain unchanged independently of the system dictionary"
+            )
+        }
+    }
+
+    func testH46PlainWordGuardMatchesOnlyCosiIgnoringCase() {
+        for word in ["cosi", "Cosi", "COSI", "cOsI"] {
+            XCTAssertTrue(ItalianAutoAccentPolicy.shouldPreservePlainWord(word), "\(word) must be preserved")
+        }
+        for word in ["", "così", "COSÌ", "cósi", " cosi", "cosi ", "cosiddetto", "scosi", "perche", "citta"] {
+            XCTAssertFalse(
+                ItalianAutoAccentPolicy.shouldPreservePlainWord(word),
+                "H-46 must not extend preservation to \(word)"
+            )
+        }
+    }
+}

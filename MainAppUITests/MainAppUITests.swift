@@ -713,58 +713,182 @@ class CopakyCampaignTests: XCTestCase {
     // MARK: - 03 · Clipboard toggle disabled without Full Access (A-03)
 
     func test03_phaseA_clipboardToggleWithoutFA() throws {
-        mainApp.launch()
-        // dismiss first-open onboarding if present
-        if let close = firstMatch(in: mainApp, labels: L.closeOnboarding, timeout: 4) {
-            close.tap()
+        // Copaky [H-21]: the OS switch is the evidence; Show all settings only changes row visibility.
+        // Copaky: OSのフルアクセスを確認する。「すべての設定」は表示範囲だけを変える。
+        settings.launch()
+        for _ in 0..<7 {
+            if firstMatch(in: settings, labels: L.general, timeout: 1) != nil { break }
+            let back = settings.navigationBars.buttons.element(boundBy: 0)
+            guard back.exists, back.isHittable else { break }
+            back.tap()
         }
-        shot("03-mainapp-home")
-        openSettingsTab()
-        shot("03-settings-tab")
-
-        // Copaky [F02]: "Cronologia appunti" is present in BOTH lists (SettingTab.swift:107 and
-        // :175) — but not at the same position. In the short "Essenziali" list it sits near the
-        // top; in the full list (shown when "Mostra tutte le impostazioni" is ON) it is much
-        // further down, in the "バー" section, well beyond what a search without scrolling can
-        // reach. So leaving the switch ON (e.g. state carried over from an earlier test) does not
-        // make the row absent — it makes it unreachable without scrolling first.
-        // Copaky [F02]: 「Cronologia appunti」は両方のリスト（SettingTab.swift:107 と :175）に
-        // 存在するが、位置が異なる。短い「Essenziali」リストでは上のほうにあり、「すべての設定を
-        // 表示」がONの完全なリストでは「バー」セクションのずっと下、スクロールなしの検索では
-        // 届かない位置にある。つまりスイッチをONのままにしても行が消えるわけではなく、
-        // スクロールしないと届かなくなるだけである。
-        func showAllSwitch() -> XCUIElement? {
-            let byLabel = mainApp.switches.matching(NSPredicate(format: "label IN %@", L.showAllSettings)).firstMatch
-            if byLabel.waitForExistence(timeout: 2) { return byLabel }
-            // SwiftUI may expose the Toggle's cell instead of a bare Switch: fall back to any element with the label
-            let cell = mainApp.descendants(matching: .any).matching(NSPredicate(format: "label IN %@", L.showAllSettings)).firstMatch
-            return cell.waitForExistence(timeout: 2) ? cell : nil
-        }
-        var attempts = 0
-        while attempts < 3, let showAll = showAllSwitch(), showAll.exists, (showAll.value as? String) == "1" {
-            showAll.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
-            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
-            attempts += 1
-        }
-        shot("03-settings-tab-short")
-
-        guard let toggle = firstMatch(in: mainApp, labels: L.clipboardToggle, timeout: 6) else {
-            // scroll and retry once — the clipboard section may be below the fold
-            mainApp.swipeUp()
-            let t2 = firstMatch(in: mainApp, labels: L.clipboardToggle, timeout: 4)
-            guard let t2 else {
-                dump(mainApp, "03-no-toggle")
-                XCTFail("Clipboard history toggle not found in MainApp settings")
-                return
-            }
-            t2.tap()
-            shot("03-toggle-tapped-noFA")
+        openKeyboardsList()
+        guard tapFirst(in: settings, labels: ["Copaky", "Copaky — Copaky", "Copaky, Copaky"], scrollUpTo: 2) else { return }
+        let fa = settings.switches.matching(NSPredicate(format: "label IN %@", L.allowFullAccess)).firstMatch
+        guard fa.waitForExistence(timeout: 6) else {
+            dump(settings, "03-no-full-access-switch")
+            XCTFail("H-21 prerequisite: Copaky's Allow Full Access switch must be visible in iOS Settings")
             return
         }
-        toggle.tap()
-        // Expected (FA off): alert explaining Full Access requirement, with open-Settings button
-        shot("03-toggle-tapped-noFA")
-        dump(mainApp, "03-after-tap")
+        if fa.value as? String == "1" {
+            fa.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
+        }
+        XCTAssertTrue(waitForFieldValue(fa, "0"), "iOS Allow Full Access must be OFF before testing")
+        shot("03-os-full-access-off")
+
+        #if targetEnvironment(simulator)
+        let field = focusField("plain-text")
+        #else
+        let field = activatePreNavigatedField("plain-text")
+        #endif
+        switchToCopaky(in: safari)
+        // Copaky [H-21]: XCUI can retain the extension tree below the screen after a Settings trip.
+        // Require a hittable product control, then allow ONE field refocus before failing setup.
+        // Copaky: 設定から戻ると画面外の拡張ツリーが残ることがある。再フォーカスは一度だけ試す。
+        func waitForPresentedCopaky(timeout: TimeInterval) -> Bool {
+            let deadline = Date().addingTimeInterval(timeout)
+            repeat {
+                let controls = safari.descendants(matching: .any).matching(NSPredicate(
+                    format: "identifier == %@ OR identifier BEGINSWITH %@",
+                    "keyboard-flick-star-123", "keyboard-language-switch-"
+                ))
+                for index in 0..<min(controls.count, 6) {
+                    let control = controls.element(boundBy: index)
+                    if control.exists && control.isHittable { return true }
+                }
+                RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+            } while Date() < deadline
+            return false
+        }
+        var keyboardPresented = waitForPresentedCopaky(timeout: 3)
+        if !keyboardPresented {
+            dump(safari, "03-before-keyboard-refocus")
+            shot("03-before-keyboard-refocus")
+            if field.exists && field.isHittable {
+                field.tap()
+                keyboardPresented = waitForPresentedCopaky(timeout: 6)
+            }
+        }
+        guard keyboardPresented else {
+            dump(safari, "03-software-keyboard-not-presented")
+            shot("03-software-keyboard-not-presented")
+            XCTFail("H-21 prerequisite: no hittable Copaky software keyboard after one field refocus; check Simulator hardware-keyboard attachment/presentation")
+            return
+        }
+        XCTAssertTrue(switchToLatinQwertyTab(in: safari), "Copaky Latin tab unavailable with Full Access OFF")
+        clearFocusedField(field, placeholder: "plain-text", in: safari)
+        func typeProbe() {
+            for label in ["c", "a"] {
+                // Copaky: the EN language switch can expose label "A"; it is not the letter key.
+                // Copaky: 言語切替の「A」を文字キーと誤認しない。
+                let letters = safari.descendants(matching: .any).matching(NSPredicate(
+                    format: "label IN %@ AND NOT (identifier BEGINSWITH %@)",
+                    [label, label.uppercased()], "keyboard-language-switch-"
+                ))
+                let key = letters.allElementsBoundByIndex.first {
+                    $0.isHittable && $0.frame.minY >= safari.frame.height * 0.45
+                }
+                guard let key else {
+                    XCTFail("Copaky typing key missing with Full Access OFF: \(label)")
+                    return
+                }
+                key.tap()
+            }
+            XCTAssertTrue(waitForFieldValue(field, "ca") || waitForFieldValue(field, "Ca"),
+                          "Copaky must insert the probe with Full Access OFF")
+        }
+        typeProbe()
+        shot("03-typing-without-full-access")
+
+        // Use the system's lowest globe, then prove a stock keyboard replaced Copaky before returning.
+        // システムの最下部Globeから切り替え、純正キーとCopaky消失の両方を確認する。
+        let globePredicate = NSPredicate(format: "label CONTAINS[c] 'astiera successiva' OR label CONTAINS[c] 'ext keyboard' OR label CONTAINS[c] '次のキーボード'")
+        var switchedAway = false
+        for _ in 0..<8 {
+            let globes = safari.buttons.matching(globePredicate).allElementsBoundByIndex
+                .filter { $0.exists && $0.isHittable }
+            guard let globe = globes.max(by: { $0.frame.maxY < $1.frame.maxY }) else { break }
+            globe.tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.6))
+            if !copakyActive(in: safari), safari.keyboards.keys.firstMatch.exists {
+                switchedAway = true
+                break
+            }
+        }
+        XCTAssertTrue(switchedAway, "Could not switch from Copaky to a system keyboard with Full Access OFF")
+        shot("03-switched-away-without-full-access")
+        // Copaky [H-21]: observed iOS first-switch coachmark covers the globe until Continue.
+        // Match only the Italian title captured in this campaign; never dismiss an unrelated prompt.
+        // Copaky: 初回切替の案内がGlobeを覆う。実測したイタリア語の案内だけを一度閉じる。
+        let switchCoachmark = safari.staticTexts.matching(NSPredicate(
+            format: "label == %@", "Cambia tastiera velocemente"
+        )).firstMatch
+        if switchCoachmark.waitForExistence(timeout: 1) {
+            let proceed = safari.buttons.matching(NSPredicate(format: "label == %@", "Continua")).firstMatch
+            guard proceed.exists && proceed.isHittable else {
+                dump(safari, "03-switch-coachmark-not-dismissible")
+                shot("03-switch-coachmark-not-dismissible")
+                XCTFail("Observed iOS keyboard-switch coachmark has no hittable Continue action")
+                return
+            }
+            proceed.tap()
+            let deadline = Date().addingTimeInterval(4)
+            while switchCoachmark.exists && Date() < deadline {
+                RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+            }
+            guard !switchCoachmark.exists else {
+                dump(safari, "03-switch-coachmark-remained")
+                shot("03-switch-coachmark-remained")
+                XCTFail("iOS keyboard-switch coachmark remained after one Continue tap")
+                return
+            }
+        }
+        switchToCopaky(in: safari)
+        XCTAssertTrue(switchToLatinQwertyTab(in: safari), "Copaky did not recover after the keyboard switch")
+        clearFocusedField(field, placeholder: "plain-text", in: safari)
+        typeProbe()
+        shot("03-returned-and-typed-without-full-access")
+
+        // Relaunch: the containing app reads its Full Access state during setup.
+        mainApp.terminate()
+        mainApp.launch()
+        if let close = firstMatch(in: mainApp, labels: L.closeOnboarding, timeout: 4) { close.tap() }
+        openSettingsTab()
+        let showAll = mainApp.switches.matching(NSPredicate(format: "label IN %@", L.showAllSettings)).firstMatch
+        if showAll.waitForExistence(timeout: 2), showAll.value as? String == "1" {
+            showAll.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+        }
+        let toggle = mainApp.switches.matching(NSPredicate(format: "label IN %@", L.clipboardToggle)).firstMatch
+        for _ in 0..<6 where !toggle.exists || !toggle.isHittable { mainApp.swipeUp() }
+        guard toggle.exists, toggle.isHittable else {
+            dump(mainApp, "03-no-clipboard-switch")
+            XCTFail("Clipboard history switch not found")
+            return
+        }
+        XCTAssertEqual(toggle.value as? String, "0", "H-21 prerequisite: clipboard history must start OFF")
+        toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
+        let alert = mainApp.alerts.firstMatch
+        XCTAssertTrue(alert.waitForExistence(timeout: 4), "Full Access requirement alert did not appear")
+        let explanations = [
+            "この機能にはフルアクセスが必要です。この機能を使いたい場合は、「設定」>「キーボード」でフルアクセスを有効にしてください。",
+            "This feature requires full access. To use this feature, please enable full access at 'Settings' > 'Keyboard'.",
+            "Questa funzione richiede l'accesso completo. Per utilizzarla, attiva l'accesso completo in \"Impostazioni\" > \"Tastiera\".",
+        ]
+        XCTAssertTrue(alert.staticTexts.matching(NSPredicate(format: "label IN %@", explanations)).firstMatch.exists,
+                      "Unexpected alert: Full Access requirement text is missing")
+        XCTAssertTrue(alert.buttons.matching(NSPredicate(format: "label IN %@", ["「設定」アプリを開く", "Open 'Settings' app", "Apri l'app «Impostazioni»"])).firstMatch.exists,
+                      "Full Access alert must offer the Settings action")
+        shot("03-full-access-required-alert")
+        let cancel = alert.buttons.matching(NSPredicate(format: "label IN %@", ["キャンセル", "Cancel", "Annulla"])).firstMatch
+        XCTAssertTrue(cancel.exists && cancel.isHittable, "Expected cancel action is absent")
+        cancel.tap()
+        XCTAssertTrue(waitForFieldValue(toggle, "0"), "Clipboard history must remain OFF after the rejected attempt")
+        shot("03-clipboard-remains-off")
+        settings.activate()
+        XCTAssertTrue(fa.waitForExistence(timeout: 4), "Could not re-observe the OS Full Access switch")
+        XCTAssertEqual(fa.value as? String, "0", "Full Access must remain OFF throughout H-21")
+        shot("03-os-full-access-still-off")
     }
 
     /// Select the Settings tab of the MainApp (custom SwiftUI tab bar; coordinate fallback).
@@ -2373,6 +2497,145 @@ class CopakyCampaignTests: XCTestCase {
         shot("37-done")
     }
 
+    // MARK: - 61 · H-46 ambiguous Italian accent, general autocorrect OFF and ON
+
+    /// Copaky: run twice with explicit seeds: italian_auto_accent_on_space=true,
+    /// live_conversion=false, enable_latin_autocorrect=false/true and matching
+    /// TEST_RUNNER_COPAKY_EXPECT_LATIN_AUTOCORRECT. Live conversion must stay OFF so that a
+    /// rejected correction cannot still commit lastUsedCandidate instead of the literal word.
+    /// Copaky: 一般補正のOFF/ONを別実行で確認。設定は変更せず読み、実キーで否定例と肯定例を検証する。
+    func test61_italianAmbiguousAccentPreservesCosi() throws {
+        // Copaky: pre-opened Safari hit the background scene watchdog while releasing its keyboard
+        // during MainApp setup. Stop that process first; the fixture is restored when reactivated.
+        safari.terminate()
+        let environment = ProcessInfo.processInfo.environment
+        // xcodebuild forwards TEST_RUNNER_* to the test process without that prefix.
+        let expected = environment["COPAKY_EXPECT_LATIN_AUTOCORRECT"]
+            ?? environment["TEST_RUNNER_COPAKY_EXPECT_LATIN_AUTOCORRECT"]
+        guard let expected, ["false", "true"].contains(expected) else {
+            XCTFail("H-46 prerequisite: TEST_RUNNER_COPAKY_EXPECT_LATIN_AUTOCORRECT must be explicitly false or true")
+            return
+        }
+        let mode = expected == "true" ? "on" : "off"
+        let dictionaries = UITextChecker.availableLanguages.map {
+            $0.replacingOccurrences(of: "_", with: "-").lowercased()
+        }
+        guard dictionaries.contains("it-it") else {
+            XCTFail("H-46 prerequisite: the it-IT spell-check dictionary is required for the positive control")
+            return
+        }
+        func fail(_ app: XCUIApplication, _ name: String, _ message: String) {
+            dump(app, "61-general-\(mode)-\(name)")
+            shot("61-general-\(mode)-\(name)")
+            XCTFail(message)
+        }
+
+        mainApp.terminate()
+        mainApp.launch()
+        if let close = firstMatch(in: mainApp, labels: L.closeOnboarding, timeout: 4) { close.tap() }
+        openSettingsTab()
+        let contracts: [(key: String, labels: [String], value: String)] = [
+            ("live_conversion", ["ライブ変換", "Live Conversion", "Conversione live"], "0"),
+            ("italian_auto_accent_on_space", L.italianAutoAccentToggle, "1"),
+            ("enable_latin_autocorrect", ["ラテン文字の自動修正", "Autocorrect typos (Latin keyboards)",
+                                          "Correzione automatica dei refusi (tastiere latine)"], expected == "true" ? "1" : "0"),
+        ]
+        for contract in contracts {
+            let toggle = mainApp.switches.matching(NSPredicate(format: "label IN %@", contract.labels)).firstMatch
+            // Search both directions because the Form can retain its previous scroll offset.
+            for _ in 0..<8 where !toggle.exists || !toggle.isHittable {
+                mainApp.swipeDown()
+                dismissMainAppAlertIfAny()
+            }
+            for _ in 0..<10 where !toggle.exists || !toggle.isHittable {
+                mainApp.swipeUp()
+                dismissMainAppAlertIfAny()
+            }
+            guard toggle.exists, toggle.isHittable, waitForFieldValue(toggle, contract.value) else {
+                let observed = toggle.exists ? String(describing: toggle.value) : "missing"
+                fail(mainApp, "seed-mismatch-\(contract.key)",
+                     "H-46 prerequisite: seeded \(contract.key) must read \(contract.value) in MainApp; got \(observed)")
+                return
+            }
+            print("H46-SETTING|\(contract.key)|\(contract.value)")
+            shot("61-general-\(mode)-setting-\(contract.key)")
+        }
+
+        let field = activatePreNavigatedField("plain-text")
+        switchToCopaky(in: safari)
+        // As in test03, presence in the AX tree alone does not prove an onscreen keyboard.
+        var presented = false
+        for attempt in 0..<2 {
+            let deadline = Date().addingTimeInterval(attempt == 0 ? 3 : 6)
+            repeat {
+                let controls = safari.descendants(matching: .any).matching(NSPredicate(
+                    format: "identifier == %@ OR identifier BEGINSWITH %@",
+                    "keyboard-flick-star-123", "keyboard-language-switch-"
+                ))
+                presented = controls.allElementsBoundByIndex.contains { $0.exists && $0.isHittable }
+                if presented { break }
+                RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+            } while Date() < deadline
+            if presented { break }
+            if attempt == 0, field.exists, field.isHittable {
+                dump(safari, "61-general-\(mode)-before-refocus")
+                shot("61-general-\(mode)-before-refocus")
+                field.tap()
+            }
+        }
+        guard presented, switchToLatinQwertyTab(in: safari) else {
+            fail(safari, "no-latin-keyboard", "H-46 prerequisite: no hittable Copaky Latin keyboard after one refocus")
+            return
+        }
+        for _ in 0..<3 {
+            guard let state = currentLanguageSwitchState(in: safari, timeout: 2), state.element.isHittable else {
+                fail(safari, "no-language-key", "H-46 prerequisite: Copaky language-switch identifier missing")
+                return
+            }
+            if state.current == "IT" { break }
+            tapLanguageSwitch(state.element, in: safari)
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+            guard switchToLatinQwertyTab(in: safari) else {
+                fail(safari, "lost-latin-keyboard", "H-46 prerequisite: could not reach the Italian Latin tab")
+                return
+            }
+        }
+        guard currentLanguageSwitchState(in: safari, timeout: 2)?.current == "IT" else {
+            fail(safari, "italian-not-active", "H-46 prerequisite: current keyboard language must be IT")
+            return
+        }
+        clearFocusedField(field, placeholder: "plain-text", in: safari)
+
+        var prefix = ""
+        for (word, committed) in [("cosi", "cosi "), ("perche", "perché ")] {
+            for character in word {
+                let keys = safari.staticTexts.matching(NSPredicate(
+                    format: "label == %@ AND NOT (identifier BEGINSWITH %@)",
+                    String(character), "keyboard-language-switch-"
+                ))
+                guard let key = keys.allElementsBoundByIndex.first(where: {
+                    $0.exists && $0.isHittable && $0.frame.minY >= safari.frame.height * 0.45
+                }) else {
+                    fail(safari, "missing-key-\(character)", "H-46 prerequisite: lowercase Copaky letter key missing; seed auto-capitalization OFF")
+                    return
+                }
+                key.tap()
+            }
+            guard waitForFieldValue(field, prefix + word) else {
+                fail(safari, "typing-\(word)", "H-46: literal input must equal \(prefix + word) before space; got \(String(describing: field.value))")
+                return
+            }
+            tapLatinSpace(in: safari)
+            guard waitForFieldValue(field, prefix + committed) else {
+                fail(safari, "commit-\(word)", "H-46: space must commit \(prefix + committed) with general autocorrect \(mode); got \(String(describing: field.value))")
+                return
+            }
+            shot("61-general-\(mode)-committed-\(word)")
+            prefix += committed
+        }
+        print("H46-RESULT|general=\(expected)|autoaccent=true|live_conversion=false|cosi=unchanged|perche=perché|PASS")
+    }
+
     // MARK: - 38 · Latin number tab keeps Latin punctuation and return target
 
     /// Copaky: the QWERTY number tab must type a literal dot and return to its originating Latin tab.
@@ -3116,270 +3379,153 @@ class CopakyCampaignTests: XCTestCase {
 
     // MARK: - 42 · Memory protocol phase C: sustained Japanese across many kana, then Italian, then back
 
-    /// Print a memory-protocol phase marker. The actual SAMPLING (physFootprint over time) is a HOST
-    /// concern — `scripts/memory_phase_c.sh` watches the keyboard extension process from outside this
-    /// test — so all this needs to produce is timestamped, greppable markers the host can align its
-    /// samples against.
-    ///
-    /// One phase gets TWO markers — `start` before its load and `end` after — instead of one printed
-    /// after the fact: a single post-load marker made the host script attribute samples to the WRONG
-    /// phase (it had no choice but to treat "marker seen" as "phase begins here"). `at:` lets a caller
-    /// back-date the `start` edge to before an outcome (e.g. clipboard open vs. skipped) was known,
-    /// so the bracket still covers the real load window even though the phase NAME is resolved late.
-    /// 1フェーズにつきマーカーを2個（開始・終了）出す。事後の1個だけでは負荷区間の帰属がずれてしまう。
-    private func memcMarker(_ phase: String, _ edge: String, at date: Date = Date()) {
-        print("MEMC|\(phase)|\(edge)|\(ISO8601DateFormatter().string(from: date))")
+    /// Copaky [E-01]: retain millisecond timestamps so a skipped/instantaneous phase cannot look valid.
+    /// Copaky: ミリ秒付き時刻で、未実行・瞬時終了のフェーズを隠さない。
+    private func memcMarker(_ phase: String, _ edge: String) {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        print("MEMC|\(phase)|\(edge)|\(formatter.string(from: Date()))")
     }
 
-    /// Clear whatever the last kana group produced (composing buffer, or — once a candidate has been
-    /// cycled onto the space key and tapped — plain committed text) before the next group starts.
-    /// Repeated DELETE, not a candidate pick: telling "genuine kanji/kana candidate" apart from "kana
-    /// row-head key relabelled" by label alone is not reliable enough for an unattended load pass
-    /// (playbook §4.2/§5), so this sweep does not try — it only needs the field empty for the next group.
-    /// 次のグループの前に入力内容を消す。候補選択ではなく削除キー連打（ラベルだけでは候補と鍵の区別が
-    /// 信頼できないため）。
-    /// Reach the Japanese tab and report its layout: `true` = flick (kana keys on screen), `false` =
-    /// QWERTY/romaji (letter keys under Japanese labels such as 「空白」). Falls back to the strict
-    /// flick helper (which fails with evidence) only when neither layout can be reached.
-    /// 日本語タブへ移動し、レイアウトを返す（true=フリック、false=QWERTY/ローマ字）。
-    private func ensureJapaneseTab(in app: XCUIApplication) -> Bool {
-        dismissCopakyNotice(in: app)
-        if flickKanaVisible(in: app, timeout: 2) { return true }
-        if japaneseQwertyVisible(in: app) { return false }
-        // Not on a Japanese tab: the language key shows 「あ」 when Japanese is the NEXT language.
-        let toJapanese = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "あ")).firstMatch
-        if toJapanese.waitForExistence(timeout: 2), toJapanese.isHittable {
-            toJapanese.tap()
-            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
-            dismissCopakyNotice(in: app)
-            if flickKanaVisible(in: app, timeout: 2) { return true }
-            if japaneseQwertyVisible(in: app) { return false }
-        }
-        switchToJapaneseFlickTab(in: app)   // strict path: dumps + fails with evidence
-        return true
-    }
-
-    /// QWERTY Japanese tab = a Latin letter key AND a Japanese function label on the same keyboard
-    /// (the Japanese tab keeps 「空白」/「改行」 by design; the Latin tab shows space/spazio).
-    private func japaneseQwertyVisible(in app: XCUIApplication) -> Bool {
-        let k = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "k")).firstMatch
-        let jpLabel = app.descendants(matching: .any)
-            .matching(NSPredicate(format: "label IN %@", ["空白", "変換", "確定", "改行"])).firstMatch
-        return k.waitForExistence(timeout: 2) && jpLabel.exists
-    }
-
-    /// Type one kana group either as flick keys or as romaji on the QWERTY Japanese tab. Returns how
-    /// many keys were pressed (for `clearTyped`). Soft: a missing key is noted, not asserted.
-    /// かなグループをフリックまたはローマ字で入力し、押したキー数を返す。
-    private func typeKanaGroup(_ group: [String], flick: Bool, in app: XCUIApplication) -> Int {
-        if flick {
-            return softTapKeys(group, in: app)
-        }
-        let romaji: [String: String] = ["あ": "a", "か": "ka", "さ": "sa", "た": "ta", "な": "na",
-                                        "は": "ha", "ま": "ma", "や": "ya", "ら": "ra", "わ": "wa"]
-        let letters = group.flatMap { (romaji[$0] ?? "").map { String($0) } }
-        return softTapKeys(letters, in: app)
-    }
-
-    private func clearTyped(atLeast charCount: Int, in app: XCUIApplication) {
-        for _ in 0..<(charCount + 3) {
-            let del = app.descendants(matching: .any).matching(NSPredicate(format: "label IN %@ OR identifier IN %@", L.deleteKey, L.deleteKeyIdentifiers)).firstMatch
-            if del.exists && del.isHittable {
-                del.tap()
-            } else {
-                break
+    /// Copaky: use our current-language identifier, independent of localized functional labels/order.
+    /// Copaky: 機能ラベルの翻訳や言語順に依存せず、現在言語の識別子を確認する。
+    private func ensureJapaneseTab(in app: XCUIApplication) -> Bool? {
+        for attempt in 0..<4 {
+            guard copakyActive(in: app) else { return nil }
+            if flickKanaVisible(in: app, timeout: 1) { return true }
+            guard let state = currentLanguageSwitchState(in: app, timeout: 1) else { return nil }
+            if state.current == "あ" {
+                let letter = app.descendants(matching: .any)
+                    .matching(NSPredicate(format: "label IN %@", ["q", "Q"])).firstMatch
+                return letter.waitForExistence(timeout: 2) ? false : nil
             }
+            guard attempt < 3 else { return nil }
+            tapLanguageSwitch(state.element, in: app)
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
         }
+        return nil
     }
 
-    /// Phase C of the memory protocol (reports/sim_test_2026-07.md): sustained Japanese typing across
-    /// MANY different kana row-heads (dictionary/candidate lookup on many different reading prefixes,
-    /// not the same one repeated), a clipboard-tab detour, a run of Italian Latin typing, then back to
-    /// Japanese — the shape `scripts/memory_phase_c.sh` is built to watch from outside.
-    ///
-    /// This test does NOT assert on memory itself — the Simulator's absolute values are not meaningful
-    /// for the jetsam budget (playbook §1 point 3) — it only has to exercise the keyboard in a
-    /// recognisable, repeatable way and print `MEMC|` markers the host script can align its samples
-    /// against. A candidate that never appears, or a clipboard tab that is unreachable on the unsigned
-    /// Simulator (playbook §5), must not fail this test — it is a load pass, not a functional check.
-    /// メモリ自体はここでは断定しない（シミュレータの絶対値は無意味）。この関数の役割は再現性のある負荷と
-    /// タイムスタンプ付きマーカーの提供のみ。候補が出ない・クリップボードタブに届かない、はここでは失敗にしない。
+    /// Phase C supplies observable workloads; scripts/memory_phase_c.sh owns memory qualification.
+    /// Copaky [E-01]: every required phase must run. Missing FA/App Group/IT prerequisites FAIL with
+    /// evidence instead of producing a green partial load. Each load stays visible for >=3 seconds
+    /// for the host's 1 Hz sampler. This does not qualify the absolute memory budget on Simulator.
+    /// Copaky: 必須フェーズは省略不可。前提不足は明示的に失敗し、各負荷を3秒以上維持する。
     func test42_memoryPhaseC_japaneseTypingAcrossKana() throws {
         let kanaGroups: [[String]] = [
             ["か", "な"], ["さ", "か"], ["た", "な"], ["は", "な"], ["ま", "た"], ["や", "ま"],
             ["ら", "か"], ["わ", "た"], ["あ", "さ"], ["な", "ま"], ["か", "さ", "た"], ["は", "ま", "や"],
         ]
-
-        // Simulator: Safari is launched on the local fixture (127.0.0.1:8377). Phone: 127.0.0.1 is the
-        // phone itself and `launch()` restores whatever tab the user had open (seen 2026-08-15:
-        // roma.corriere.it) — so the orchestrator pre-navigates Safari to https://copaky.app/kbtest
-        // (memory_phase_c.sh --mode device) and the test only ACTIVATES it, like test33/35 do.
-        // 実機では 127.0.0.1 は端末自身: スクリプトが copaky.app/kbtest を開いておき、テストは activate だけ行う。
         #if targetEnvironment(simulator)
-        _ = focusField("textarea-field")
+        let field = focusField("textarea-field")
         #else
-        _ = activatePreNavigatedField("textarea-field")
+        // The device runner pre-navigates Safari; localhost would address the phone itself.
+        let field = activatePreNavigatedField("textarea-field")
         #endif
         switchToCopaky(in: safari)
-        // The Japanese tab may be FLICK (Simulator seed, most Japanese users) or QWERTY/romaji (the
-        // test phone: its owner types romaji). Both build the same reading → the same dictionary
-        // lookups; on QWERTY each kana group is typed as its romaji ("か","な" → "kana").
-        // 日本語タブはフリック（シミュレータ）でも QWERTY/ローマ字（実機）でもよい: 読みが同じなら辞書検索も同じ。
-        let jpFlick = ensureJapaneseTab(in: safari)
-        print("MEMC-INFO|japanese-layout|\(jpFlick ? "flick" : "qwerty-romaji")")
+        clearFocusedField(field, placeholder: "textarea-field", in: safari)
 
-        for (i, group) in kanaGroups.enumerated() {
-            memcMarker("jp-\(i)", "start")
-            let typed = typeKanaGroup(group, flick: jpFlick, in: safari)
-            RunLoop.current.run(until: Date().addingTimeInterval(0.8))   // let candidates compute
-            if i == 0 || i == kanaGroups.count - 1 {
-                shot("42-jp-\(i)")
+        // Copaky: PASS is emitted only after the body and the Copaky liveness check succeed.
+        // Copaky: 負荷とCopaky生存確認の成功後だけPASSを出す。
+        func runPhase(_ phase: String, _ body: () -> String?) -> Bool {
+            memcMarker(phase, "start")
+            let reason = body() ?? (copakyActive(in: safari) ? nil : "copaky-not-active-after-load")
+            memcMarker(phase, "end")
+            print("MEMC-RESULT|\(phase)|\(reason == nil ? "PASS" : "FAIL")|\(reason ?? "workload-observed")")
+            guard let reason else { return true }
+            note("42-\(phase)-failure", reason)
+            dump(safari, "42-\(phase)-failure")
+            shot("42-\(phase)-failure")
+            XCTFail("Required memory phase \(phase) was not exercised: \(reason)")
+            return false
+        }
+        func pressKeys(_ labels: [String]) -> Bool {
+            guard copakyActive(in: safari) else { return false }
+            for label in labels {
+                let predicate = NSPredicate(format: "label ==[c] %@", label)
+                let text = safari.staticTexts.matching(predicate).firstMatch
+                let key = text.waitForExistence(timeout: 1) ? text
+                    : safari.descendants(matching: .any).matching(predicate).firstMatch
+                guard key.waitForExistence(timeout: 2), key.isHittable,
+                      key.frame.minY >= safari.frame.height * 0.45 else { return false }
+                key.tap()
             }
-            clearTyped(atLeast: typed, in: safari)
-            memcMarker("jp-\(i)", "end")
+            return true
+        }
+        func fieldIsEmpty() -> Bool {
+            let value = field.value as? String
+            return value == "" || value == "textarea-field"
+        }
+        func typeJapaneseGroup(_ group: [String]) -> String? {
+            guard let flick = ensureJapaneseTab(in: safari) else { return "japanese-tab-not-reached" }
+            guard fieldIsEmpty() else { return "field-not-empty-before-japanese-load" }
+            let romaji = ["あ": "a", "か": "ka", "さ": "sa", "た": "ta", "な": "na",
+                          "は": "ha", "ま": "ma", "や": "ya", "ら": "ra", "わ": "wa"]
+            let keys = flick ? group : group.flatMap { (romaji[$0] ?? "").map { String($0) } }
+            guard pressKeys(keys) else { return "japanese-key-missing" }
+            guard waitForFieldValue(field, group.joined()) else { return "japanese-text-not-inserted" }
+            RunLoop.current.run(until: Date().addingTimeInterval(3))
+            clearFocusedField(field, placeholder: "textarea-field", in: safari)
+            return fieldIsEmpty() ? nil : "japanese-load-did-not-clear"
         }
 
-        // Clipboard tab detour — best-effort through A-11's shipped 123/#+= long press. The optional
-        // candidate-bar Copaky button is OFF by default and must not be a prerequisite. `clipboardStart`
-        // is captured BEFORE the attempt so the bracket still covers the real load even though the
-        // NAME (clipboard vs clipboard-skipped) is only known once the attempt is over.
-        let clipboardStart = Date()
-        var clipboardPhase = "clipboard"
-        var clipboardOpened = false
-        var clipboardRecoveryFailed = false
-        let latinReadyForShortcut = switchToLatinQwertyTab(in: safari)
-        if latinReadyForShortcut,
-           longPressClipboardShortcut(),
-           clipboardPanelIsOpen(timeout: 2) {
-            clipboardOpened = true
-        } else {
-            clipboardPhase = "clipboard-skipped"
-            note("42-clipboard-skip-reason",
-                 latinReadyForShortcut ? "123/#+= long press did not open Clipboard history" : "Latin 123/#+= key was not reachable")
+        memcMarker("begin", "start")
+        for (index, group) in kanaGroups.enumerated() {
+            guard runPhase("jp-\(index)", { typeJapaneseGroup(group) }) else { return }
         }
-        // Close through the panel's own lowest Back match; Safari exposes another Back higher up.
-        // Any missing shortcut/panel/back remains soft because this is a load pass.
-        // Safariの戻るを避け、クリップボード画面の最下部の戻るキーを使う。失敗は負荷試験ではsoft扱い。
-        if clipboardOpened {
-            if let back = clipboardBackKey(in: safari, timeout: 3), back.isHittable {
-                back.tap()
-                RunLoop.current.run(until: Date().addingTimeInterval(0.6))
-            } else {
-                clipboardPhase = "clipboard-skipped"
-                clipboardRecoveryFailed = true
-                note("42-clipboard-skip-reason", "Clipboard history opened but its keyboard Back key was not reachable")
+
+        guard runPhase("clipboard", {
+            guard switchToLatinQwertyTab(in: safari), longPressClipboardShortcut(),
+                  clipboardPanelIsOpen(timeout: 3) else {
+                return "clipboard-not-opened-requires-full-access-signed-app-group-and-history-enabled"
             }
-        }
-        // Layout-agnostic "the keyboard is back": flick kana, QWERTY Japanese, or a Latin letter key.
-        let keyboardBack = flickKanaVisible(in: safari, timeout: 4) || japaneseQwertyVisible(in: safari)
-            || safari.descendants(matching: .any)
-                .matching(NSPredicate(format: "label IN %@", ["a", "A"])).firstMatch.waitForExistence(timeout: 2)
-        if !keyboardBack {
-            clipboardPhase = "clipboard-skipped"
-            clipboardRecoveryFailed = true
-            note("42-clipboard-skip-reason", "Main Copaky keys did not return after the best-effort clipboard detour")
-            dump(safari, "42-keyboard-not-back-after-clipboard")
-        }
-        memcMarker(clipboardPhase, "start", at: clipboardStart)
-        memcMarker(clipboardPhase, "end")
+            shot("42-clipboard-open")
+            RunLoop.current.run(until: Date().addingTimeInterval(3))
+            guard let back = clipboardBackKey(in: safari, timeout: 3), back.isHittable else {
+                return "clipboard-back-key-missing"
+            }
+            back.tap()
+            guard switchToLatinQwertyTab(in: safari), !clipboardPanelIsOpen(timeout: 1) else {
+                return "keyboard-did-not-return-from-clipboard"
+            }
+            return nil
+        }) else { return }
 
-        // Italian on the Latin tab — Italian must be SELECTED, never assumed: the default of
-        // enable_italian_keyboard_language is false (BoolKeyboardSetting.swift:249-253), so typing on
-        // an unselected Latin tab would silently measure English. Same proven transition as
-        // test33/test35 (switchToEnglishTab, then one more tap of the language-switch key to reach the
-        // "IT" shortSymbol); a soft skip with a reason is recorded instead of failing the whole load
-        // pass when the tab or the language cannot be reached (this test's own contract).
-        switchToEnglishTab(in: safari)
-        dismissCopakyNotice(in: safari)
-        let reachedLatin = safari.descendants(matching: .any)
-            .matching(NSPredicate(format: "label == %@ OR label == %@", "IT", "あ")).firstMatch
-            .waitForExistence(timeout: 4)
-        var itPhase = "it-skipped"
-        var itSkipReason = "latin-tab-not-reached"
-        if reachedLatin {
-            var italian = safari.descendants(matching: .any)
-                .matching(NSPredicate(format: "label == %@", "IT")).firstMatch
-            if !italian.waitForExistence(timeout: 4) {
-                let switchKey = safari.descendants(matching: .any)
-                    .matching(NSPredicate(format: "label == %@ OR label == %@", "A", "あ")).firstMatch
-                if switchKey.exists && switchKey.isHittable {
-                    switchKey.tap()
-                    RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+        guard runPhase("it", {
+            // Select IT from the actual current/next identifier, including reordered active lists.
+            // 実際の現在言語を確認し、並び替え済みリストでもITを選ぶ。
+            for _ in 0..<3 {
+                if currentLanguageSwitchState(in: safari, timeout: 1)?.current == "IT" { break }
+                guard switchToLatinQwertyTab(in: safari),
+                      let state = currentLanguageSwitchState(in: safari, timeout: 1) else {
+                    return "italian-language-switch-unavailable"
                 }
-                italian = safari.descendants(matching: .any)
-                    .matching(NSPredicate(format: "label == %@", "IT")).firstMatch
-            }
-            if italian.exists && italian.isHittable {
-                italian.tap()
+                if state.current == "IT" { break }
+                tapLanguageSwitch(state.element, in: safari)
                 RunLoop.current.run(until: Date().addingTimeInterval(0.8))
-                shot("42-after-it-tap")
-                // Evidence from the first Simulator run: the tap on «IT» landed the keyboard on the
-                // Japanese FLICK tab (screenshot in the xcresult), so verify the LATIN letters are
-                // really on screen before typing; if the flick tab came up, go back to the Latin tab
-                // once — latinKeyboardLanguage was already set to Italian by the tap — and re-check.
-                // 「IT」タップ後にフリック日本語タブへ戻る事象を観測: ラテン文字が本当に表示されているか確認する。
-                if flickKanaVisible(in: safari, timeout: 1) {
-                    switchToEnglishTab(in: safari)
-                }
-                let latinLetter = safari.descendants(matching: .any)
-                    .matching(NSPredicate(format: "label == %@", "p")).firstMatch
-                if latinLetter.waitForExistence(timeout: 4) {
-                    itPhase = "it"
-                    // Which Latin language is active is readable from the switch key itself: it
-                    // shows the NEXT language of the cycle (ja → en → it), so 「あ」 means Italian is
-                    // active, 「IT」 means English still is. Recorded as evidence, not asserted.
-                    // 言語切替キーは次の言語を示す: 「あ」ならイタリア語が有効、「IT」ならまだ英語。
-                    let nextIsJapanese = safari.descendants(matching: .any)
-                        .matching(NSPredicate(format: "label == %@", "あ")).firstMatch.exists
-                    let nextIsItalian = safari.descendants(matching: .any)
-                        .matching(NSPredicate(format: "label == %@", "IT")).firstMatch.exists
-                    let active = nextIsJapanese ? "italian" : (nextIsItalian ? "english" : "unknown")
-                    print("MEMC-INFO|latin-language-active|\(active)")
-                    note("42-latin-language-active", active)
-                } else {
-                    itSkipReason = "latin-letters-not-on-screen-after-it-tap"
-                }
-            } else {
-                itSkipReason = "italian-not-enabled"
             }
-        }
-        if itPhase == "it-skipped" {
-            note("42-it-skip-reason", itSkipReason)
-            dump(safari, "42-it-skipped-\(itSkipReason)")
-        }
-        memcMarker(itPhase, "start")
-        if itPhase == "it" {
-            let italianWords = ["perche", "citta", "andro", "piu", "cosi", "puo", "societa", "grazie"]
-            let spaceLabels = L.spaceKey + ["successivo", "次候補", "next candidate", "Next candidate"]
-            for word in italianWords {
-                // Soft taps: this is a load exercise, a missing key must not abort the phase (the
-                // marker pair still brackets whatever was typed).
-                _ = softTapKeys(word.map { String($0) }, in: safari)
-                let space = safari.descendants(matching: .any)
-                    .matching(NSPredicate(format: "label IN %@", spaceLabels)).firstMatch
-                if space.waitForExistence(timeout: 3), space.isHittable {
-                    space.tap()
-                    RunLoop.current.run(until: Date().addingTimeInterval(0.3))
-                }
+            guard currentLanguageSwitchState(in: safari, timeout: 2)?.current == "IT",
+                  latinQwertyVisible(in: safari, timeout: 2) else { return "italian-not-active" }
+            print("MEMC-INFO|latin-language-active|italian")
+            for word in ["perche", "citta", "andro", "piu", "cosi", "puo", "societa", "grazie"] {
+                let before = field.value as? String
+                guard pressKeys(word.map { String($0) }) else { return "italian-key-missing" }
+                tapLatinSpace(in: safari)
+                RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+                guard let after = field.value as? String, after != before, !after.isEmpty,
+                      after != "textarea-field" else { return "italian-text-not-inserted" }
             }
-        }
-        memcMarker(itPhase, "end")
+            RunLoop.current.run(until: Date().addingTimeInterval(3))
+            guard currentLanguageSwitchState(in: safari, timeout: 1)?.current == "IT" else {
+                return "italian-language-changed-during-load"
+            }
+            shot("42-italian-typed")
+            clearFocusedField(field, placeholder: "textarea-field", in: safari)
+            return fieldIsEmpty() ? nil : "italian-load-did-not-clear"
+        }) else { return }
 
-        // Back to Japanese for a final push. If the best-effort clipboard detour could not return,
-        // preserve every marker but do not call the strict layout helper on top of the stranded panel.
-        let jpFlickFinal: Bool? = clipboardRecoveryFailed || clipboardPanelIsOpen(timeout: 1)
-            ? nil
-            : ensureJapaneseTab(in: safari)
-        for (i, group) in kanaGroups.prefix(3).enumerated() {
-            memcMarker("jp-final-\(i)", "start")
-            if let jpFlickFinal {
-                _ = typeKanaGroup(group, flick: jpFlickFinal, in: safari)
-                RunLoop.current.run(until: Date().addingTimeInterval(0.8))
-                clearTyped(atLeast: group.count, in: safari)
-            } else if i == 0 {
-                note("42-jp-final-skip-reason", "Clipboard detour did not return to the main keyboard")
-            }
-            memcMarker("jp-final-\(i)", "end")
+        for (index, group) in kanaGroups.prefix(3).enumerated() {
+            guard runPhase("jp-final-\(index)", { typeJapaneseGroup(group) }) else { return }
         }
         memcMarker("end", "end")
     }

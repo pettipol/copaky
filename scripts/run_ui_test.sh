@@ -371,4 +371,10 @@ xcrun simctl openurl "$UDID" "$FIELDS_URL"
 # The installed xctrunner has repeatedly lagged one source build behind.
 xcrun simctl uninstall "$UDID" "$RUNNER_BUNDLE" >/dev/null 2>&1 || true
 
+# Copaky: reassert the software-keyboard prerequisite after build/install and host startup.
+# A pre-build detach alone did not prevent an offscreen keyboard in the H-21 campaign.
+# Copaky: ビルドとホスト起動の後にもハードウェアキーボードを切断する。
+[[ -x "$HWKB_BIN" ]] || die "software-keyboard prerequisite: sim_hw_keyboard unavailable"
+"$HWKB_BIN" "$UDID" off || die "software-keyboard prerequisite: hardware detach failed"
+
 xcodebuild test-without-building "${XCB_ARGS[@]}"

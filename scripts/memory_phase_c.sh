@@ -6,8 +6,8 @@
 #
 # The Simulator's ABSOLUTE memory numbers are not meaningful for the jetsam budget (playbook §1 point
 # 3 / §4.5): `sim` mode exists to see the SHAPE of the curve locally, for free. `device` mode is the
-# one whose numbers matter for a real verdict; it is written to the same contract as `sim` but this
-# script was authored and exercised on `sim` only — the phone was out of scope for this session.
+# one whose numbers matter for a qualified verdict. Complete phase coverage is required; historical
+# captures with skipped workloads are rejected by memory_phase_c_validate.py.
 # シミュレータの絶対値はjetsam予算の判断に使えない（形だけを見る）。実機モードの数値だけが意味を持つ。
 #
 # Usage:
@@ -21,11 +21,11 @@
 set -uo pipefail
 
 MODE=""
-CONFIGURATION="${COPAKY_CONFIGURATION:-}"   # empty = the scheme's default (Debug); "Release" = the shipped kind
+CONFIGURATION="${COPAKY_CONFIGURATION:-Release}"
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --mode) MODE="$2"; shift 2 ;;
-    --configuration) CONFIGURATION="$2"; shift 2 ;;
+    --mode) [[ $# -ge 2 ]] || exit 2; MODE="$2"; shift 2 ;;
+    --configuration) [[ $# -ge 2 ]] || exit 2; CONFIGURATION="$2"; shift 2 ;;
     -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
     *) echo "ERROR: unknown argument '$1' (expected --mode device|sim)" >&2; exit 2 ;;
   esac
@@ -34,6 +34,12 @@ if [[ "$MODE" != "sim" && "$MODE" != "device" ]]; then
   echo "Usage: $0 --mode device|sim" >&2
   exit 2
 fi
+if [[ "$CONFIGURATION" != "Release" && "$CONFIGURATION" != "Debug" ]]; then
+  echo "ERROR: configuration must be Release or Debug" >&2; exit 2
+fi
+if [[ "$MODE" == "device" && "$CONFIGURATION" != "Release" ]]; then
+  echo "ERROR: device memory qualification requires Release" >&2; exit 2
+fi
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROJECT="$REPO_DIR/azooKey.xcodeproj"
@@ -41,22 +47,17 @@ SCHEME="CopakyUITests"
 UITEST_BUNDLE="azooKeyUITests"
 TEST_ID="$UITEST_BUNDLE/CopakyCampaignTests/test42_memoryPhaseC_japaneseTypingAcrossKana"
 SIM_NAME="${COPAKY_SIM_NAME:-iPhone 17}"
-DEVICE_ID="${COPAKY_DEVICE_ID:-2902B1DD-4621-5324-9818-37C757CF15E9}"      # CoreDevice id — for xcodebuild
+DEVICE_ID="${COPAKY_DEVICE_ID:-}"      # CoreDevice id — for xcodebuild; never a device-specific default
 # pymobiledevice3 addresses the phone by its lockdown UDID, NOT by the CoreDevice identifier above:
 # passing the CoreDevice id gives "Device not found" and the sampler dies before the first sample
 # (paid on 2026-08-15, first device run). Two ids for the same phone, on purpose.
 # pymobiledevice3 は CoreDevice ID ではなく lockdown UDID を要求する（同じ端末に2つのIDがある）。
 # No default: a lockdown UDID is a persistent identifier of one specific phone and does not belong in a
 # public repository (Codex counter-review, 2026-08-16). Set COPAKY_DEVICE_UDID, or let the script pick the
-# first device usbmuxd knows about. / 既定値なし：端末固有の UDID は公開リポジトリに置かない。
+# explicit paired device. / 既定値なし：端末固有の UDID は公開リポジトリに置かない。
 DEVICE_UDID="${COPAKY_DEVICE_UDID:-}"   # lockdown UDID — for pymobiledevice3
-if [ "$MODE" = "device" ] && [ -z "$DEVICE_UDID" ]; then
-  # `usbmux list --simple` prints a JSON array of UDID strings (checked 2026-08-16: `[]` with no phone).
-  DEVICE_UDID="$(PATH="$HOME/.local/bin:$PATH" pymobiledevice3 usbmux list --simple 2>/dev/null \
-    | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d[0] if d else "")' 2>/dev/null || true)"
-  if [ -z "$DEVICE_UDID" ]; then
-    echo "ERROR: no lockdown UDID — set COPAKY_DEVICE_UDID (see: pymobiledevice3 usbmux list)" >&2; exit 2
-  fi
+if [[ "$MODE" == "device" && ( -z "$DEVICE_UDID" || -z "$DEVICE_ID" ) ]]; then
+  echo "ERROR: set COPAKY_DEVICE_ID and COPAKY_DEVICE_UDID for the same paired phone" >&2; exit 2
 fi
 LOG_DIR="$HOME/copaky_device_logs"
 mkdir -p "$LOG_DIR"
@@ -65,6 +66,10 @@ CSV="$LOG_DIR/memc_${TS}.csv"
 XCLOG="$LOG_DIR/memc_${TS}_xcodebuild.log"
 RESULT_BUNDLE="$LOG_DIR/memc_${TS}.xcresult"
 RAW_DIR="$LOG_DIR/memc_${TS}_raw"; mkdir -p "$RAW_DIR"
+VALIDATOR="$REPO_DIR/scripts/memory_phase_c_validate.py"
+SUMMARY_JSON="$LOG_DIR/memc_${TS}_summary.json"
+PROVENANCE_JSON="$RAW_DIR/provenance.json"
+DERIVED_DATA="${COPAKY_MEMORY_DERIVED_DATA:-$HOME/Library/Developer/Xcode/DerivedData/CopakyMemoryPhaseC}"
 
 log() { echo "[$(date +%H:%M:%S)] $*"; }
 
@@ -119,73 +124,29 @@ sample_sim() {
 }
 
 # ---- sampler: device mode -----------------------------------------------------------------------
-# `pymobiledevice3 developer dvt sysmon process monitor process --help` (checked 2026-08-15, see
-# docs/UI_TESTING_PLAYBOOK.md §4.5): the subcommand DOES filter the live process snapshot by
-# key=value (--filter), so `--filter name=Keyboard` should narrow the stream on its own; the python3
-# re-check below is the fallback the brief asked for in case a given pymobiledevice3 build does not
-# actually narrow — never verified against the phone in this session (device mode was explicitly out
-# of scope: "il telefono NON è disponibile ora — non provare il device").
-# --filter name=Keyboard で絞れるはずだが、効かない版に備えてPython側でも再確認する（実機は未検証）。
+# Copaky: single includes execName (monitor does not). Resolve the exact extension first, then
+# monitor that PID; a process named Keyboard alone is never an identity proof. Snapshots and monitor
+# stderr remain private evidence. A new PID during the campaign invalidates qualification.
 sample_device() {
-  echo "timestamp,pid,physFootprint_bytes" > "$CSV"
-  # `monitor process` picks ONE process from the snapshot taken at start-up and errors out when
-  # nothing matches ("Failed to find a process matching the given filters in the current
-  # snapshot") — and the extension process does not exist until the test brings the keyboard up,
-  # and can be relaunched by iOS mid-run (new pid). So: keep re-attaching until we are stopped;
-  # every attach that fails or ends is retried after 2 s. Verified on the phone 2026-08-15 (the
-  # first device run had the sampler die at t=0 for exactly this reason).
-  # 拡張プロセスはキーボード表示まで存在せず、途中で再起動もする → 停止されるまで再接続を繰り返す。
-  #
-  # Output goes to a JSONL FILE per attach (`--output`), never through a pipe: pymobiledevice3
-  # block-buffers stdout when piped, so a 280 s run produced ZERO lines through `| python3`
-  # (5th device run) while `--output` wrote every second. The files are merged into the CSV by
-  # finalize_device_samples() after the test.
-  # パイプだと出力がバッファされ何も届かない（実測）→ 必ず --output でファイルに書き、後で CSV に変換する。
-  local n=0
+  local n=0 identity kpid
   while true; do
     n=$((n + 1))
-    PATH="$HOME/.local/bin:$PATH" pymobiledevice3 developer dvt sysmon process monitor process \
-        --filter name=Keyboard --key pid --key name --key physFootprint \
-        --interval 1000 --choose last --udid "$DEVICE_UDID" \
-        --output "$RAW_DIR/attach_$(printf '%03d' "$n").jsonl" >/dev/null 2>&1
+    identity="$RAW_DIR/identity_$(printf '%03d' "$n").json"
+    if PATH="$HOME/.local/bin:$PATH" pymobiledevice3 developer dvt sysmon process single \
+        --filter name=Keyboard --key pid --key name --key execName --udid "$DEVICE_UDID" \
+        --output "$identity" 2>"$RAW_DIR/identity_$(printf '%03d' "$n").stderr"; then
+      kpid="$(python3 "$VALIDATOR" --select-pids "$identity")"
+      # Reject ambiguous matches rather than choose the newest unrelated keyboard.
+      if [[ "$kpid" =~ ^[0-9]+$ ]]; then
+        PATH="$HOME/.local/bin:$PATH" pymobiledevice3 developer dvt sysmon process monitor process \
+          --filter "pid=$kpid" --key pid --key name --key physFootprint \
+          --interval 1000 --choose last --udid "$DEVICE_UDID" \
+          --output "$RAW_DIR/attach_$(printf '%03d' "$n").jsonl" \
+          >"$RAW_DIR/attach_$(printf '%03d' "$n").log" 2>&1
+      fi
+    fi
     sleep 2
   done
-}
-
-# Merge the per-attach JSONL files into the CSV the summarizer reads. `--key execName` is rejected
-# by the monitor, so the only handle is the process name: on this phone the sole third-party
-# keyboard is Copaky (checked with `sysmon process single`: name=Keyboard, execName …/azooKey.app/
-# PlugIns/Keyboard.appex/Keyboard).
-finalize_device_samples() {
-  /usr/bin/python3 - "$RAW_DIR" "$CSV" <<'PY'
-import sys, json, glob, os
-raw_dir, csv_path = sys.argv[1], sys.argv[2]
-rows = []
-for path in sorted(glob.glob(os.path.join(raw_dir, "attach_*.jsonl"))):
-    with open(path) as fh:
-        for line in fh:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                rec = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            name = str(rec.get("name", ""))
-            if name != "Keyboard" and "copaky" not in name.lower():
-                continue
-            ts = rec.get("timestamp")
-            pid = rec.get("pid", "")
-            foot = rec.get("physFootprint", "")
-            if ts is None or foot == "":
-                continue
-            rows.append((ts, pid, foot))
-rows.sort()
-with open(csv_path, "a") as out:
-    for ts, pid, foot in rows:
-        out.write(f"{ts},{pid},{foot}\n")
-print(f"[device] merged {len(rows)} samples from {len(glob.glob(os.path.join(raw_dir, 'attach_*.jsonl')))} attach file(s)")
-PY
 }
 
 SAMPLER_PID=""
@@ -242,6 +203,9 @@ while pgrep -f "usr/bin/xcodebuild (build|test|archive|build-for-testing|test-wi
   sleep 30
   waited=$((waited + 30))
 done
+if [[ $waited -ge 1800 ]]; then
+  log "ERROR: another xcodebuild still owns the execution lane"; exit 2
+fi
 
 # ---- sim only: seed the keyboard layout settings test42 needs (playbook §4.7) --------------------
 # The Simulator's App Group is not provisioned, so these never reach the extension via the app itself
@@ -271,20 +235,34 @@ if [[ "$MODE" == "sim" ]]; then
   fi
 fi
 
-start_sampler
-sleep 1   # let the first sample land before the run's own MEMC markers start
-
 # ---- run test42 on the right destination ----------------------------------------------------
 log "running $TEST_ID (mode=$MODE)"
 if [[ "$MODE" == "sim" ]]; then
+  start_sampler
   xcodebuild test -project "$PROJECT" -scheme "$SCHEME" \
-    ${CONFIGURATION:+-configuration "$CONFIGURATION"} \
+    -configuration "$CONFIGURATION" -derivedDataPath "$DERIVED_DATA" \
     -destination "platform=iOS Simulator,name=$SIM_NAME" \
     -only-testing:"$TEST_ID" \
     CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
     -resultBundlePath "$RESULT_BUNDLE" \
     2>&1 | tee "$XCLOG"
 else
+  # Verify that xcodebuild/devicectl and sysmon refer to the same phone; never select the first USB device.
+  xcrun devicectl list devices --json-output "$RAW_DIR/devices.json" >"$RAW_DIR/devices.log" 2>&1
+  if [[ $? != 0 ]] || ! python3 "$VALIDATOR" --device-map "$RAW_DIR/devices.json" \
+      --device-id "$DEVICE_ID" --device-udid "$DEVICE_UDID"; then
+    log "ERROR: CoreDevice/lockdown identifiers could not be correlated"; exit 2
+  fi
+  # Build and install BEFORE restarting the process, so an old Debug extension cannot survive
+  # an apparent Release measurement. Execution remains in this single script's lane.
+  xcodebuild build-for-testing -project "$PROJECT" -scheme "$SCHEME" \
+    -configuration "$CONFIGURATION" -derivedDataPath "$DERIVED_DATA" \
+    -destination "platform=iOS,id=$DEVICE_ID" -allowProvisioningUpdates \
+    2>&1 | tee "$RAW_DIR/build.log"
+  if [[ $? != 0 ]]; then log "ERROR: Release build-for-testing failed"; exit 2; fi
+  xcrun devicectl device install app --device "$DEVICE_ID" \
+    "$DERIVED_DATA/Build/Products/Release-iphoneos/azooKey.app" >"$RAW_DIR/install.log" 2>&1
+  if [[ $? != 0 ]]; then log "ERROR: Release app installation failed"; exit 2; fi
   # Pre-navigate Safari on the phone to the public copy of the field fixture (site/kbtest.html →
   # https://copaky.app/kbtest): on device the test ACTIVATES Safari instead of launching it, because
   # `launch()` restores the user's last tab and 127.0.0.1 would be the phone itself.
@@ -297,18 +275,27 @@ else
   # first "Release" one, which therefore measured Debug). Terminate it; the test's first keystroke
   # spawns a new process from the binary that was just installed.
   # 拡張プロセスは再インストール後も生き残る → 事前に終了させ、新しいバイナリで起動させる。
-  for kpid in $(xcrun devicectl device info processes --device "$DEVICE_ID" 2>/dev/null | awk '/azooKey.app\/PlugIns\/Keyboard.appex\/Keyboard/ {print $1}'); do
+  PATH="$HOME/.local/bin:$PATH" pymobiledevice3 developer dvt sysmon process single \
+    --key pid --key name --key execName --udid "$DEVICE_UDID" \
+    --output "$RAW_DIR/before.json" >"$RAW_DIR/before.log" 2>&1
+  if [[ $? != 0 ]]; then log "ERROR: cannot establish pre-run process identity"; exit 2; fi
+  STALE_PIDS="$(python3 "$VALIDATOR" --select-pids "$RAW_DIR/before.json")"
+  if [[ $? != 0 ]]; then log "ERROR: invalid pre-run identity snapshot"; exit 2; fi
+  for kpid in $STALE_PIDS; do
     log "terminating stale Keyboard extension process pid $kpid"
-    xcrun devicectl device process terminate --device "$DEVICE_ID" --pid "$kpid" >/dev/null 2>&1 || true
+    xcrun devicectl device process terminate --device "$DEVICE_ID" --pid "$kpid" >/dev/null 2>&1 || {
+      log "ERROR: could not terminate stale Keyboard process"; exit 2;
+    }
   done
   log "pre-navigating Safari on the phone to https://copaky.app/kbtest"
   xcrun devicectl device process launch --device "$DEVICE_ID" --payload-url "https://copaky.app/kbtest" com.apple.mobilesafari >/dev/null 2>&1 || \
     log "WARN: devicectl could not open Safari — the test will fail on 'textarea-field not found' if the page is not open"
   sleep 3
+  start_sampler
   # `-configuration Release` measures the SHIPPED kind of binary (Debug builds carry unoptimised
   # code and allocator debugging and read several MB higher — first device run: 47-51 MB Debug).
-  xcodebuild test -project "$PROJECT" -scheme "$SCHEME" \
-    ${CONFIGURATION:+-configuration "$CONFIGURATION"} \
+  xcodebuild test-without-building -project "$PROJECT" -scheme "$SCHEME" \
+    -configuration "$CONFIGURATION" -derivedDataPath "$DERIVED_DATA" \
     -destination "platform=iOS,id=$DEVICE_ID" -allowProvisioningUpdates \
     -only-testing:"$TEST_ID" \
     -resultBundlePath "$RESULT_BUNDLE" \
@@ -327,143 +314,35 @@ fi
 
 stop_sampler
 trap - EXIT
-if [[ "$MODE" == "device" ]]; then finalize_device_samples; fi
 
-# ---- markers + summary -----------------------------------------------------------------------
-log "=== MEMC markers ($XCLOG) ==="
-grep '^MEMC|' "$XCLOG" || echo "(none found — the test may not have run; check the log above)"
+# ---- machine-readable, fail-closed summary ----------------------------------------------------
+# Copaky: record requested configuration and local build output separately from process identity.
+# This is not a remote hash attestation of the installed binary.
+python3 - "$PROVENANCE_JSON" "$MODE" "$CONFIGURATION" "$XCODEBUILD_STATUS" "$SAMPLER_DIED" "$REPO_DIR" <<'PYPROV'
+import json, subprocess, sys
+from pathlib import Path
+path, mode, configuration, status, sampler_died, repo = sys.argv[1:]
+def git(*args):
+    result = subprocess.run(["git", "-C", repo, *args], capture_output=True, text=True)
+    return result.stdout.strip() if result.returncode == 0 else None
+Path(path).write_text(json.dumps({"mode": mode, "configuration": configuration,
+    "xcodebuild_status": int(status), "sampler_died": int(sampler_died),
+    "device_mapping_verified": mode == "device",
+    "source_commit": git("rev-parse", "HEAD"), "source_dirty": bool(git("status", "--porcelain")),
+    "installed_binary_hash": "NOT_VERIFIED", "test": "test42_memoryPhaseC_japaneseTypingAcrossKana"}, indent=2) + "\n")
+PYPROV
+PROVENANCE_STATUS=$?
+if [[ "$PROVENANCE_STATUS" != 0 ]]; then log "ERROR: could not record provenance"; exit 2; fi
 
-log "=== physFootprint summary ($CSV) ==="
 SUMMARY_STATUS=0
-/usr/bin/python3 - "$XCLOG" "$CSV" <<'PY' || SUMMARY_STATUS=$?
-import sys, csv
-from datetime import datetime
-
-xclog_path, csv_path = sys.argv[1], sys.argv[2]
-
-def parse_iso(ts):
-    ts = ts.strip()
-    if ts.endswith("Z"):
-        ts = ts[:-1] + "+00:00"
-    return datetime.fromisoformat(ts)
-
-# markers[phase][edge] = timestamp, edge in {"start", "end"} — see MainAppUITests.memcMarker.
-markers = {}
-malformed = 0
-with open(xclog_path, errors="replace") as f:
-    for line in f:
-        line = line.strip()
-        if not line.startswith("MEMC|"):
-            continue
-        parts = line.split("|", 3)
-        if len(parts) != 4 or parts[2] not in ("start", "end"):
-            malformed += 1
-            continue
-        _, phase, edge, ts = parts
-        try:
-            markers.setdefault(phase, {})[edge] = parse_iso(ts)
-        except ValueError:
-            malformed += 1
-
-try:
-    with open(csv_path) as f:
-        rows = list(csv.DictReader(f))
-except FileNotFoundError:
-    rows = []
-
-samples = []
-for r in rows:
-    try:
-        samples.append((parse_iso(r["timestamp"]), int(r["physFootprint_bytes"])))
-    except (KeyError, ValueError):
-        continue
-
-total_marker_lines = sum(len(edges) for edges in markers.values())
-print(f"markers: {total_marker_lines} ({len(markers)} phases)")
-if malformed:
-    print(f"malformed MEMC lines skipped: {malformed}")
-print(f"samples: {len(samples)}")
-
-ok = True
-if not samples:
-    print("FAIL: zero samples recorded — the sampler produced no data")
-    ok = False
-
-# ---- required marker set (memory phase C review, finding B): every jp-N with BOTH edges, one of
-# clipboard/clipboard-skipped, one of it/it-skipped, and a final "end". Missing any of these means
-# the run is not trustworthy enough to summarize as a pass. ------------------------------------
-required_jp = [f"jp-{i}" for i in range(12)]
-missing_edges = [p for p in required_jp if not {"start", "end"} <= markers.get(p, {}).keys()]
-if missing_edges:
-    print(f"FAIL: missing start+end markers for: {', '.join(missing_edges)}")
-    ok = False
-
-clipboard_phase = next((p for p in ("clipboard", "clipboard-skipped") if p in markers), None)
-if clipboard_phase is None:
-    print("FAIL: no 'clipboard' or 'clipboard-skipped' marker found")
-    ok = False
-
-italian_phase = next((p for p in ("it", "it-skipped") if p in markers), None)
-if italian_phase is None:
-    print("FAIL: no 'it' or 'it-skipped' marker found")
-    ok = False
-
-if "end" not in markers:
-    print("FAIL: no final 'end' marker found — the test may not have completed")
-    ok = False
-
-# ---- per-phase attribution: window = [start, end] for a paired phase, a single instant for "end" -
-print("--- per-phase samples ---")
-ordered_phases = sorted(markers, key=lambda p: min(markers[p].values()))
-phases_with_samples = 0
-for phase in ordered_phases:
-    edges = markers[phase]
-    start = edges.get("start", edges.get("end"))
-    end = edges.get("end", edges.get("start"))
-    window = [b for t, b in samples if start <= t <= end]
-    if window:
-        phases_with_samples += 1
-        print(f"{phase}: n={len(window)} max={max(window) / (1024 * 1024):.2f} MB")
-    else:
-        print(f"{phase}: no samples in window")
-print(f"phases with samples: {phases_with_samples}/{len(ordered_phases)}")
-
-# ---- required phases must ALSO carry at least one sample in their own window ------------------
-# Skipped when there are zero samples overall — every phase would show up "starved" and just repeat
-# the "zero samples recorded" FAIL above with no new information.
-if samples:
-    required_phases = required_jp + [p for p in (clipboard_phase, italian_phase) if p]
-    starved = []
-    for phase in required_phases:
-        edges = markers.get(phase, {})
-        start, end = edges.get("start"), edges.get("end")
-        if not (start and end):
-            continue   # already reported under missing_edges above
-        if not [b for t, b in samples if start <= t <= end]:
-            starved.append(phase)
-    if starved:
-        print(f"FAIL: zero samples inside the window of required phase(s): {', '.join(starved)}")
-        ok = False
-
-if samples:
-    mb = [b / (1024 * 1024) for _, b in samples]
-    print(f"min: {min(mb):.2f} MB")
-    print(f"max: {max(mb):.2f} MB")
-    print(f"avg: {sum(mb) / len(mb):.2f} MB")
-
-sys.exit(0 if ok else 1)
-PY
-
-FINAL_STATUS="$XCODEBUILD_STATUS"
-if [[ "$SAMPLER_DIED" == 1 && "$FINAL_STATUS" == 0 ]]; then
-  FINAL_STATUS=1
+if [[ "$MODE" == "device" ]]; then
+  python3 "$VALIDATOR" --log "$XCLOG" --csv "$CSV" --raw-dir "$RAW_DIR" \
+    --provenance "$PROVENANCE_JSON" --app "$DERIVED_DATA/Build/Products/Release-iphoneos/azooKey.app" \
+    --json "$SUMMARY_JSON" || SUMMARY_STATUS=$?
+else
+  python3 "$VALIDATOR" --log "$XCLOG" --csv "$CSV" --provenance "$PROVENANCE_JSON" \
+    --json "$SUMMARY_JSON" || SUMMARY_STATUS=$?
 fi
-if [[ "$SUMMARY_STATUS" != 0 ]]; then
-  log "summary validation FAILED (exit $SUMMARY_STATUS) — see FAIL lines above"
-  if [[ "$FINAL_STATUS" == 0 ]]; then
-    FINAL_STATUS=1
-  fi
-fi
-
-log "done. CSV=$CSV xcodebuild-log=$XCLOG result-bundle=$RESULT_BUNDLE"
-exit "$FINAL_STATUS"
+log "done. summary=$SUMMARY_JSON CSV=$CSV xcodebuild-log=$XCLOG result-bundle=$RESULT_BUNDLE"
+# 0 = complete/in budget; 1 = complete/over budget; 2 = measurement error or simulator-only.
+exit "$SUMMARY_STATUS"

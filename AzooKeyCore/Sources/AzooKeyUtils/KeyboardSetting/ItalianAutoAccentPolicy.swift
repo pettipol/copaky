@@ -32,6 +32,13 @@ public enum ItalianAutoAccentPolicy {
         contentType == nil
     }
 
+    // Copaky: H-46 preserves the corpus control "cosi" even when a system dictionary proposes
+    // "così". Match only this whole plain word, ignoring case without folding accents.
+    // Copaky: システム辞書が「così」を提案しても「cosi」を保持。大小文字だけを無視し、アクセントは区別する。
+    public static func shouldPreservePlainWord(_ typed: String) -> Bool {
+        typed.lowercased() == "cosi"
+    }
+
     // Copaky: fail-closed oracle — the fix is applied only when the SYSTEM Italian spell checker
     // flags the plain word as misspelled. The bundled 50k-word lexicon cannot tell a valid plain word
     // it simply lacks ("meta", "faro", "pero", "Sara") from a missing accent ("perche", "piu"); the
@@ -58,7 +65,9 @@ public enum ItalianAutoAccentPolicy {
     // our candidate, which closes the residual path of the 2026-08-19 re-review.
     // Copaky: 端末の校正候補にこちらの補正形が含まれる場合のみ適用（fail-closed の後段）。
     @MainActor public static func systemConfirmsAccentFix(forTyped typed: String, fix: String) -> Bool {
-        guard !typed.isEmpty, UITextChecker.availableLanguages.contains(where: { $0.hasPrefix("it") }) else {
+        guard !typed.isEmpty,
+              !shouldPreservePlainWord(typed),
+              UITextChecker.availableLanguages.contains(where: { $0.hasPrefix("it") }) else {
             return false
         }
         let range = NSRange(location: 0, length: (typed as NSString).length)

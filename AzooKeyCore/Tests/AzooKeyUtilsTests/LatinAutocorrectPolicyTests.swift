@@ -155,6 +155,55 @@ final class LatinAutocorrectPolicyTests: XCTestCase {
         }
     }
 
+    // Copaky: H-46 must preserve cosi even if both system-oracle stages endorse così.
+    // Copaky: H-46ではシステム校正の両段階がcosìを支持してもcosiを保持する。
+    func testH46PreservesCosiWhenGeneralOracleRejectsIt() {
+        let hostileOracle = LatinAutocorrectPolicy.SpellCheckResult(
+            isMisspelled: true,
+            guesses: ["così"],
+            oracleAcceptedGuesses: ["così"]
+        )
+        for typed in ["cosi", "Cosi"] {
+            XCTAssertNil(
+                LatinAutocorrectPolicy.correction(
+                    forTypedWord: typed,
+                    language: .italian,
+                    context: context(beforeWord: ""),
+                    spellCheckResult: hostileOracle
+                ),
+                "H-46: a hostile oracle must not replace \(typed)"
+            )
+        }
+    }
+
+    // Copaky: checking only the general path would leave A-01c's preferred branch open.
+    // Copaky: 一般補正だけの保護ではA-01c優先分岐を防げないため、その経路も検証する。
+    func testH46PreservesCosiBeforePreferredAccent() {
+        for typed in ["cosi", "Cosi"] {
+            XCTAssertNil(
+                LatinAutocorrectPolicy.correction(
+                    forTypedWord: typed,
+                    language: .italian,
+                    context: context(
+                        beforeWord: "",
+                        preferredItalianAccent: "così",
+                        italianAccentCandidateExists: true
+                    ),
+                    spellCheckResult: .init(isMisspelled: true, guesses: ["così"])
+                ),
+                "H-46: preferred accent must not bypass preservation of \(typed)"
+            )
+        }
+    }
+
+    func testH46PlainWordGuardDoesNotChangeEnglishOracleDecisions() {
+        XCTAssertEqual(
+            correction("cosi", "così", language: .english, oracleAcceptedGuesses: ["così"]),
+            "così",
+            "the Italian preservation rule must not change an injected English oracle decision"
+        )
+    }
+
     func testItalianAutoAccentHasPrecedenceAndCanBlockGeneralFallback() {
         let generalGuess = LatinAutocorrectPolicy.SpellCheckResult(isMisspelled: true, guesses: ["perché"])
         XCTAssertEqual(

@@ -308,6 +308,12 @@ public enum LatinAutocorrectPolicy {
             return .reject
         }
 
+        // Copaky: H-46's plain-word contract applies before either A-01c or the general oracle.
+        // Copaky: H-46の無アクセント語保護をA-01c優先分岐と一般校正の両方より先に適用する。
+        if language == .italian, ItalianAutoAccentPolicy.shouldPreservePlainWord(typed) {
+            return .reject
+        }
+
         // A-01c owns missing-accent words. A confirmed fix wins; an unconfirmed/disabled A-01c
         // candidate stays untouched instead of being reinterpreted by the general guess ranking.
         if language == .italian, context.italianAutoAccentCandidateExists {
