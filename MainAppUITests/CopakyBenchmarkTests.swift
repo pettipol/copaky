@@ -56,6 +56,7 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
                 "noisy": noisy,
                 "result": result,
                 "candidates_before_space": candidates,
+                "candidate_observation": candidates.isEmpty ? "unavailable" : "observed",
                 "selected_candidate_index": selectedCandidateIndex.map { $0 as Any } ?? NSNull(),
                 "taps": taps,
                 "ms": milliseconds,
@@ -70,6 +71,7 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
         let expected: String
         let noisy: String
         let final: String
+        let expectedRaw: String
         let taps: Int
         let milliseconds: Int
         let error: String?
@@ -81,8 +83,10 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
                 "block": block,
                 "op": op,
                 "expected": expected,
+                "expected_raw": expectedRaw,
                 "noisy": noisy,
                 "final": final,
+                "final_trimmed_diagnostic": final.trimmingCharacters(in: .whitespacesAndNewlines),
                 "taps": taps,
                 "ms": milliseconds,
                 "error": error.map { $0 as Any } ?? NSNull(),
@@ -126,13 +130,11 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
     }
 
     private var requestedKeyboard: String {
-        let value = environmentValue("COPAKY_BENCH_KEYBOARD") ?? "copaky"
-        return ["copaky", "apple"].contains(value) ? value : "copaky"
+        environmentValue("COPAKY_BENCH_KEYBOARD") ?? "copaky"
     }
 
     private var requestedLanguage: String {
-        let value = environmentValue("COPAKY_BENCH_LANGUAGE") ?? "en"
-        return ["en", "it", "ja"].contains(value) ? value : "en"
+        environmentValue("COPAKY_BENCH_LANGUAGE") ?? "en"
     }
 
     private var deviceName: String {
@@ -205,6 +207,14 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
     }
 
     private func prepareKeyboard(fieldPlaceholder: String, keyboard: String, language: String) throws -> XCUIElement {
+        guard ["en", "it", "ja"].contains(language) else {
+            throw BenchError.configuration("Invalid COPAKY_BENCH_LANGUAGE: \(language)")
+        }
+        // Copaky: a visible Keyboard element does not establish its provider or locale.
+        // Copaky: Keyboard要素だけでは提供元・言語を証明できないため比較を拒否する。
+        guard keyboard == "copaky" else {
+            throw BenchError.configuration("UNSUPPORTED: Apple provider/language selection is not proved by this harness")
+        }
         let field = activatePreNavigatedField(fieldPlaceholder)
         if keyboard == "copaky" {
             switchToCopaky(in: safari)
@@ -285,13 +295,58 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
         do {
             _ = try prepareKeyboard(fieldPlaceholder: "plain-text", keyboard: keyboard, language: language)
         } catch {
+            _ = emitJSON(["keyboard": keyboard, "language": language, "state": state, "keys": [], "error": String(describing: error)], name: "geometry-\(keyboard)-\(language)-setup-failed.json")
+            attachScreenshot("59-setup-failed")
             XCTFail(String(describing: error))
             return
         }
         wait(1.0)
+        attachScreenshot("59-before-geometry-query")
+        let geometryTree = XCTAttachment(string: safari.debugDescription)
+        geometryTree.name = "59-geometry-tree"
+        geometryTree.lifetime = .keepAlways
+        add(geometryTree)
 
         guard let inputFrame = keyboardFrame(for: keyboard) else {
             XCTFail("Keyboard frame disappeared before geometry capture")
+            return
+        }
+        // Copaky: retained AX keyboard trees can sit below the screen after a host round trip.
+        // Copaky: ホスト復帰後の画面外AXツリーを実際に表示されたキーボードとして測定しない。
+        // Copaky: the UI-test runner's UIScreen can be 320×480 while target Safari is 440×956.
+        // Its bounds are diagnostic only; the target's actual window is the qualified viewport.
+        // Copaky: ランナーのUIScreenではなく、実際のSafariウィンドウを表示領域として使う。
+        let screenFrame = UIScreen.main.bounds
+        let hostFrame = safari.frame
+        let anchors = safari.staticTexts.matching(NSPredicate(format: "label IN %@", language == "ja" ? ["あ", "か", "さ"] : ["q", "Q"]))
+        let hasVisibleLetter = anchors.allElementsBoundByIndex.prefix(20).contains {
+            guard $0.exists else { return false }
+            let measured = $0.frame
+            guard frame(measured, isInside: inputFrame), hostFrame.insetBy(dx: -1, dy: -1).contains(measured) else { return false }
+            return $0.isHittable
+        }
+        guard hostFrame.insetBy(dx: -1, dy: -1).contains(inputFrame), hasVisibleLetter else {
+            func bounds(_ rect: CGRect) -> [String: Double] {
+                ["x": Double(rect.minX), "y": Double(rect.minY), "w": Double(rect.width), "h": Double(rect.height)]
+            }
+            let anchorDiagnostics: [[String: Any]] = anchors.allElementsBoundByIndex.prefix(20).enumerated().map { index, anchor in
+                guard anchor.exists else { return ["index": index, "exists": false] }
+                let anchorFrame = anchor.frame
+                let validFrame = frame(anchorFrame, isInside: inputFrame) && hostFrame.insetBy(dx: -1, dy: -1).contains(anchorFrame)
+                return ["index": index, "exists": true, "label": anchor.label, "frame": bounds(anchorFrame), "isHittable": validFrame ? anchor.isHittable as Any : NSNull(),
+                        "inside_inputView": frame(anchorFrame, isInside: inputFrame),
+                        "inside_safari": hostFrame.insetBy(dx: -1, dy: -1).contains(anchorFrame),
+                        "inside_screen": screenFrame.insetBy(dx: -1, dy: -1).contains(anchorFrame)]
+            }
+            var report = geometryJSON(keyboard: keyboard, language: language, state: state, inputFrame: inputFrame, keys: [], error: "HOLD: inputView or Copaky letter is not visible and hittable on screen")
+            report["visibility_diagnostics"] = ["inputFrame": bounds(inputFrame), "safariFrame": bounds(hostFrame), "screenFrame": bounds(screenFrame),
+                                                "viewport_source": "Safari target window; runner UIScreen is diagnostic only",
+                                                "input_inside_safari": hostFrame.insetBy(dx: -1, dy: -1).contains(inputFrame),
+                                                "input_inside_screen": screenFrame.insetBy(dx: -1, dy: -1).contains(inputFrame),
+                                                "has_visible_letter_at_gate": hasVisibleLetter, "anchors": anchorDiagnostics]
+            _ = emitJSON(report, name: "geometry-\(keyboard)-\(language)-offscreen.json")
+            attachScreenshot("59-offscreen-keyboard")
+            XCTFail("HOLD: geometry requires an on-screen inputView and a hittable Copaky letter")
             return
         }
 
@@ -317,10 +372,21 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
         let keys = keyboard == "copaky"
             ? captureCopakyGeometry(in: inputFrame, language: language)
             : captureAppleGeometry(in: inputFrame)
-        let invalidFrames = keys.filter { !frame($0.frame, isInside: inputFrame) }
-        let error = invalidFrames.isEmpty
-            ? nil
-            : "\(invalidFrames.count) key frame(s) fall outside the keyboard frame"
+        let invalidFrames = keys.filter {
+            !frame($0.frame, isInside: inputFrame)
+                || !hostFrame.insetBy(dx: -1, dy: -1).contains($0.frame)
+        }
+        let requiredLetters = language == "ja" ? 10 : 26
+        let letters = keys.filter { $0.role == "letter" }
+        let validLetters = Set(letters.filter { isKeyCell($0.frame, in: inputFrame, letter: true) }.map(\.label))
+        let missingControlRoles = ["space", "delete", "return"].filter { role in !keys.contains { $0.role == role } }
+        let error: String? = !invalidFrames.isEmpty
+            ? "\(invalidFrames.count) key frame(s) fall outside the keyboard frame"
+            : validLetters.count != requiredLetters
+                ? "HOLD: expected \(requiredLetters) unique key-sized letter cells; got \(validLetters.count)"
+                : !missingControlRoles.isEmpty
+                    ? "HOLD: missing measured control cells: \(missingControlRoles.joined(separator: ", "))"
+                    : nil
         let report = geometryJSON(
             keyboard: keyboard,
             language: language,
@@ -332,8 +398,9 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
         _ = emitJSON(report, name: "geometry-\(keyboard)-\(language)-\(safeComponent(state)).json")
         attachScreenshot("59-geometry-\(keyboard)-\(language)-\(safeComponent(state))")
 
-        XCTAssertFalse(keys.isEmpty, "Geometry capture found no keys")
+        XCTAssertEqual(validLetters.count, requiredLetters, "Geometry requires all distinct letter cells; containers and glyph bounds are not key geometry")
         XCTAssertTrue(invalidFrames.isEmpty, "Every captured key frame must be inside the keyboard frame")
+        XCTAssertTrue(missingControlRoles.isEmpty, "HOLD: geometry also requires measured space, delete and return cells; missing \(missingControlRoles)")
     }
 
     private func geometryJSON(
@@ -395,8 +462,7 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
                 appendUnique(GeometryKey(label: label.lowercased(), frame: key.frame, role: "letter"), to: &keys)
             } else if language != "ja" {
                 let uppercase = label.uppercased()
-                let text = uppercase == "A" ? visibleUppercaseLetter(uppercase) : visibleStaticText(labels: [uppercase], keyboard: "copaky")
-                if let text, let key = smallestTouchContainer(around: text, in: keyboardFrame) {
+                if let key = copakyTextKey(label: uppercase, in: keyboardFrame) {
                     appendUnique(GeometryKey(label: label.lowercased(), frame: key.frame, role: "letter"), to: &keys)
                 }
             }
@@ -476,6 +542,11 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
         for index in 0..<min(texts.count, 20) {
             let text = texts.element(boundBy: index)
             guard text.exists, frame(text.frame, isInside: keyboardFrame) else { continue }
+            // Copaky: use a proven hittable cell leaf directly; glyphs still require a container.
+            if isKeyCell(text.frame, in: keyboardFrame, letter: label.count == 1 && label.first?.isLetter == true),
+               safari.frame.insetBy(dx: -1, dy: -1).contains(text.frame), text.isHittable {
+                return text
+            }
             let containerQueries = [
                 safari.otherElements.containing(predicate),
                 safari.buttons.containing(predicate),
@@ -493,7 +564,12 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
             NSPredicate(format: "identifier == %@", identifier)
         ).firstMatch
         guard descendant.waitForExistence(timeout: 0.4), frame(descendant.frame, isInside: keyboardFrame) else { return nil }
-        return smallestTouchContainer(around: descendant, in: keyboardFrame)
+        if let container = smallestTouchContainer(around: descendant, in: keyboardFrame) { return container }
+        // Copaky: an AX Image is measurable only if it exposes a real, hittable key cell.
+        // Copaky: 実キー寸法とヒット判定のあるImageだけを認め、字形の寸法は採用しない。
+        if descendant.elementType == .image, isKeyCell(descendant.frame, in: keyboardFrame, letter: false),
+           safari.frame.insetBy(dx: -1, dy: -1).contains(descendant.frame), descendant.isHittable { return descendant }
+        return nil
     }
 
     private func smallestTouchContainer(
@@ -511,7 +587,7 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
                 guard candidate.exists else { continue }
                 let candidateFrame = candidate.frame
                 let area = candidateFrame.width * candidateFrame.height
-                guard candidateFrame.width > 1, candidateFrame.height > 1,
+                guard isKeyCell(candidateFrame, in: keyboardFrame, letter: descendant.label.count == 1 && descendant.label.first?.isLetter == true),
                       area > childFrame.width * childFrame.height * 1.05,
                       frame(candidateFrame, isInside: keyboardFrame),
                       candidateFrame.insetBy(dx: -1, dy: -1).contains(CGPoint(x: childFrame.midX, y: childFrame.midY)),
@@ -521,6 +597,15 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
             }
         }
         return best
+    }
+
+    private func isKeyCell(_ candidate: CGRect, in keyboardFrame: CGRect, letter: Bool) -> Bool {
+        // Copaky: reject glyphs and whole-row/inputView ancestors (e.g. 440×250).
+        // Copaky: 字形の境界と行全体・inputViewの祖先をキー寸法として認めない。
+        candidate.width >= 20 && candidate.height >= 30
+            && candidate.width <= keyboardFrame.width * (letter ? 0.34 : 0.8)
+            && candidate.height <= keyboardFrame.height * 0.34
+            && frame(candidate, isInside: keyboardFrame)
     }
 
     private func frame(_ candidate: CGRect, isInside container: CGRect) -> Bool {
@@ -611,13 +696,16 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
             var skippedMeta = meta
             skippedMeta["note"] = "Apple Japanese decoder benchmark is intentionally unsupported"
             _ = emitJSON(["meta": skippedMeta, "phrases": []], name: "decoder-apple-ja.json")
-            throw XCTSkip("Apple + Japanese decoder benchmark is out of scope")
+            XCTFail("UNSUPPORTED: Apple + Japanese decoder benchmark is out of scope")
+            return
         }
 
         let field: XCUIElement
         do {
             field = try prepareKeyboard(fieldPlaceholder: "textarea-field", keyboard: keyboard, language: language)
         } catch {
+            _ = emitJSON(["meta": meta, "phrases": [], "error": String(describing: error)], name: "decoder-\(keyboard)-\(language)-setup-failed.json")
+            attachScreenshot("60-setup-failed")
             XCTFail(String(describing: error))
             return
         }
@@ -634,15 +722,30 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
             return
         }
 
+        var completed: [PhraseResult] = []
+        func recordProgress(_ phrase: PhraseResult) {
+            completed.append(phrase)
+            // Copaky: completed observations survive a later XCUI failure, but cannot qualify a run.
+            _ = emitJSON(["meta": meta, "phrases": completed.map(\.json), "status": "PARTIAL"],
+                         name: "decoder-progress-\(keyboard)-\(language)-\(completed.count).json")
+        }
         let phrases: [PhraseResult]
         if language == "ja" {
-            phrases = runJapaneseFixtures(parseJapaneseTSV(contents).prefix(limit), field: field, keyboard: keyboard)
+            phrases = runJapaneseFixtures(parseJapaneseTSV(contents).prefix(limit), field: field, keyboard: keyboard, onFixture: recordProgress)
         } else {
-            phrases = runLatinFixtures(parseLatinTSV(contents).prefix(limit), field: field, keyboard: keyboard)
+            phrases = runLatinFixtures(parseLatinTSV(contents).prefix(limit), field: field, keyboard: keyboard, onFixture: recordProgress)
         }
         let report: [String: Any] = ["meta": meta, "phrases": phrases.map(\.json)]
         _ = emitJSON(report, name: "decoder-\(keyboard)-\(language).json")
         attachScreenshot("60-decoder-\(keyboard)-\(language)-complete")
+        let completedTree = XCTAttachment(string: safari.debugDescription)
+        completedTree.name = "60-decoder-\(keyboard)-\(language)-tree-complete"
+        completedTree.lifetime = .keepAlways
+        add(completedTree)
+        // Copaky: attach every observation before reporting a failing phrase.
+        XCTAssertFalse(phrases.isEmpty, "Benchmark TSV contains no data fixtures")
+        let failures = phrases.filter { $0.error != nil }
+        XCTAssertTrue(failures.isEmpty, "Decoder failed: \(failures.map { "\($0.id): \($0.error ?? "unknown")" }.joined(separator: "; "))")
     }
 
     private func benchmarkMeta(keyboard: String, language: String, autocorrect: Bool?, tsv: String) -> [String: Any] {
@@ -656,6 +759,8 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
             "tsv": tsv,
             "commit": commit.map { $0 as Any } ?? NSNull(),
             "date": ISO8601DateFormatter().string(from: Date()),
+            "keystroke_count_status": "NOT_QUALIFIED",
+            "taps_semantics": "logical_input_actions_excluding_navigation",
         ]
         if keyboard == "apple" {
             meta["candidate_note"] = "predictive-bar candidates are empty when XCUI does not expose readable labels"
@@ -669,6 +774,314 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
         case "0", "false", "no", "off": false
         default: nil
         }
+    }
+
+    // Copaky: independent IT/EN/JA runs, literal keys only; settings are read, never changed.
+    // Copaky: 伊英日を別実行し、実キーだけを使う。設定は読み取りのみ。
+    func test62_realTypingScenarios() throws {
+        let language = requestedLanguage
+        var checkpoints: [[String: Any]] = []
+        var error: String?
+        var taps = 0
+        let started = Date()
+        do {
+            guard requestedKeyboard == "copaky" else { throw BenchError.configuration("test62 requires Copaky") }
+            guard ["en", "it", "ja"].contains(language) else { throw BenchError.configuration("Invalid COPAKY_BENCH_LANGUAGE: \(language)") }
+            // test61: stop Safari BEFORE MainApp setup to avoid its background keyboard watchdog.
+            safari.terminate()
+            mainApp.terminate()
+            mainApp.launch()
+            let close = mainApp.buttons.matching(NSPredicate(format: "label IN %@", ["閉じる", "Close", "Chiudi"])).firstMatch
+            if close.waitForExistence(timeout: 3), close.isHittable { close.tap() }
+            let settings = mainApp.descendants(matching: .any).matching(NSPredicate(format: "label IN %@", ["設定", "Settings", "Impostazioni"])).firstMatch
+            guard settings.waitForExistence(timeout: 3), settings.isHittable else { throw BenchError.missingElement("MainApp Settings tab missing") }
+            settings.tap()
+            wait(0.5)
+            var contracts: [(String, [String])] = [("live_conversion", ["ライブ変換", "Live Conversion", "Conversione live"])]
+            if language != "ja" {
+                contracts += [
+                    ("enable_latin_autocorrect", ["ラテン文字の自動修正", "Autocorrect typos (Latin keyboards)", "Correzione automatica dei refusi (tastiere latine)"]),
+                    ("enable_latin_auto_capitalization", ["文頭を自動で大文字に", "Auto-capitalization", "Maiuscole automatiche"]),
+                    ("double_space_period", ["スペース2回でピリオド", "Double-space for period", "Doppio spazio per il punto"]),
+                ]
+            }
+            if language == "it" {
+                contracts.append(("italian_auto_accent_on_space", ["スペースでアクセントを自動補正（イタリア語）", "Auto-accent on space (Italian)", "Accento automatico con lo spazio (italiano)"]))
+            }
+            for (key, labels) in contracts {
+                let toggle = mainApp.switches.matching(NSPredicate(format: "label IN %@", labels)).firstMatch
+                for direction in [false, true] {
+                    for _ in 0..<8 where !toggle.exists || !toggle.isHittable {
+                        if direction { mainApp.swipeUp() } else { mainApp.swipeDown() }
+                        let alert = mainApp.alerts.firstMatch
+                        if alert.exists, alert.buttons.firstMatch.exists { alert.buttons.firstMatch.tap() }
+                    }
+                }
+                guard toggle.exists, toggle.isHittable, toggle.value as? String == "0" else {
+                    throw BenchError.configuration("Literal scenario prerequisite: seed \(key)=false; observed \(toggle.exists ? String(describing: toggle.value) : "missing")")
+                }
+                attachScreenshot("62-\(language)-seed-\(key)-off")
+            }
+            let field = try prepareKeyboard(fieldPlaceholder: "textarea-field", keyboard: "copaky", language: language)
+            guard field.exists, field.value is String else { throw BenchError.missingElement("Readable textarea fixture is required") }
+            try clearBenchField(field, keyboard: "copaky")
+            func checkpoint(_ name: String, _ expected: String) throws {
+                let deadline = Date().addingTimeInterval(3)
+                repeat {
+                    if currentFieldValue(field) == expected { break }
+                    wait(0.2)
+                } while Date() < deadline
+                let observed = currentFieldValue(field)
+                checkpoints.append(["step": name, "expected": expected, "observed_raw": observed, "taps": taps, "matched": observed == expected])
+                attachScreenshot("62-\(language)-\(name)")
+                guard observed == expected else { throw BenchError.input("\(name): expected \(expected.debugDescription), observed \(observed.debugDescription)") }
+            }
+            func literal(_ value: String) throws {
+                for character in value {
+                    if character == " " { try tapSpace(keyboard: "copaky") }
+                    else if character == "\n" {
+                        taps += try tapNewline(field: field)
+                        continue
+                    } else { try tapLatinCharacter(character, keyboard: "copaky") }
+                    taps += 1
+                }
+            }
+            func commitKana(_ reading: String) throws {
+                let prefix = currentFieldValue(field)
+                taps += try tapFlickString(reading)
+                let expected = prefix + reading
+                let typingDeadline = Date().addingTimeInterval(3)
+                repeat {
+                    if currentFieldValue(field) == expected { break }
+                    wait(0.2)
+                } while Date() < typingDeadline
+                guard currentFieldValue(field) == expected else {
+                    throw BenchError.input("Literal kana before confirmation: expected \(expected.debugDescription), observed \(currentFieldValue(field).debugDescription)")
+                }
+                // Copaky: UnifiedEnterKeyModel.complete performs .enter; with live conversion OFF,
+                // InputManager.enterCandidate commits composingText.convertTarget literally.
+                // Copaky: ライブ変換OFFでは「確定」が入力中のかなをそのまま確定する。
+                guard let confirm = visibleKeyboardControl(labels: ["確定"]) else {
+                    throw BenchError.missingElement("Actual Japanese confirmation key is missing")
+                }
+                confirm.tap()
+                taps += 1
+                let commitDeadline = Date().addingTimeInterval(3)
+                repeat {
+                    if currentFieldValue(field) == expected, visibleKeyboardControl(labels: returnLabels) != nil { return }
+                    wait(0.2)
+                } while Date() < commitDeadline
+                throw BenchError.input("Japanese confirmation must retain \(expected.debugDescription) and expose the actual return key; observed \(currentFieldValue(field).debugDescription)")
+            }
+            if language == "ja" {
+                try commitKana("あいう")
+                try checkpoint("kana", "あいう")
+                try literal("  ")
+                try checkpoint("two-spaces", "あいう  ")
+                try commitKana("かきく")
+                try checkpoint("second-word", "あいう  かきく")
+                guard let punctuation = visibleStaticText(labels: ["､｡?!"], keyboard: "copaky") else { throw BenchError.missingElement("Japanese punctuation key missing") }
+                let start = safari.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: punctuation.frame.midX - safari.frame.minX, dy: punctuation.frame.midY - safari.frame.minY))
+                start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: -52, dy: 0)))
+                taps += 1
+                try checkpoint("punctuation-before-newline", "あいう  かきく。")
+                try literal("\n")
+                try checkpoint("punctuation-newline", "あいう  かきく。\n")
+                try commitKana("さ")
+                try checkpoint("before-delete", "あいう  かきく。\nさ")
+            } else {
+                let first = language == "it" ? "ciao" : "hello"
+                let second = language == "it" ? "mondo" : "world"
+                let line = language == "it" ? "riga" : "next"
+                try literal(first)
+                try checkpoint("first-word", first)
+                try literal("  ")
+                try checkpoint("two-spaces", first + "  ")
+                try literal(second + ".")
+                try checkpoint("punctuation-before-newline", first + "  " + second + ".")
+                try literal("\n")
+                try checkpoint("punctuation-newline", first + "  " + second + ".\n")
+                try literal(line + "!")
+                try checkpoint("before-delete", first + "  " + second + ".\n" + line + "!")
+            }
+            let beforeDelete = currentFieldValue(field)
+            guard let delete = deleteKey(keyboard: "copaky"), delete.isHittable else { throw BenchError.missingElement("Real delete key missing") }
+            delete.tap()
+            taps += 1
+            let deleted = String(beforeDelete.dropLast())
+            try checkpoint("deleted-one-character", deleted)
+            if language == "ja" { try commitKana("た") } else { try literal("a") }
+            try checkpoint("edited-final", deleted + (language == "ja" ? "た" : "a"))
+        } catch let failure {
+            error = String(describing: failure)
+        }
+        _ = emitJSON(["meta": benchmarkMeta(keyboard: "copaky", language: language, autocorrect: false, tsv: "built-in literal scenario"), "checkpoints": checkpoints, "taps": taps, "ms": elapsedMilliseconds(since: started), "error": error.map { $0 as Any } ?? NSNull()], name: "real-typing-\(language).json")
+        attachScreenshot("62-\(language)-final")
+        XCTAssertNil(error, "Real typing scenario failed: \(error ?? "")")
+        XCTAssertEqual(checkpoints.count, language == "ja" ? 8 : 7, "Every exact checkpoint must execute")
+    }
+
+    private func tapNewline(field: XCUIElement) throws -> Int {
+        // Copaky: a composing word exposes Confirm, whose action is commit rather than newline.
+        // Copaky: 未確定文字列の「確定」は改行ではない。確定後の実際の改行キーを別に押す。
+        let before = currentFieldValue(field)
+        var taps = 0
+        if let confirm = visibleKeyboardControl(labels: ["確定", "Complete", "Conferma"]) {
+            confirm.tap()
+            taps += 1
+            attachScreenshot("62-\(requestedLanguage)-composition-confirmed-before-newline")
+        }
+        let deadline = Date().addingTimeInterval(3)
+        repeat {
+            if let newline = visibleKeyboardControl(labels: returnLabels + ["arrow.turn.down.left"]) {
+                guard currentFieldValue(field) == before else {
+                    throw BenchError.input("Confirm before newline changed literal text: \(currentFieldValue(field).debugDescription)")
+                }
+                newline.tap()
+                return taps + 1
+            }
+            wait(0.2)
+        } while Date() < deadline
+        throw BenchError.missingElement("Actual newline key missing after \(taps) composition-confirmation tap(s)")
+    }
+
+    // Copaky: seeded-history reuse only; this does not qualify clipboard capture or persistence.
+    // Copaky: シード済み履歴の再利用だけを確認し、取得・永続化の証明にはしない。
+    func test63_clipboardReuseScenario() throws {
+        let clips = ["Il tuo codice di verifica è 482913", "Ci prendiamo un caffè questa settimana?"]
+        var checkpoints: [[String: Any]] = []
+        var actions: [String] = []
+        var error: String?
+        let started = Date()
+        do {
+            guard environmentValue("COPAKY_CLIPBOARD_PRESEEDED") == "1" else {
+                throw BenchError.configuration("HOLD: COPAKY_CLIPBOARD_PRESEEDED=1 is required; seed signed shared history with --seed-clipboard it")
+            }
+            guard requestedKeyboard == "copaky", requestedLanguage == "it" else {
+                throw BenchError.configuration("Clipboard reuse scenario requires COPAKY_BENCH_KEYBOARD=copaky and COPAKY_BENCH_LANGUAGE=it")
+            }
+            let field = try prepareKeyboard(fieldPlaceholder: "textarea-field", keyboard: "copaky", language: "it")
+            guard field.exists, field.value is String else { throw BenchError.missingElement("Readable textarea fixture is required") }
+            try clearBenchField(field, keyboard: "copaky")
+            func checkpoint(_ name: String, _ expected: String) throws {
+                let deadline = Date().addingTimeInterval(3)
+                repeat {
+                    if currentFieldValue(field) == expected { break }
+                    wait(0.2)
+                } while Date() < deadline
+                let observed = currentFieldValue(field)
+                checkpoints.append(["step": name, "expected": expected, "observed_raw": observed, "matched": observed == expected])
+                attachScreenshot("63-\(name)")
+                guard observed == expected else { throw BenchError.input("\(name): expected \(expected.debugDescription), observed \(observed.debugDescription)") }
+            }
+            func openHistory() throws {
+                guard let numbers = visibleKeyboardControl(labels: ["123", "numbers", "Numbers", "numeri", "Numeri", "数字", "textformat.123", "textformat.numbers"]) else {
+                    throw BenchError.missingElement("HOLD: visible Latin numbers shortcut is missing")
+                }
+                numbers.press(forDuration: 1.2)
+                actions.append("long-press Latin numbers shortcut")
+                let back = safari.descendants(matching: .any).matching(NSPredicate(format: "identifier == %@", "copaky_clipboard_back")).firstMatch
+                guard back.waitForExistence(timeout: 4), back.isHittable,
+                      let frame = keyboardFrame(for: "copaky"), self.frame(back.frame, isInside: frame) else {
+                    throw BenchError.missingElement("HOLD: Copaky clipboard panel did not open from the real shortcut")
+                }
+                attachScreenshot("63-history-open-\(actions.count)")
+            }
+            func pasteClip(_ clip: String) throws {
+                let tiles = safari.buttons.matching(NSPredicate(format: "identifier == %@ AND label CONTAINS %@", "copaky_clipboard_text_tile", clip))
+                guard tiles.firstMatch.waitForExistence(timeout: 4), let frame = keyboardFrame(for: "copaky") else {
+                    throw BenchError.missingElement("HOLD: seeded Unicode clipboard tile is missing: \(clip)")
+                }
+                let viewport = frame.intersection(safari.frame)
+                for attempt in 0...3 {
+                    if let tile = tiles.allElementsBoundByIndex.prefix(12).first(where: {
+                        $0.exists && $0.isHittable && self.frame($0.frame, isInside: frame)
+                            && viewport.insetBy(dx: -1, dy: -1).contains($0.frame)
+                    }) {
+                        tile.tap()
+                        actions.append("tap clipboard tile: \(clip)")
+                        return
+                    }
+                    guard attempt < 3, let target = tiles.allElementsBoundByIndex.prefix(12).first(where: { $0.exists }) else { break }
+                    let targetFrame = target.frame
+                    guard targetFrame.height > 1, viewport.width > 80,
+                          targetFrame.minY >= viewport.minY, targetFrame.maxY <= viewport.maxY,
+                          targetFrame.minX < viewport.minX || targetFrame.maxX > viewport.maxX else { break }
+                    // Copaky: ClipboardSection is a horizontal ScrollView/LazyHStack. Drag only
+                    // within this tile's row; never scroll the page or tap a clipped tile.
+                    // Copaky: 対象タイルの水平スクロール行だけを実際にドラッグする。
+                    let left = viewport.minX + 24
+                    let right = viewport.maxX - 24
+                    let scrollLeft = targetFrame.maxX > viewport.maxX
+                    let origin = safari.coordinate(withNormalizedOffset: .zero)
+                    let start = origin.withOffset(CGVector(dx: (scrollLeft ? right : left) - safari.frame.minX, dy: targetFrame.midY - safari.frame.minY))
+                    let end = origin.withOffset(CGVector(dx: (scrollLeft ? left : right) - safari.frame.minX, dy: targetFrame.midY - safari.frame.minY))
+                    start.press(forDuration: 0.05, thenDragTo: end)
+                    actions.append("swipe \(scrollLeft ? "left" : "right") in clipboard tile row; attempt=\(attempt + 1)")
+                    wait(0.4)
+                    attachScreenshot("63-tile-row-scroll-\(attempt + 1)")
+                }
+                throw BenchError.missingElement("HOLD: seeded clipboard tile is not entirely visible and hittable after at most three horizontal row gestures: \(clip)")
+            }
+            func backToLatin() throws {
+                let back = safari.descendants(matching: .any).matching(NSPredicate(format: "identifier == %@", "copaky_clipboard_back")).firstMatch
+                guard back.exists, back.isHittable, let frame = keyboardFrame(for: "copaky"), self.frame(back.frame, isInside: frame) else {
+                    throw BenchError.missingElement("HOLD: visible Copaky clipboard back control missing")
+                }
+                back.tap()
+                actions.append("tap clipboard back")
+                wait(0.4)
+                // Copaky: observe the actual Back result; never switch tabs to repair it here.
+                // Copaky: 戻る操作の結果を読み取りだけで検証し、タブ切替で修復しない。
+                let deadline = Date().addingTimeInterval(3)
+                var observedLanguage = copakyLanguageSwitchState()?.current ?? "missing"
+                actions.append("clipboard back initial language=\(observedLanguage)")
+                repeat {
+                    observedLanguage = copakyLanguageSwitchState()?.current ?? "missing"
+                    if let keyboardFrame = keyboardInputViewFrame(of: safari) {
+                        func visible(_ labels: [String]) -> Bool {
+                            safari.staticTexts.matching(NSPredicate(format: "label IN %@", labels))
+                                .allElementsBoundByIndex.prefix(20).contains {
+                                    $0.exists && $0.isHittable && self.frame($0.frame, isInside: keyboardFrame)
+                                }
+                        }
+                        if observedLanguage == "IT", visible(["q", "Q"]), visible(latinSpaceLabels) {
+                            attachScreenshot("63-back-to-latin-\(actions.count)")
+                            return
+                        }
+                    }
+                    wait(0.2)
+                } while Date() < deadline
+                actions.append("clipboard back failed language=\(observedLanguage)")
+                throw BenchError.input("Clipboard back did not restore visible Italian Latin keys; observed language=\(observedLanguage)")
+            }
+            try openHistory()
+            try pasteClip(clips[0])
+            try checkpoint("first-unicode-paste", clips[0])
+            try backToLatin()
+            try tapSpace(keyboard: "copaky")
+            actions.append("tap Latin space")
+            try checkpoint("literal-space-after-paste", clips[0] + " ")
+            let newlineTaps = try tapNewline(field: field)
+            actions.append("tap actual newline; enter-control taps=\(newlineTaps)")
+            let prefix = clips[0] + " \n"
+            try checkpoint("newline-after-paste", prefix)
+            try openHistory()
+            try pasteClip(clips[1])
+            try checkpoint("second-unicode-paste", prefix + clips[1])
+            try backToLatin()
+            for character in "ab" {
+                try tapLatinCharacter(character, keyboard: "copaky")
+                actions.append("tap Latin letter \(character)")
+            }
+            try checkpoint("literal-typing-after-second-paste", prefix + clips[1] + "ab")
+        } catch let failure {
+            error = String(describing: failure)
+        }
+        _ = emitJSON(["meta": benchmarkMeta(keyboard: "copaky", language: "it", autocorrect: nil, tsv: "seeded Unicode clipboard reuse"), "scope": "seeded-history reuse; capture, persistence and OS Full Access not qualified", "actions": actions, "checkpoints": checkpoints, "ms": elapsedMilliseconds(since: started), "error": error.map { $0 as Any } ?? NSNull()], name: "clipboard-reuse-it.json")
+        attachScreenshot("63-final")
+        XCTAssertNil(error, "Clipboard reuse scenario failed: \(error ?? "")")
+        XCTAssertEqual(checkpoints.count, 5, "Every clipboard reuse checkpoint must execute")
     }
 
     private func dataLines(_ contents: String) -> [(line: Int, columns: [String])] {
@@ -698,7 +1111,7 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
                 noisy: row.columns[1],
                 block: row.columns[2],
                 op: row.columns[3],
-                parseError: nil
+                parseError: row.columns[0].isEmpty || row.columns[1].isEmpty ? "empty expected/noisy text at TSV line \(row.line)" : nil
             )
         }
     }
@@ -736,9 +1149,15 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
     private func runLatinFixtures<C: Collection>(
         _ fixtures: C,
         field: XCUIElement,
-        keyboard: String
+        keyboard: String,
+        onFixture: (PhraseResult) -> Void
     ) -> [PhraseResult] where C.Element == LatinFixture {
         fixtures.map { fixture in
+            attachScreenshot("60-latin-fixture-\(fixture.id)-before")
+            let tree = XCTAttachment(string: safari.debugDescription)
+            tree.name = "60-latin-fixture-\(fixture.id)-tree-before"
+            tree.lifetime = .keepAlways
+            add(tree)
             let started = Date()
             var taps = 0
             var words: [WordResult] = []
@@ -756,7 +1175,7 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
                         taps += 1
                         wordTaps += 1
                     }
-                    let candidates = candidateLabels(keyboard: keyboard)
+                    let candidates = waitForCandidates(keyboard: keyboard, timeout: 1)
                     let beforeSpace = currentFieldValue(field)
                     try tapSpace(keyboard: keyboard)
                     taps += 1
@@ -778,31 +1197,41 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
             } catch {
                 phraseError = phraseError ?? String(describing: error)
             }
-            let final = currentFieldValue(field).trimmingCharacters(in: .whitespacesAndNewlines)
-            if phraseError == nil, final != fixture.expected {
+            let final = currentFieldValue(field)
+            // Each benchmark word deliberately taps a final space; preserve it in raw evidence.
+            if phraseError == nil, final != fixture.expected + " " {
                 phraseError = "final_mismatch"
             }
-            return PhraseResult(
+            let observation = PhraseResult(
                 id: fixture.id,
                 block: fixture.block,
                 op: fixture.op,
                 expected: fixture.expected,
                 noisy: fixture.noisy,
                 final: final,
+                expectedRaw: fixture.expected + " ",
                 taps: taps,
                 milliseconds: elapsedMilliseconds(since: started),
                 error: phraseError,
                 words: words
             )
+            onFixture(observation)
+            return observation
         }
     }
 
     private func runJapaneseFixtures<C: Collection>(
         _ fixtures: C,
         field: XCUIElement,
-        keyboard: String
+        keyboard: String,
+        onFixture: (PhraseResult) -> Void
     ) -> [PhraseResult] where C.Element == JapaneseFixture {
         fixtures.map { fixture in
+            attachScreenshot("60-japanese-fixture-\(fixture.id)-before")
+            let tree = XCTAttachment(string: safari.debugDescription)
+            tree.name = "60-japanese-fixture-\(fixture.id)-tree-before"
+            tree.lifetime = .keepAlways
+            add(tree)
             let started = Date()
             var taps = 0
             var phraseError = fixture.parseError
@@ -815,6 +1244,9 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
                     let segmentTaps = try tapFlickString(segment.reading)
                     taps += segmentTaps
                     let candidates = waitForCandidates(keyboard: keyboard, timeout: 3)
+                    if candidates.isEmpty {
+                        throw BenchError.missingElement("INFRA_CANDIDATE_OBSERVATION_UNAVAILABLE at segment \(index)")
+                    }
                     let selected = candidates.firstIndex(of: segment.result) ?? -1
                     if selected >= 0 {
                         guard let candidate = candidateElement(label: segment.result, keyboard: keyboard) else {
@@ -844,18 +1276,21 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
             }
             let final = currentFieldValue(field)
             if phraseError == nil, final != fixture.expected { phraseError = "final_mismatch" }
-            return PhraseResult(
+            let observation = PhraseResult(
                 id: fixture.id,
                 block: "JA",
                 op: "convert",
                 expected: fixture.expected,
                 noisy: fixture.reading,
                 final: final,
+                expectedRaw: fixture.expected,
                 taps: taps,
                 milliseconds: elapsedMilliseconds(since: started),
                 error: phraseError,
                 words: words
             )
+            onFixture(observation)
+            return observation
         }
     }
 
@@ -914,12 +1349,7 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
             let query = safari.keyboards.firstMatch.keys.matching(NSPredicate(format: "label IN %@", deleteLabels))
             return query.firstMatch.waitForExistence(timeout: 1) ? query.firstMatch : nil
         }
-        for identifier in ["delete.left", "delete.backward"] {
-            let key = safari.descendants(matching: .any).matching(NSPredicate(format: "identifier == %@", identifier)).firstMatch
-            if key.waitForExistence(timeout: 0.4) { return key }
-        }
-        let key = safari.descendants(matching: .any).matching(NSPredicate(format: "label IN %@", deleteLabels)).firstMatch
-        return key.waitForExistence(timeout: 1) ? key : nil
+        return visibleKeyboardControl(labels: deleteLabels + ["delete.left", "delete.backward"])
     }
 
     private func tapSpace(keyboard: String) throws {
@@ -927,7 +1357,8 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
         if keyboard == "apple" {
             key = safari.keyboards.firstMatch.keys.matching(NSPredicate(format: "label IN %@", latinSpaceLabels)).firstMatch
         } else {
-            key = safari.staticTexts.matching(NSPredicate(format: "label IN %@", latinSpaceLabels)).firstMatch
+            guard let space = visibleStaticText(labels: latinSpaceLabels, keyboard: keyboard) else { throw BenchError.missingElement("Visible Copaky space key is missing") }
+            key = space
         }
         guard key.waitForExistence(timeout: 2) else { throw BenchError.missingElement("space key is missing") }
         key.tap()
@@ -1062,25 +1493,41 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
 
     private func tapCopakyPunctuation(_ character: Character) throws {
         let target = String(character)
-        if target == ".", let dot = visibleStaticText(labels: ["."], keyboard: "copaky") {
-            dot.tap()
-            return
+        // Copaky: the Latin letter tab has no period after F-07; use test38's numbers path.
+        // Copaky: F-07以後の文字タブにピリオドはない。test38と同じ数字タブを使う。
+        guard let numbers = visibleKeyboardControl(labels: ["123", "numbers", "Numbers", "numeri", "Numeri", "数字", "textformat.123", "textformat.numbers"]) else {
+            throw BenchError.missingElement("Latin numbers key is missing")
         }
-        let variations = [".", ",", "!", "?", "'", "\""]
-        guard let index = variations.firstIndex(of: target),
-              let source = visibleStaticText(labels: ["."], keyboard: "copaky"),
-              let keyboardFrame = keyboardFrame(for: "copaky") else {
+        numbers.tap()
+        wait(0.4)
+        guard let punctuation = visibleStaticText(labels: [target], keyboard: "copaky") else {
             throw BenchError.unsupportedCharacter(character)
         }
-        let touchFrame = smallestTouchContainer(around: source, in: keyboardFrame)?.frame ?? source.frame
-        let width = max(touchFrame.width, 28)
-        let dx = -width * (CGFloat(variations.count - index) - 0.5)
-        let appFrame = safari.frame
-        let start = safari.coordinate(withNormalizedOffset: .zero).withOffset(
-            CGVector(dx: touchFrame.midX - appFrame.minX, dy: touchFrame.midY - appFrame.minY)
-        )
-        start.press(forDuration: 0.8, thenDragTo: start.withOffset(CGVector(dx: dx, dy: 0)))
-        wait(0.25)
+        punctuation.tap()
+        wait(0.2)
+        guard let frame = keyboardFrame(for: "copaky") else { throw BenchError.missingElement("Numbers keyboard disappeared") }
+        let query = safari.descendants(matching: .any).matching(NSPredicate(format: "label IN %@", ["ABC", "ITA", "あいう"]))
+        let back = query.allElementsBoundByIndex.filter {
+            guard $0.exists else { return false }
+            let measured = $0.frame
+            guard self.frame(measured, isInside: frame), safari.frame.insetBy(dx: -1, dy: -1).contains(measured) else { return false }
+            return $0.isHittable
+        }.min { $0.frame.minX < $1.frame.minX }
+        guard let back else { throw BenchError.missingElement("Numbers-tab language/back key is missing") }
+        back.tap()
+        wait(0.4)
+        guard switchToLatinQwertyTab(in: safari) else { throw BenchError.input("Numbers tab did not return to Latin") }
+    }
+
+    private func visibleKeyboardControl(labels: [String]) -> XCUIElement? {
+        guard let frame = keyboardFrame(for: "copaky") else { return nil }
+        let query = safari.descendants(matching: .any).matching(NSPredicate(format: "label IN %@ OR identifier IN %@", labels, labels))
+        return query.allElementsBoundByIndex.prefix(30).first {
+            guard $0.exists else { return false }
+            let measured = $0.frame
+            guard self.frame(measured, isInside: frame), safari.frame.insetBy(dx: -1, dy: -1).contains(measured) else { return false }
+            return $0.isHittable
+        }
     }
 
     private func tapApplePunctuation(_ character: Character) throws {
@@ -1106,79 +1553,93 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
         let query = safari.staticTexts.matching(NSPredicate(format: "label IN %@", labels))
         for index in 0..<min(query.count, 30) {
             let element = query.element(boundBy: index)
-            if element.exists, self.frame(element.frame, isInside: frame) { return element }
+            guard element.exists else { continue }
+            let measured = element.frame
+            guard self.frame(measured, isInside: frame), safari.frame.insetBy(dx: -1, dy: -1).contains(measured) else { continue }
+            if element.isHittable { return element }
         }
         return nil
     }
 
-    private func candidateLabels(keyboard: String) -> [String] {
-        guard let frame = keyboardFrame(for: keyboard) else { return [] }
-        let keyTop: CGFloat
-        if keyboard == "apple" {
-            let keys = safari.keyboards.firstMatch.keys
-            var top = CGFloat.greatestFiniteMagnitude
-            for index in 0..<keys.count {
-                let key = keys.element(boundBy: index)
-                if key.exists, key.frame.height > 1 { top = min(top, key.frame.minY) }
-            }
-            keyTop = top
-        } else {
-            let anchors = safari.staticTexts.matching(NSPredicate(format: "label IN %@", ["q", "Q", "あ", "か", "さ"]))
-            var top = CGFloat.greatestFiniteMagnitude
-            for index in 0..<min(anchors.count, 20) {
-                let anchor = anchors.element(boundBy: index)
-                if anchor.exists, self.frame(anchor.frame, isInside: frame) { top = min(top, anchor.frame.minY) }
-            }
-            keyTop = top
+    private func candidateRegion(keyboard: String) -> CGRect? {
+        guard keyboard == "copaky", let input = keyboardFrame(for: keyboard),
+              safari.frame.insetBy(dx: -1, dy: -1).contains(input) else { return nil }
+        let anchors = safari.staticTexts.matching(NSPredicate(format: "label IN %@", ["q", "Q", "あ", "か", "さ"]))
+        var provenCells: [String: CGRect] = [:]
+        for anchor in anchors.allElementsBoundByIndex.prefix(20) {
+            guard anchor.exists else { continue }
+            let measured = anchor.frame
+            guard isKeyCell(measured, in: input, letter: true),
+                  safari.frame.insetBy(dx: -1, dy: -1).contains(measured), anchor.isHittable else { continue }
+            let label = anchor.label
+            if let previous = provenCells[label], previous.width * previous.height >= measured.width * measured.height { continue }
+            provenCells[label] = measured
         }
-        guard keyTop.isFinite else { return [] }
+        guard let keyTop = provenCells.values.map(\.minY).min(), keyTop > input.minY + 1 else { return nil }
+        // Copaky: inputView is an AX placeholder; candidates render in a sibling window. Admit
+        // only visible text above a proved physical first-row cell, never glyph/parent transforms.
+        // Copaky: AXのinputViewに子要素がなくても、実キーより上の表示領域だけを読む。
+        return CGRect(x: input.minX, y: input.minY, width: input.width, height: keyTop - input.minY - 1)
+    }
 
+    private func candidateLabels(keyboard: String) -> [String] {
+        guard let region = candidateRegion(keyboard: keyboard) else { return [] }
         var candidates: [(String, CGFloat)] = []
-        let texts = safari.staticTexts
-        for index in 0..<min(texts.count, 240) {
-            let element = texts.element(boundBy: index)
+        var observations: [[String: Any]] = []
+        // Copaky: ResultBar exposes its textual candidates as Button(action:label:) elements.
+        // Copaky: ResultBarの文字候補はStaticTextではなくButtonとして公開される。
+        // Bind by AX identity: repeated index resolution omitted visible candidates on iOS 26.5.
+        // インデックス再解決による表示候補の欠落を避け、AX要素の識別情報に結び付ける。
+        let texts = safari.buttons.allElementsBoundByAccessibilityElement
+        for element in texts.prefix(240) {
+            guard element.exists else { continue }
+            let measured = element.frame
             let label = element.label.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard element.exists, !label.isEmpty,
-                  element.frame.midY >= frame.minY - 1,
-                  element.frame.maxY < keyTop - 1,
-                  element.frame.midX >= frame.minX,
-                  element.frame.midX <= frame.maxX else { continue }
-            candidates.append((label, element.frame.minX))
+            let inside = self.frame(measured, isInside: region) && safari.frame.insetBy(dx: -1, dy: -1).contains(measured)
+            let hittable = inside && element.isHittable
+            observations.append(["label": label, "identifier": element.identifier, "frame": NSCoder.string(for: measured), "inside": inside, "hittable": hittable])
+            guard inside, hittable, !["chevron.down", "chevron.up"].contains(element.identifier) else { continue }
+            guard !label.isEmpty else { continue }
+            candidates.append((label, measured.minX))
         }
-        if keyboard == "apple" {
-            let others = safari.keyboards.firstMatch.otherElements
-            for index in 0..<min(others.count, 80) {
-                let element = others.element(boundBy: index)
-                let label = element.label.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard element.exists, !label.isEmpty,
-                      element.frame.midY >= frame.minY - 1,
-                      element.frame.maxY < keyTop - 1 else { continue }
-                candidates.append((label, element.frame.minX))
-            }
+        if let data = try? JSONSerialization.data(withJSONObject: ["region": NSCoder.string(for: region), "buttons": observations], options: [.prettyPrinted, .sortedKeys]) {
+            let attachment = XCTAttachment(data: data, uniformTypeIdentifier: "public.json")
+            attachment.name = "decoder-candidate-observation-\(UUID().uuidString).json"
+            attachment.lifetime = .keepAlways
+            add(attachment)
         }
         var seen = Set<String>()
         return candidates.sorted { $0.1 < $1.1 }.compactMap { label, _ in
-            guard !["写", "取り消す", "お知らせ", "逆順"].contains(label) else { return nil }
+            guard !["写", "取り消す", "Annulla", "Undo", "お知らせ", "逆順", "chevron.down", "chevron.up"].contains(label) else { return nil }
             return seen.insert(label).inserted ? label : nil
         }
     }
 
     private func waitForCandidates(keyboard: String, timeout: TimeInterval) -> [String] {
         let deadline = Date().addingTimeInterval(timeout)
+        var previous: [String] = []
+        var observations = 0
         repeat {
             let labels = candidateLabels(keyboard: keyboard)
-            if !labels.isEmpty { return labels }
+            observations += 1
+            if !labels.isEmpty, labels == previous { return labels }
+            previous = labels
             wait(0.2)
-        } while Date() < deadline
-        return candidateLabels(keyboard: keyboard)
+            // Copaky: one AX snapshot may exceed the polling window. Allow its bounded second
+            // observation before classifying a visible list as unavailable.
+            // Copaky: AX取得が待機時間を超えても、最初の候補リストの確認を一度だけ許す。
+        } while observations < 3 && (Date() < deadline || (observations == 1 && !previous.isEmpty))
+        return [] // Unstable/missing candidates are not a measured candidate list.
     }
 
     private func candidateElement(label: String, keyboard: String) -> XCUIElement? {
-        guard let frame = keyboardFrame(for: keyboard) else { return nil }
-        let texts = safari.staticTexts.matching(NSPredicate(format: "label == %@", label))
+        guard let region = candidateRegion(keyboard: keyboard) else { return nil }
+        let texts = safari.buttons.matching(NSPredicate(format: "label == %@", label))
         for index in 0..<min(texts.count, 20) {
             let element = texts.element(boundBy: index)
-            guard element.exists, element.frame.midY >= frame.minY - 1, element.frame.midY <= frame.midY else { continue }
+            guard element.exists else { continue }
+            let measured = element.frame
+            guard self.frame(measured, isInside: region), safari.frame.insetBy(dx: -1, dy: -1).contains(measured), element.isHittable else { continue }
             return element
         }
         return nil

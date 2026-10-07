@@ -167,17 +167,33 @@ UDID="${COPAKY_UDID:-E0552C62-FFDB-4DF6-9040-2734DB5B2458}"
 PROJECT="$REPO_DIR/azooKey.xcodeproj"
 TEST_CLASS="CopakyCampaignTests"
 case "$TEST" in
-  test59_keyboardGeometryBaseline|test60_benchDecoder)
+  test59_keyboardGeometryBaseline|test60_benchDecoder|test62_realTypingScenarios|test63_clipboardReuseScenario)
     TEST_CLASS="CopakyBenchmarkTests"
     ;;
 esac
 TEST_ID="azooKeyUITests/$TEST_CLASS/$TEST"
 CONFIGURATION="${COPAKY_CONFIGURATION:-Debug}"
+# Copaky: normal assertion failures keep XCUI attachments without a 600-second sysdiagnose.
+# Opt in for platform crashes; this setting never changes the test verdict.
+# Copaky: 通常の失敗では添付を保持し、重いsysdiagnoseは明示指定時だけ収集する。
+COLLECT_DIAGNOSTICS="${COPAKY_COLLECT_TEST_DIAGNOSTICS:-never}"
+[[ "$COLLECT_DIAGNOSTICS" == never || "$COLLECT_DIAGNOSTICS" == on-failure ]] \
+  || die "COPAKY_COLLECT_TEST_DIAGNOSTICS must be never or on-failure"
 DERIVED_DATA="${COPAKY_DERIVED_DATA_PATH:-$HOME/Library/Developer/Xcode/DerivedData/CopakySingleUITest}"
+# Copaky [H-47]: retain each result outside Xcode's pruned DerivedData logs.
+# Copaky: 結果をDerivedDataの自動削除対象外に保存し、skipを成功に数えない。
+RESULT_ROOT="${COPAKY_UI_RESULTS_DIR:-$HOME/copaky_device_logs/ui}"
+mkdir -p "$RESULT_ROOT"
+RUN_DIR="$(mktemp -d "$RESULT_ROOT/${TEST}_$(date +%Y%m%d_%H%M%S)_XXXXXX")"
+RESULT_BUNDLE="$RUN_DIR/result.xcresult"
+echo "UI evidence: $RUN_DIR"
 APP_BUNDLE="com.pettipol.copaky"
 KB_BUNDLE="com.pettipol.copaky.keyboard"
 RUNNER_BUNDLE="com.pettipol.copaky.uitests.xctrunner"
-FIELDS_URL="http://127.0.0.1:8377/kbtest.html"
+# Copaky: a fresh local fixture URL prevents Safari restoring a previous multiline selection.
+# This initializes the test document; all scenario text is still entered through visible keys.
+# Copaky: 前回の複数行選択をSafariが復元しないよう、実行ごとに空のローカル文書を開く。
+FIELDS_URL="http://127.0.0.1:8377/kbtest.html?copaky-run=$(basename "$RUN_DIR")"
 # Copaky (05/09): the host app product must ALWAYS carry the App Group entitlement. An unsigned
 # build-for-testing (CODE_SIGNING_ALLOWED=NO) re-links azooKey.app without its Simulated.xcent and
 # test-without-building then reinstalls it over the signed app: containermanagerd drops the group
@@ -252,6 +268,29 @@ fi
 bash "$REPO_DIR/scripts/serve_test_page.sh" --daemon
 
 # Build the UI runner (and the signed host app) once; --fresh-install re-installs that host app below.
+# Copaky: capture requested settings and source identity, without signing credentials.
+python3 - "$REPO_DIR" "$RUN_DIR" "$TEST_ID" "$CONFIGURATION" "$UDID" "$BENCH_TSV" "${SEEDS[@]}" <<'PY'
+import hashlib, json, os, subprocess, sys
+from pathlib import Path
+repo, out, test, config, device, corpus, *seeds = sys.argv[1:]
+# Copaky: the environment-only entry point must identify its fixture too.
+corpus = corpus or os.environ.get("TEST_RUNNER_COPAKY_BENCH_TSV", "")
+def git(*args):
+    return subprocess.check_output(["git", "-C", repo, *args])
+def digest(data):
+    return hashlib.sha256(data).hexdigest()
+untracked = git("ls-files", "--others", "--exclude-standard", "-z").decode().split("\0")
+receipt = {"test_id": test, "configuration": config, "simulator_id": device,
+           "source_commit": git("rev-parse", "HEAD").decode().strip(),
+           "tracked_delta_sha256": digest(git("diff", "--binary", "HEAD")),
+           "untracked_hashes": {name: digest((Path(repo) / name).read_bytes())
+                                for name in untracked if name and (Path(repo) / name).is_file()},
+           "requested_seeds": seeds,
+           "benchmark_environment": {k: v for k, v in os.environ.items()
+                                     if k.startswith("TEST_RUNNER_COPAKY_BENCH_")},
+           "corpus": {"path": corpus, "sha256": digest(Path(corpus).read_bytes())} if corpus else None}
+Path(out, "provenance.json").write_text(json.dumps(receipt, indent=2) + "\n")
+PY
 xcodebuild build-for-testing "${XCB_ARGS[@]}"
 
 if [[ "$FRESH_INSTALL" == 1 ]]; then
@@ -377,4 +416,18 @@ xcrun simctl uninstall "$UDID" "$RUNNER_BUNDLE" >/dev/null 2>&1 || true
 [[ -x "$HWKB_BIN" ]] || die "software-keyboard prerequisite: sim_hw_keyboard unavailable"
 "$HWKB_BIN" "$UDID" off || die "software-keyboard prerequisite: hardware detach failed"
 
-xcodebuild test-without-building "${XCB_ARGS[@]}"
+TEST_STATUS=0
+xcodebuild test-without-building "${XCB_ARGS[@]}" \
+  -parallel-testing-enabled NO -maximum-concurrent-test-simulator-destinations 1 \
+  -collect-test-diagnostics "$COLLECT_DIAGNOSTICS" \
+  -resultBundlePath "$RESULT_BUNDLE" || TEST_STATUS=$?
+if [[ -d "$RESULT_BUNDLE" ]]; then
+  xcrun xcresulttool get test-results summary --path "$RESULT_BUNDLE" --compact \
+    > "$RUN_DIR/summary.json" || true
+  xcrun xcresulttool get test-results tests --path "$RESULT_BUNDLE" --compact \
+    > "$RUN_DIR/tests.json" || true
+fi
+python3 "$REPO_DIR/scripts/ui_result_validate.py" "$RUN_DIR/summary.json" \
+  --xcodebuild-status "$TEST_STATUS" --test-id "$TEST_ID" \
+  --tests "$RUN_DIR/tests.json" \
+  --result-bundle "$RESULT_BUNDLE" --output "$RUN_DIR/receipt.json"
