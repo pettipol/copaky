@@ -8,6 +8,15 @@ All notable changes to **Copaky** (an independent project based on azooKey). For
 
 ## [Unreleased] — pre-release (v0.1)
 
+- **Compact optional idle toolbar** (H-49): when enabled, the Copaky menu sits on the right,
+  with toolbar content capped at 44 pt plus clearance above the first key row. The setting remains
+  off by default. With clipboard history and Full Access enabled, non-secure fields can show up to
+  three saved-item previews: unpinned items from the last 120 seconds, or pinned items without that
+  preview age limit. Tapping inserts the full text unchanged under Shift/Caps; Undo removes that
+  insertion once.
+  The default iPhone landscape body is capped at 240 pt before the user's height scale;
+  explicitly resized heights are preserved, including existing saved settings.
+
 - **Privacy-manifest coverage for the double-space shortcut** (H-01): the keyboard extension's privacy
   manifest now declares the required-reason API category SystemBootTime (reason 35F9.1) for the
   `ProcessInfo.systemUptime` used by the double-space shortcut.

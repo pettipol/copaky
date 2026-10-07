@@ -72,12 +72,7 @@ public struct TabDependentDesign {
     }
 
     var verticalSpacing: CGFloat {
-        switch orientation {
-        case .vertical:
-            return interfaceWidth / 50
-        case .horizontal:
-            return interfaceWidth / 107
-        }
+        Design.keyboardVerticalSpacing(interfaceWidth: interfaceWidth, orientation: orientation)
     }
 
     /// screenWidthとhorizontalKeyCountとkeyViewWidthに依存
@@ -147,6 +142,21 @@ public enum Design {
         keyboardHeight(screenWidth: SemiStaticStates.shared.screenWidth, orientation: orientation, upsideComponent: upsideComponent) + keyboardScreenBottomPadding
     }
 
+    // Copaky: limit the default phone landscape body, preserving explicit height/scale choices.
+    // Copaky: iPhone横向きの既定高さだけを抑え、利用者の高さ指定と倍率を保持する。
+    public static let defaultPhoneLandscapeHeightCap: CGFloat = 240
+
+    public static func resolvedInterfaceHeight(
+        defaultHeight: CGFloat, storedHeight: CGFloat?, userHasOverwrittenHeight: Bool,
+        isPhone: Bool, orientation: KeyboardOrientation, heightScale: CGFloat
+    ) -> CGFloat {
+        let selected = storedHeight ?? defaultHeight
+        let explicitHeight = userHasOverwrittenHeight && storedHeight != nil
+        let capped = isPhone && orientation == .horizontal && !explicitHeight
+            ? min(selected, defaultPhoneLandscapeHeightCap) : selected
+        return capped * heightScale
+    }
+
     /// screenWidthに依存して決定する
     /// 12はresultViewのpadding
     @MainActor public static func keyboardHeight(screenWidth: CGFloat, orientation: KeyboardOrientation, upsideComponent: UpsideComponent? = nil) -> CGFloat {
@@ -169,7 +179,8 @@ public enum Design {
         case .padVertical:
             return 15 / 31 * width * scale + 12
         case .phoneHorizontal:
-            return 17 / 56 * width * scale + 12
+            let body = min(17 / 56 * width + 12, defaultPhoneLandscapeHeightCap)
+            return (body - 12) * scale + 12
         case .padHorizontal:
             return 5 / 18 * width * scale + 12
         }
@@ -209,6 +220,42 @@ public enum Design {
     /// both edges. Exposed so the extension constraint and SwiftUI layout use one exact value.
     @MainActor public static func keyboardBarReservedHeight(interfaceHeight: CGFloat, orientation: KeyboardOrientation) -> CGFloat {
         keyboardBarHeight(interfaceHeight: interfaceHeight, orientation: orientation) + 12
+    }
+
+    /// Copaky: share the existing key spacing with the toolbar's touch clearance.
+    /// Copaky: 従来のキー間隔をツールバーのタッチ領域保護にも共通で使用する。
+    public static func keyboardVerticalSpacing(interfaceWidth: CGFloat, orientation: KeyboardOrientation) -> CGFloat {
+        switch orientation {
+        case .vertical: interfaceWidth / 50
+        case .horizontal: interfaceWidth / 107
+        }
+    }
+
+    /// Copaky: row-one key hit areas extend upward by half the actual vertical spacing.
+    /// Copaky: 最上段キーのタッチ領域は実際の垂直間隔の半分だけ上へ広がる。
+    public static func keyboardBarCompactBottomClearance(interfaceWidth: CGFloat, orientation: KeyboardOrientation) -> CGFloat {
+        max(6, keyboardVerticalSpacing(interfaceWidth: interfaceWidth, orientation: orientation) / 2)
+    }
+
+    @MainActor public static func keyboardBarCompactContentHeight(
+        interfaceHeight: CGFloat, interfaceWidth: CGFloat, orientation: KeyboardOrientation
+    ) -> CGFloat {
+        let reserved = max(0, keyboardBarReservedHeight(interfaceHeight: interfaceHeight, orientation: orientation))
+        let clearance = keyboardBarCompactBottomClearance(interfaceWidth: interfaceWidth, orientation: orientation)
+        return min(44, max(0, reserved - clearance))
+    }
+
+    /// Copaky: project the idle toolbar without changing the persisted height or key geometry.
+    /// Copaky: 保存された高さやキー寸法を変更せず、待機バーの表示領域だけを縮める。
+    @MainActor public static func keyboardBarVisibleReservedHeight(
+        interfaceHeight: CGFloat, interfaceWidth: CGFloat, orientation: KeyboardOrientation, collapsed: Bool, compact: Bool
+    ) -> CGFloat {
+        let reserved = max(0, keyboardBarReservedHeight(interfaceHeight: interfaceHeight, orientation: orientation))
+        if collapsed { return 0 }
+        guard compact else { return reserved }
+        let content = keyboardBarCompactContentHeight(interfaceHeight: interfaceHeight, interfaceWidth: interfaceWidth, orientation: orientation)
+        let clearance = keyboardBarCompactBottomClearance(interfaceWidth: interfaceWidth, orientation: orientation)
+        return min(reserved, content + clearance)
     }
 
     /// Height left for keys when the candidate row is omitted. The inverse keeps resize-mode
@@ -252,11 +299,15 @@ public enum Design {
         orientation: KeyboardOrientation,
         tab: KeyboardTab.ExistentialTab,
         enabled: Bool,
-        candidateBarCollapsed: Bool
+        candidateBarCollapsed: Bool,
+        candidateBarCompact: Bool = false
     ) -> CGFloat {
-        let standardVisibleHeight = candidateBarCollapsed
-            ? keyboardKeysHeight(interfaceHeight: standardInterfaceHeight, orientation: orientation)
-            : standardInterfaceHeight
+        let reserved = keyboardBarReservedHeight(interfaceHeight: standardInterfaceHeight, orientation: orientation)
+        let visibleReserved = keyboardBarVisibleReservedHeight(
+            interfaceHeight: standardInterfaceHeight, interfaceWidth: interfaceWidth, orientation: orientation,
+            collapsed: candidateBarCollapsed, compact: candidateBarCompact
+        )
+        let standardVisibleHeight = max(0, standardInterfaceHeight - reserved + visibleReserved)
         let layout = qwertyNumberRowLayout(
             for: tab,
             enabled: enabled,

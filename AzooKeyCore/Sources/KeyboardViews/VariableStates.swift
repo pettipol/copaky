@@ -133,7 +133,10 @@ public final class VariableStates: ObservableObject {
     /// Nota: `UITextDocumentProxy` non espone `isSecureTextEntry`; il valore è euristico (vedi
     /// `KeyboardViewController.isSecureField`). Difesa aggiuntiva: iOS sostituisce comunque la
     /// tastiera di terze parti con quella di sistema nei campi sicuri.
-    @MainActor private(set) public var isSecureEntry: Bool = false
+    @MainActor @Published private(set) public var isSecureEntry: Bool = false
+    // Copaky: observable permission state for stored clipboard previews; no pasteboard read.
+    // Copaky: 保存済み履歴のプレビュー用。ペーストボードの内容は読み取らない。
+    @MainActor @Published private(set) public var hasFullAccess: Bool = false
 
     /// `ResultModel`の変数
     @Published public var resultModel = ResultModel()
@@ -250,6 +253,23 @@ public final class VariableStates: ObservableObject {
         )
     }
 
+    /// Copaky: only the idle built-in toolbar is compact; IME, notices and resize retain their geometry.
+    /// Copaky: 標準タブの待機バーだけを縮め、候補・通知・サイズ調整の高さを維持する。
+    @MainActor public func shouldUseCompactIdleBar(
+        for tab: KeyboardTab.ExistentialTab,
+        copakyButtonVisible: Bool,
+        hasMessageView: Bool = false,
+        hasTemporalMessage: Bool = false
+    ) -> Bool {
+        switch tab {
+        case .special, .custard: return false
+        default: break
+        }
+        return copakyButtonVisible && resultModel.displayState == .nothing
+            && barState == .none && resizingState != .resizing && upsideComponent == nil
+            && !hasMessageView && !hasTemporalMessage
+    }
+
     @MainActor public func setResizingMode(_ state: ResizingState) {
         let baseHeight = Design.keyboardHeight(
             screenWidth: SemiStaticStates.shared.screenWidth,
@@ -257,10 +277,13 @@ public final class VariableStates: ObservableObject {
         )
         switch state {
         case .fullwidth:
-            let height = keyboardInternalSettingManager.oneHandedModeSetting.heightItem(orientation: keyboardOrientation).height
+            let height = keyboardInternalSettingManager.oneHandedModeSetting.heightItem(orientation: keyboardOrientation)
             interfaceSize = .init(
                 width: SemiStaticStates.shared.screenWidth,
-                height: (height ?? baseHeight) * self.heightScaleFromKeyboardHeightSetting
+                height: Design.resolvedInterfaceHeight(defaultHeight: baseHeight, storedHeight: height.height,
+                    userHasOverwrittenHeight: height.userHasOverwrittenKeyboardHeightSetting,
+                    isPhone: UIDevice.current.userInterfaceIdiom == .phone, orientation: keyboardOrientation,
+                    heightScale: heightScaleFromKeyboardHeightSetting)
             )
             interfacePosition = .zero
 
@@ -270,8 +293,12 @@ public final class VariableStates: ObservableObject {
         case .resizing:
             // リサイズ開始時は、保存された値から初期状態を読み込むので変更なし
             let item = keyboardInternalSettingManager.oneHandedModeSetting.item(orientation: keyboardOrientation)
-            let height = keyboardInternalSettingManager.oneHandedModeSetting.heightItem(orientation: keyboardOrientation).height
-            interfaceSize = CGSize(width: min(item.width, SemiStaticStates.shared.screenWidth), height: (height ?? baseHeight) * heightScaleFromKeyboardHeightSetting)
+            let height = keyboardInternalSettingManager.oneHandedModeSetting.heightItem(orientation: keyboardOrientation)
+            interfaceSize = CGSize(width: min(item.width, SemiStaticStates.shared.screenWidth),
+                height: Design.resolvedInterfaceHeight(defaultHeight: baseHeight, storedHeight: height.height,
+                    userHasOverwrittenHeight: height.userHasOverwrittenKeyboardHeightSetting,
+                    isPhone: UIDevice.current.userInterfaceIdiom == .phone, orientation: keyboardOrientation,
+                    heightScale: heightScaleFromKeyboardHeightSetting))
             interfacePosition = item.position
         }
 
@@ -347,7 +374,13 @@ public final class VariableStates: ObservableObject {
 
     /// Imposta lo stato "campo sicuro" usato per disabilitare la cattura clipboard.
     @MainActor public func setSecureEntry(_ isSecure: Bool) {
+        guard self.isSecureEntry != isSecure else { return }
         self.isSecureEntry = isSecure
+    }
+
+    @MainActor public func setHasFullAccess(_ allowed: Bool) {
+        guard self.hasFullAccess != allowed else { return }
+        self.hasFullAccess = allowed
     }
 
     /// Cattura il contenuto corrente degli appunti nella cronologia, su intento esplicito dell'utente.
@@ -457,9 +490,15 @@ public final class VariableStates: ObservableObject {
         keyboardInternalSettingManager.update(\.oneHandedModeSetting) {value in
             value.setIfFirst(orientation: orientation, size: .init(width: screenWidth, height: height), position: .zero)
         }
-        let idealHeight = keyboardInternalSettingManager.oneHandedModeSetting.heightItem(orientation: orientation).height
+        let heightItem = keyboardInternalSettingManager.oneHandedModeSetting.heightItem(orientation: orientation)
         let ignoreStoredHeight = UIDevice.current.userInterfaceIdiom == .pad && screenWidth < 400
-        let effectiveHeight = (ignoreStoredHeight ? height : (idealHeight ?? height)) * heightScaleFromKeyboardHeightSetting
+        // Copaky: cap retained defaults in memory too; do not rewrite an explicit user height.
+        // Copaky: 保存済みの既定値にも適用するが、利用者の指定値は書き換えない。
+        let effectiveHeight = Design.resolvedInterfaceHeight(defaultHeight: height,
+            storedHeight: ignoreStoredHeight ? nil : heightItem.height,
+            userHasOverwrittenHeight: heightItem.userHasOverwrittenKeyboardHeightSetting,
+            isPhone: UIDevice.current.userInterfaceIdiom == .phone, orientation: orientation,
+            heightScale: heightScaleFromKeyboardHeightSetting)
         switch self.resizingState {
         case .fullwidth:
             self.interfaceSize = CGSize(width: screenWidth, height: effectiveHeight)

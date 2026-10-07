@@ -84,6 +84,13 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
         )
     }
 
+    private var usesCompactIdleBar: Bool {
+        variableStates.shouldUseCompactIdleBar(
+            for: activeTab, copakyButtonVisible: Extension.SettingProvider.displayTabBarButton,
+            hasMessageView: hasVisibleMessageView, hasTemporalMessage: hasVisibleTemporalMessage
+        )
+    }
+
     private func numberRowLayout(for tab: KeyboardTab.ExistentialTab) -> QwertyNumberRowLayoutDecision.Layout {
         Design.qwertyNumberRowLayout(
             for: tab,
@@ -103,7 +110,8 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
             orientation: variableStates.keyboardOrientation,
             tab: activeTab,
             enabled: Extension.SettingProvider.enableQwertyNumberRow,
-            candidateBarCollapsed: collapsedCandidateBarHeight > 0
+            candidateBarCollapsed: collapsedCandidateBarHeight > 0,
+            candidateBarCompact: usesCompactIdleBar
         )
     }
 
@@ -175,11 +183,20 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
                         )
                     } else {
                         if showsCandidateBar {
-                            KeyboardBarView<Extension>(isResultViewExpanded: $isResultViewExpanded)
-                                .frame(height: Design.keyboardBarHeight(interfaceHeight: variableStates.interfaceSize.height, orientation: variableStates.keyboardOrientation))
+                            let bar = KeyboardBarView<Extension>(isResultViewExpanded: $isResultViewExpanded, compactIdleBar: usesCompactIdleBar)
+                                .frame(height: usesCompactIdleBar
+                                    ? Design.keyboardBarCompactContentHeight(interfaceHeight: standardInterfaceHeight, interfaceWidth: variableStates.interfaceSize.width, orientation: variableStates.keyboardOrientation)
+                                    : Design.keyboardBarHeight(interfaceHeight: variableStates.interfaceSize.height, orientation: variableStates.keyboardOrientation))
+                            if usesCompactIdleBar {
+                                // Copaky: explicit controls own their hit and accessibility shapes;
+                                // a whole-row shape can expand the only remaining menu control.
+                                // Copaky: 操作ごとの領域を保ち、単独メニューを行全体へ広げない。
+                                bar.padding(.bottom, Design.keyboardBarVisibleReservedHeight(interfaceHeight: standardInterfaceHeight, interfaceWidth: variableStates.interfaceSize.width, orientation: variableStates.keyboardOrientation, collapsed: false, compact: true)
+                                    - Design.keyboardBarCompactContentHeight(interfaceHeight: standardInterfaceHeight, interfaceWidth: variableStates.interfaceSize.width, orientation: variableStates.keyboardOrientation))
+                            } else {
                                 // バーのタッチ判定領域はpaddingより前まで
-                                .contentShape(Rectangle())
-                                .padding(.vertical, 6)
+                                bar.contentShape(Rectangle()).padding(.vertical, 6)
+                            }
                         }
                         keyboardView(tab: activeTab)
                             .zIndex(1)
@@ -190,6 +207,7 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
                     position: $variableStates.interfacePosition,
                     initialSize: CGSize(width: SemiStaticStates.shared.screenWidth, height: Design.keyboardHeight(screenWidth: SemiStaticStates.shared.screenWidth, orientation: variableStates.keyboardOrientation)),
                     candidateBarCollapsed: !showsCandidateBar,
+                    candidateBarCompact: usesCompactIdleBar,
                     extension: Extension.self
                 )
                 .padding(.bottom, Design.keyboardScreenBottomPadding)

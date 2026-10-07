@@ -149,10 +149,48 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
         RunLoop.current.run(until: Date().addingTimeInterval(seconds))
     }
 
+    private var keyboardContainerSource = "unavailable"
+
+    // Copaky: Safari's inputView proxy can lag the native keyboard by one height delta.
+    // Measure an actual ancestor of the OS footer, never synthesize a frame from key glyphs.
+    // Copaky: Safari側の代理フレームではなく、OSフッターの実在する親領域を測る。
+    private func measuredKeyboardContainer() -> CGRect? {
+        let viewport = safari.frame
+        let dictation = safari.buttons.matching(identifier: "dictation").firstMatch
+        if dictation.exists {
+            let footer = dictation.frame
+            // Copaky: this is only an identity anchor, never a tap target. iOS can keep its
+            // portrait coordinates after rotation while the native parent frame is correct.
+            // Do not ask isHittable; validate the measured parent and actual key cells instead.
+            guard footer.width.isFinite, footer.height.isFinite,
+                  footer.width > 1, footer.height > 1 else {
+                keyboardContainerSource = "host_inputView_fallback_invalid_footer"
+                return keyboardInputViewFrame(of: safari)
+            }
+            let ancestors = safari.otherElements.containing(.button, identifier: "dictation")
+            var candidates: [CGRect] = []
+            for element in ancestors.allElementsBoundByAccessibilityElement where element.exists {
+                let candidate = element.frame
+                guard viewport.insetBy(dx: -2, dy: -2).contains(candidate),
+                      candidate.width >= viewport.width * 0.8,
+                      candidate.height > footer.height * 2,
+                      candidate.height < viewport.height * 0.8,
+                      abs(candidate.maxY - viewport.maxY) <= 2 else { continue }
+                candidates.append(candidate)
+            }
+            if let actual = candidates.min(by: { $0.height < $1.height }) {
+                keyboardContainerSource = "native_OS_footer_ancestor"
+                return actual
+            }
+        }
+        keyboardContainerSource = "host_inputView_fallback"
+        return keyboardInputViewFrame(of: safari)
+    }
+
     private func keyboardFrame(for keyboard: String, timeout: TimeInterval = 6) -> CGRect? {
         let deadline = Date().addingTimeInterval(timeout)
         repeat {
-            if keyboard == "copaky", let frame = keyboardInputViewFrame(of: safari), frame.width > 1, frame.height > 1 {
+            if keyboard == "copaky", let frame = measuredKeyboardContainer(), frame.width > 1, frame.height > 1 {
                 return frame
             }
             let systemKeyboard = safari.keyboards.firstMatch
@@ -288,6 +326,11 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
     // MARK: - test59 geometry
 
     func test59_keyboardGeometryBaseline() throws {
+        try captureKeyboardGeometry()
+    }
+
+    private func captureKeyboardGeometry(rotatingToLandscape: Bool = false) throws {
+        defer { if rotatingToLandscape { XCUIDevice.shared.orientation = .portrait } }
         let keyboard = requestedKeyboard
         let language = requestedLanguage
         let state = environmentValue("COPAKY_BENCH_STATE") ?? "default"
@@ -299,6 +342,17 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
             attachScreenshot("59-setup-failed")
             XCTFail(String(describing: error))
             return
+        }
+        // Copaky: establish provider/language before rotation; the shared picker fallback
+        // assumes portrait coordinates and can reject the first landscape marker.
+        if rotatingToLandscape {
+            XCUIDevice.shared.orientation = .landscapeLeft
+            let deadline = Date().addingTimeInterval(5)
+            while safari.frame.width <= safari.frame.height, Date() < deadline { wait(0.2) }
+            guard safari.frame.width > safari.frame.height else {
+                attachScreenshot("59-landscape-rotation-not-observed")
+                throw BenchError.configuration("Landscape requires the observed Safari viewport width to exceed height")
+            }
         }
         wait(1.0)
         attachScreenshot("59-before-geometry-query")
@@ -380,14 +434,45 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
         let letters = keys.filter { $0.role == "letter" }
         let validLetters = Set(letters.filter { isKeyCell($0.frame, in: inputFrame, letter: true) }.map(\.label))
         let missingControlRoles = ["space", "delete", "return"].filter { role in !keys.contains { $0.role == role } }
-        let error: String? = !invalidFrames.isEmpty
+        let menu = safari.buttons.matching(identifier: "copaky-toolbar-menu").firstMatch
+        let menuFrame: CGRect? = menu.exists ? menu.frame : nil
+        // Copaky: landscape has native side margins. The trailing edge belongs to the real
+        // parent containing the menu and measured keys, not the full-screen OS background.
+        let contentFrames = safari.otherElements.containing(.button, identifier: "copaky-toolbar-menu")
+            .allElementsBoundByAccessibilityElement.filter { $0.exists }.map(\.frame).filter { candidate in
+                candidate.width > inputFrame.width / 2 && candidate.height > 88
+                    && frame(candidate, isInside: inputFrame)
+                    && keys.allSatisfy { frame($0.frame, isInside: candidate) }
+                    && (menuFrame.map { frame($0, isInside: candidate) } ?? false)
+            }
+        let contentFrame = contentFrames.min { $0.width * $0.height < $1.width * $1.height }
+        let toolbarValid = !state.hasPrefix("compact-") || (menuFrame.map {
+            frame($0, isInside: inputFrame) && $0.width <= 45 && $0.height <= 45
+                && (contentFrame.map { abs($0.maxX - menu.frame.maxX) <= 2 } ?? false)
+                && $0.maxY <= (keys.map(\.frame.minY).min() ?? 0) + 1
+        } ?? false)
+        let digitsValid = state != "compact-number-row"
+            || Set(keys.filter { $0.role == "digit" }.map(\.label)) == Set((0...9).map(String.init))
+        let heightLimit = environmentValue("COPAKY_BENCH_MAX_HEIGHT").flatMap(Double.init)
+        let touchMinimum = environmentValue("COPAKY_BENCH_MIN_KEY_HEIGHT").flatMap(Double.init)
+        let heightValid = heightLimit.map { $0.isFinite && $0 > 0 && inputFrame.height <= $0 } ?? true
+        let touchValid = touchMinimum.map { minimum in
+            minimum.isFinite && minimum > 0 && !letters.isEmpty && letters.allSatisfy { $0.frame.height >= minimum }
+        } ?? true
+        let error: String? = !heightValid || !touchValid
+            ? "HOLD: observed height or measured touch cells violate the declared bounds"
+            : !digitsValid
+            ? "HOLD: number-row geometry requires all ten measured digit cells"
+            : !toolbarValid
+            ? "HOLD: compact menu must stay at the right edge and clear the measured first key row"
+            : !invalidFrames.isEmpty
             ? "\(invalidFrames.count) key frame(s) fall outside the keyboard frame"
             : validLetters.count != requiredLetters
                 ? "HOLD: expected \(requiredLetters) unique key-sized letter cells; got \(validLetters.count)"
                 : !missingControlRoles.isEmpty
                     ? "HOLD: missing measured control cells: \(missingControlRoles.joined(separator: ", "))"
                     : nil
-        let report = geometryJSON(
+        var report = geometryJSON(
             keyboard: keyboard,
             language: language,
             state: state,
@@ -395,9 +480,19 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
             keys: keys,
             error: error
         )
+        report["toolbarFrame"] = menuFrame.map { NSCoder.string(for: $0) } ?? "unavailable"
+        report["keyboardContentFrame"] = contentFrame.map { NSCoder.string(for: $0) } ?? "unavailable"
+        report["containerSource"] = keyboardContainerSource
+        report["hostInputViewFrame"] = keyboardInputViewFrame(of: safari).map { NSCoder.string(for: $0) } ?? "unavailable"
+        report["compactToolbarContract"] = state.hasPrefix("compact-") ? toolbarValid as Any : NSNull()
+        report["maximumHeightContract"] = heightLimit.map { $0 as Any } ?? NSNull()
+        report["minimumKeyHeightContract"] = touchMinimum.map { $0 as Any } ?? NSNull()
         _ = emitJSON(report, name: "geometry-\(keyboard)-\(language)-\(safeComponent(state)).json")
         attachScreenshot("59-geometry-\(keyboard)-\(language)-\(safeComponent(state))")
 
+        XCTAssertTrue(toolbarValid, "Compact menu must remain at the right without overlapping keys")
+        XCTAssertTrue(digitsValid, "The enabled number row requires ten distinct measured digit cells")
+        XCTAssertTrue(heightValid && touchValid, "Measured layout must satisfy the declared height and touch bounds")
         XCTAssertEqual(validLetters.count, requiredLetters, "Geometry requires all distinct letter cells; containers and glyph bounds are not key geometry")
         XCTAssertTrue(invalidFrames.isEmpty, "Every captured key frame must be inside the keyboard frame")
         XCTAssertTrue(missingControlRoles.isEmpty, "HOLD: geometry also requires measured space, delete and return cells; missing \(missingControlRoles)")
@@ -564,12 +659,15 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
             NSPredicate(format: "identifier == %@", identifier)
         ).firstMatch
         guard descendant.waitForExistence(timeout: 0.4), frame(descendant.frame, isInside: keyboardFrame) else { return nil }
-        if let container = smallestTouchContainer(around: descendant, in: keyboardFrame) { return container }
-        // Copaky: an AX Image is measurable only if it exposes a real, hittable key cell.
-        // Copaky: 実キー寸法とヒット判定のあるImageだけを認め、字形の寸法は採用しない。
-        if descendant.elementType == .image, isKeyCell(descendant.frame, in: keyboardFrame, letter: false),
+        // Copaky: accept an already proven image cell before the expensive ancestor search.
+        // Number-row identifiers are assigned to input keys whose AX StaticText exports the full
+        // cell. Admit only that identifier contract; ordinary glyphs still require a container.
+        // Copaky: 実キー寸法とヒット判定がある画像を先に使い、字形だけなら祖先を調べる。
+        let directCell = descendant.elementType == .image
+            || (identifier.hasPrefix("keyboard-number-row-") && descendant.elementType == .staticText)
+        if directCell, isKeyCell(descendant.frame, in: keyboardFrame, letter: false),
            safari.frame.insetBy(dx: -1, dy: -1).contains(descendant.frame), descendant.isHittable { return descendant }
-        return nil
+        return smallestTouchContainer(around: descendant, in: keyboardFrame)
     }
 
     private func smallestTouchContainer(
@@ -947,6 +1045,444 @@ final class CopakyBenchmarkTests: CopakyCampaignTests {
 
     // Copaky: seeded-history reuse only; this does not qualify clipboard capture or persistence.
     // Copaky: シード済み履歴の再利用だけを確認し、取得・永続化の証明にはしない。
+    // Copaky: a bounded real-input pilot for the compact idle row; simulator proof only.
+    // Copaky: コンパクトな待機バーの実入力試験。実機の権限・メモリ試験とは区別する。
+    func test64_compactToolbarWorkflow() throws {
+        let landscape = environmentValue("COPAKY_BENCH_ORIENTATION") == "landscape"
+        XCUIDevice.shared.orientation = landscape ? .landscapeLeft : .portrait
+        defer { XCUIDevice.shared.orientation = .portrait }
+        wait(1)
+        let language = requestedLanguage
+        var checkpoints: [[String: Any]] = []
+        var measurements: [String: Any] = [:]
+        var failure: String?
+        do {
+            guard environmentValue("COPAKY_CLIPBOARD_PRESEEDED") == "1",
+                  environmentValue("COPAKY_BENCH_RECENT_CLIPBOARD") == "1",
+                  let maximumHeight = environmentValue("COPAKY_BENCH_MAX_HEIGHT").flatMap(Double.init),
+                  maximumHeight.isFinite, maximumHeight > 0 else {
+                throw BenchError.configuration("Seed fresh synthetic history and an explicit maximum inputView height")
+            }
+            let field = try prepareKeyboard(fieldPlaceholder: "textarea-field", keyboard: "copaky", language: language)
+            try clearBenchField(field, keyboard: "copaky")
+            let menu = safari.buttons["copaky-toolbar-menu"]
+            guard menu.waitForExistence(timeout: 4), let input = keyboardFrame(for: "copaky") else {
+                throw BenchError.missingElement("Compact Copaky menu/inputView missing")
+            }
+            let menuFrame = menu.frame
+            measurements = ["inputViewHeight": input.height, "viewportHeight": safari.frame.height,
+                            "menuFrame": NSCoder.string(for: menuFrame), "inputViewFrame": NSCoder.string(for: input)]
+            measurements["containerSource"] = keyboardContainerSource
+            measurements["hostInputViewFrame"] = keyboardInputViewFrame(of: safari).map { NSCoder.string(for: $0) } ?? "unavailable"
+            attachScreenshot("64-\(language)-idle-before")
+            guard frame(menuFrame, isInside: input), menu.isHittable,
+                  menuFrame.width <= 45, menuFrame.height <= 45,
+                  menuFrame.minX >= input.maxX - 65,
+                  input.height <= maximumHeight else {
+                throw BenchError.input("Idle toolbar is not compact, trailing and within the declared height bound")
+            }
+            guard let firstRow = copakyIdentifierKey(identifier: "keyboard-number-row-1", in: input)
+                ?? copakyTextKey(label: language == "ja" ? "あ" : "q", in: input) else {
+                throw BenchError.missingElement("First-row touch cell unavailable for overlap check")
+            }
+            let firstRowFrame = firstRow.frame
+            measurements["firstRowFrame"] = NSCoder.string(for: firstRowFrame)
+            guard menuFrame.maxY <= firstRowFrame.minY + 1 else {
+                throw BenchError.input("Menu touch target overlaps the first row")
+            }
+            menu.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.95)).tap()
+            let history = safari.buttons.matching(NSPredicate(format: "label IN %@", ["Cronologia degli appunti", "Clipboard histories", "クリップボードの履歴"])).firstMatch
+            guard history.waitForExistence(timeout: 3), history.isHittable, currentFieldValue(field).isEmpty else {
+                throw BenchError.input("Lower menu edge did not open the tab bar without typing")
+            }
+            attachScreenshot("64-\(language)-menu-lower-edge")
+            history.tap()
+            let back = safari.descendants(matching: .any).matching(identifier: "copaky_clipboard_back").firstMatch
+            guard back.waitForExistence(timeout: 3), back.isHittable else {
+                throw BenchError.missingElement("History panel unavailable from compact menu")
+            }
+            back.tap()
+            guard currentFieldValue(field).isEmpty else { throw BenchError.input("Menu/history navigation inserted text") }
+            // Copaky: the existing tab bar remains open after Back; ordinary input dismisses it.
+            try tapSpace(keyboard: "copaky")
+            try clearBenchField(field, keyboard: "copaky")
+            guard menu.waitForExistence(timeout: 3), currentFieldValue(field).isEmpty else {
+                throw BenchError.input("Compact menu did not restore after history")
+            }
+            func checkpoint(_ name: String, _ expected: String) throws {
+                let deadline = Date().addingTimeInterval(3)
+                while currentFieldValue(field) != expected, Date() < deadline { wait(0.2) }
+                let observed = currentFieldValue(field)
+                checkpoints.append(["step": name, "expected": expected, "observed_raw": observed, "matched": observed == expected])
+                attachScreenshot("64-\(language)-\(name)")
+                guard observed == expected else { throw BenchError.input("\(name): exact input mismatch") }
+            }
+            func pasteRecent(_ text: String) throws {
+                let prefix = String(text.prefix(28))
+                let query = safari.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label BEGINSWITH %@", "copaky-recent-clipboard-", prefix))
+                guard let chip = query.allElementsBoundByAccessibilityElement.first(where: {
+                    $0.exists && self.frame($0.frame, isInside: input) && $0.isHittable
+                }) else { throw BenchError.missingElement("Visible recent clipboard preview is missing") }
+                guard chip.frame.maxY <= firstRowFrame.minY + 1 else {
+                    throw BenchError.input("Clipboard touch target overlaps the first row")
+                }
+                // Copaky: exercise the lower edge that could be intercepted by the key grid.
+                chip.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.95)).tap()
+            }
+            let capsFixture = environmentValue("COPAKY_BENCH_CAPS_CLIPBOARD") == "1"
+            let first = capsFixture ? "Straße 👩🏽‍💻 日本" : "Il tuo codice di verifica è 482913"
+            let preservedPrefix = capsFixture ? " " : ""
+            if capsFixture {
+                guard language != "ja" else { throw BenchError.configuration("Caps fixture requires a Latin keyboard") }
+                try tapSpace(keyboard: "copaky")
+                guard currentFieldValue(field) == preservedPrefix,
+                      let shift = copakyIdentifierKey(identifier: "shift", in: input) else {
+                    throw BenchError.missingElement("Caps fixture prefix or Shift control unavailable")
+                }
+                shift.press(forDuration: 1)
+                guard let caps = copakyIdentifierKey(identifier: "capslock.fill", in: input), caps.isHittable else {
+                    throw BenchError.input("Caps Lock was not enabled for literal paste")
+                }
+                attachScreenshot("64-\(language)-caps-before-paste")
+            }
+            let second = "Ci prendiamo un caffè questa settimana?"
+            try pasteRecent(first)
+            try checkpoint("unicode-paste", preservedPrefix + first)
+            let undo = safari.buttons.matching(NSPredicate(format: "label IN %@", ["Annulla", "Undo", "取り消す"])).firstMatch
+            guard undo.waitForExistence(timeout: 3), undo.isHittable else { throw BenchError.missingElement("Dedicated undo control missing") }
+            undo.tap()
+            try checkpoint("undo", preservedPrefix)
+            XCTAssertEqual(safari.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label BEGINSWITH %@", "copaky-recent-clipboard-", String(first.prefix(28)))).count, 0,
+                           "An already used preview must remain consumed after Undo")
+            if capsFixture {
+                guard let caps = copakyIdentifierKey(identifier: "capslock.fill", in: input) else {
+                    throw BenchError.input("Literal clipboard insertion unexpectedly changed Caps Lock")
+                }
+                caps.tap()
+                try clearBenchField(field, keyboard: "copaky")
+            }
+            try pasteRecent(second)
+            try checkpoint("full-long-preview-paste", second)
+            try tapSpace(keyboard: "copaky")
+            _ = try tapNewline(field: field)
+            let prefix = second + " \n"
+            try checkpoint("space-newline", prefix)
+            if language == "ja" {
+                _ = try tapFlickString("にほん")
+                let chips = safari.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "copaky-recent-clipboard-"))
+                XCTAssertEqual(chips.count, 0, "Clipboard previews must yield to IME candidates")
+                let candidates = waitForCandidates(keyboard: "copaky", timeout: 3)
+                guard candidates.contains("日本"), let candidate = candidateElement(label: "日本", keyboard: "copaky") else {
+                    throw BenchError.missingElement("Japanese candidate unavailable after clipboard input")
+                }
+                candidate.tap()
+                try checkpoint("typing-after-paste", prefix + "日本")
+            } else {
+                for character in "ab" { try tapLatinCharacter(character, keyboard: "copaky") }
+                let chips = safari.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "copaky-recent-clipboard-"))
+                XCTAssertEqual(chips.count, 0, "Clipboard previews must yield to candidates")
+                let candidates = waitForCandidates(keyboard: "copaky", timeout: 3)
+                measurements["latinCandidates"] = candidates
+                guard !candidates.isEmpty else { throw BenchError.missingElement("Candidate bar did not appear during Latin input") }
+                try checkpoint("typing-after-paste", prefix + "ab")
+            }
+        } catch { failure = String(describing: error) }
+        let tree = XCTAttachment(string: safari.debugDescription)
+        tree.name = "64-\(language)-tree-final"; tree.lifetime = .keepAlways; add(tree)
+        _ = emitJSON(["language": language, "measurements": measurements, "checkpoints": checkpoints,
+                      "error": failure.map { $0 as Any } ?? NSNull()], name: "compact-toolbar-\(language).json")
+        if let failure { XCTFail(failure) }
+        XCTAssertEqual(checkpoints.count, 5, "All exact paste/undo/typing checkpoints must execute")
+    }
+
+    // Copaky: three bounded preview policies over externally seeded Italian synthetic history.
+    // Copaky: 外部でシードしたイタリア語の合成履歴だけで、三つの表示条件を実際に確認する。
+    // Root joins the no-full-access observation to the immediately preceding test03 receipt.
+    // This method does not inspect or change the OS Full Access switch or capture the pasteboard.
+    func test66_compactToolbarPrivacy() throws {
+        let policy = environmentValue("COPAKY_BENCH_PREVIEW_POLICY") ?? ""
+        let pinnedText = "Spedire a: Via Roma 12, 20121 Milano MI"
+        let pinnedPreview = String(pinnedText.prefix(28))
+        var observations: [[String: Any]] = []
+        var failure: String?
+        var secureFieldChecked = false
+        let started = Date()
+
+        func evidence(_ step: String) {
+            attachScreenshot("66-\(policy)-\(step)")
+        }
+        func previews() -> [XCUIElement] {
+            safari.buttons.matching(NSPredicate(
+                format: "identifier BEGINSWITH %@", "copaky-recent-clipboard-"
+            )).allElementsBoundByAccessibilityElement.filter { $0.exists }
+        }
+        func requireVisibleMenu() throws -> CGRect {
+            let menu = safari.buttons.matching(identifier: "copaky-toolbar-menu").firstMatch
+            guard menu.waitForExistence(timeout: 4),
+                  let input = keyboardFrame(for: "copaky"),
+                  frame(menu.frame, isInside: input),
+                  menu.frame.width <= 45, menu.frame.height <= 45,
+                  menu.frame.minX >= input.maxX - 65,
+                  safari.frame.insetBy(dx: -1, dy: -1).contains(menu.frame),
+                  menu.isHittable else {
+                throw BenchError.missingElement("Visible, hittable Copaky idle menu is required")
+            }
+            return input
+        }
+        func observeIdlePreviews(_ step: String, expectedCount: Int) throws {
+            let input = try requireVisibleMenu()
+            let deadline = Date().addingTimeInterval(3)
+            var consecutiveMatches = 0
+            repeat {
+                let items = previews()
+                let countMatches = items.count == expectedCount
+                let identityMatches = expectedCount == 0 || (items.count == 1 && items[0].label == pinnedPreview)
+                if countMatches && identityMatches {
+                    consecutiveMatches += 1
+                    if consecutiveMatches >= 2 { break }
+                } else {
+                    consecutiveMatches = 0
+                }
+                wait(0.2)
+            } while Date() < deadline
+            let items = previews()
+            let matched = consecutiveMatches >= 2 && items.count == expectedCount
+                && (expectedCount == 0 || (items.count == 1 && items[0].label == pinnedPreview
+                    && frame(items[0].frame, isInside: input)
+                    && safari.frame.insetBy(dx: -1, dy: -1).contains(items[0].frame)
+                    && items[0].isHittable))
+            observations.append(["step": step, "expected_count": expectedCount,
+                                 "observed_count": items.count, "observed_labels": items.map(\.label),
+                                 "matched": matched])
+            evidence(step)
+            guard matched else {
+                throw BenchError.input("\(step): expected \(expectedCount) preview(s), with only the synthetic pin admitted")
+            }
+        }
+        func observeText(_ step: String, field: XCUIElement, expected: String) throws {
+            let deadline = Date().addingTimeInterval(3)
+            while currentFieldValue(field) != expected, Date() < deadline { wait(0.2) }
+            let observed = currentFieldValue(field)
+            observations.append(["step": step, "expected": expected,
+                                 "observed_raw": observed, "matched": observed == expected])
+            evidence(step)
+            guard observed == expected else { throw BenchError.input("\(step): literal field mismatch") }
+        }
+
+        do {
+            guard ["expired", "history-off", "no-full-access"].contains(policy),
+                  requestedKeyboard == "copaky", requestedLanguage == "it",
+                  environmentValue("COPAKY_CLIPBOARD_PRESEEDED") == "1" else {
+                throw BenchError.configuration("Require explicit preview policy, Copaky IT and a successful synthetic history seed")
+            }
+            // Caller: pinned item age 3600 s; every unpinned item age >= 121 s.
+            // History is ON except in history-off; OS FA is OFF only in no-full-access.
+            let expectedCount = policy == "expired" ? 1 : 0
+            let field = try prepareKeyboard(fieldPlaceholder: "textarea-field", keyboard: "copaky", language: "it")
+            guard field.exists, field.value is String else {
+                throw BenchError.missingElement("Readable synthetic textarea fixture is required")
+            }
+            try clearBenchField(field, keyboard: "copaky")
+            try observeIdlePreviews("initial-idle-policy", expectedCount: expectedCount)
+            if expectedCount == 0 {
+                let input = try requireVisibleMenu()
+                // Copaky: the empty left slot must not be a giant hidden menu button.
+                safari.coordinate(withNormalizedOffset: .zero).withOffset(
+                    CGVector(dx: input.minX + 20, dy: input.minY + 20)
+                ).tap()
+                wait(0.2)
+                guard safari.buttons["copaky-toolbar-menu"].exists, currentFieldValue(field).isEmpty else {
+                    throw BenchError.input("The empty toolbar slot must not open the menu or type")
+                }
+            }
+            for character in "ab" { try tapLatinCharacter(character, keyboard: "copaky") }
+            try observeText("actual-copaky-typing", field: field, expected: "ab")
+            try clearBenchField(field, keyboard: "copaky")
+            try observeText("cleared-synthetic-field", field: field, expected: "")
+            // Re-observe idle, so zero previews cannot be explained merely by active candidates.
+            try observeIdlePreviews("idle-policy-after-typing", expectedCount: expectedCount)
+
+            if policy == "expired" {
+                // Focus the secure fixture directly. Never force Copaky into this field.
+                let web = safari.webViews.firstMatch
+                let secureQuery = web.secureTextFields.matching(NSPredicate(
+                    format: "label == %@ OR placeholderValue == %@ OR identifier == %@",
+                    "password-secure", "password-secure", "password-secure"
+                ))
+                let secure = secureQuery.firstMatch
+                guard secure.waitForExistence(timeout: 4) else {
+                    throw BenchError.missingElement("Synthetic password-secure fixture is required")
+                }
+                // Copaky: dismiss through the real menu before changing fields; WebKit can
+                // report obscured inputs as hittable while they are behind the keyboard.
+                safari.buttons["copaky-toolbar-menu"].tap()
+                let dismiss = safari.buttons.matching(NSPredicate(format: "label IN %@",
+                    ["Nascondi tastiera", "Dismiss keyboard", "キーボードを閉じる"])).firstMatch
+                guard dismiss.waitForExistence(timeout: 3), dismiss.isHittable else {
+                    throw BenchError.missingElement("Actual keyboard dismissal menu item is required")
+                }
+                dismiss.tap()
+                let dismissDeadline = Date().addingTimeInterval(4)
+                while safari.buttons["copaky-toolbar-menu"].exists, Date() < dismissDeadline { wait(0.2) }
+                guard secure.exists, secure.isHittable,
+                      !safari.buttons["copaky-toolbar-menu"].exists,
+                      secure.frame.minY >= 90, secure.frame.maxY <= safari.frame.maxY - 110 else {
+                    throw BenchError.missingElement("Synthetic secure field must be visible after keyboard dismissal")
+                }
+                evidence("secure-field-before-tap")
+                secure.tap()
+                let deadline = Date().addingTimeInterval(4)
+                var secured = false
+                repeat {
+                    let system = safari.keyboards.firstMatch
+                    let menus = safari.buttons.matching(identifier: "copaky-toolbar-menu")
+                    secured = system.exists && system.keys.firstMatch.exists
+                        && copakyLanguageSwitchState() == nil
+                        && safari.frame.insetBy(dx: -1, dy: -1).contains(system.frame)
+                        && previews().isEmpty && menus.count == 0
+                    if secured { break }
+                    wait(0.2)
+                } while Date() < deadline
+                if secured {
+                    let before = secure.value as? String ?? ""
+                    let keyboard = safari.keyboards.firstMatch
+                    let key = keyboard.keys["q"].exists ? keyboard.keys["q"] : keyboard.keys["Q"]
+                    guard key.exists, key.isHittable else { throw BenchError.missingElement("Stock Q key unavailable in synthetic secure field") }
+                    key.tap()
+                    let changedDeadline = Date().addingTimeInterval(3)
+                    repeat {
+                        let value = secure.value as? String ?? ""
+                        if !value.isEmpty && value != "password-secure" && value != before { break }
+                        wait(0.2)
+                    } while Date() < changedDeadline
+                    let value = secure.value as? String ?? ""
+                    secured = !value.isEmpty && value != "password-secure" && value != before
+                }
+                observations.append(["step": "secure-field-no-preview-or-menu",
+                                     "matched": secured, "stock_key_tap_verified_focus": secured,
+                                     "force_copaky_attempted": false])
+                evidence("secure-field")
+                guard secured else {
+                    throw BenchError.input("Secure focus/system keyboard/no Copaky preview or menu was not proved")
+                }
+                secureFieldChecked = true
+                let returned = try prepareKeyboard(fieldPlaceholder: "textarea-field", keyboard: "copaky", language: "it")
+                // Copaky: dismissal retains the existing tab menu; ordinary input closes it.
+                try tapSpace(keyboard: "copaky")
+                try clearBenchField(returned, keyboard: "copaky")
+                try observeIdlePreviews("pin-returns-after-secure-field", expectedCount: 1)
+            }
+        } catch {
+            failure = String(describing: error)
+        }
+
+        let tree = XCTAttachment(string: safari.debugDescription)
+        tree.name = "66-\(policy)-tree-final"
+        tree.lifetime = .keepAlways
+        add(tree)
+        evidence("final")
+        _ = emitJSON([
+            "policy": policy, "language": requestedLanguage,
+            "fixture_contract": "Italian synthetic history: one pinned item age 3600s, all unpinned items age >=121s",
+            "permission_basis": policy == "no-full-access"
+                ? "OS FA OFF belongs to the immediately preceding external test03 receipt; not revalidated by test66"
+                : "external explicit synthetic seed; test66 observes previews and actual typing",
+            "scope": "preview exclusion and literal Copaky typing; no capture/persistence/device-memory qualification",
+            "secure_field_checked": secureFieldChecked,
+            "observations": observations, "ms": elapsedMilliseconds(since: started),
+            "error": failure.map { $0 as Any } ?? NSNull()
+        ], name: "compact-toolbar-privacy-\(safeComponent(policy)).json")
+        if let failure { XCTFail("Compact toolbar privacy pilot failed: \(failure)") }
+        XCTAssertEqual(observations.count, policy == "expired" ? 6 : 4,
+                       "Every declared policy/typing checkpoint must execute")
+        XCTAssertTrue(observations.allSatisfy { $0["matched"] as? Bool == true },
+                      "Every retained observation must match its explicit contract")
+    }
+
+    // Copaky: exercise the same measured-cell geometry contract after an actual rotation.
+    func test67_compactToolbarLandscapeGeometry() throws {
+        XCUIDevice.shared.orientation = .portrait
+        try captureKeyboardGeometry(rotatingToLandscape: true)
+    }
+
+    func test65_systemKeyboardHeightReference() throws {
+        let field = activatePreNavigatedField("textarea-field")
+        switchToCopaky(in: safari)
+        let globes = safari.buttons.matching(NSPredicate(format: "label CONTAINS[c] 'astiera successiva' OR label CONTAINS[c] 'ext keyboard' OR label CONTAINS[c] '次のキーボード'"))
+        guard let globe = globes.allElementsBoundByAccessibilityElement.filter({ $0.exists }).max(by: { $0.frame.maxY < $1.frame.maxY }) else {
+            XCTFail("System keyboard picker unavailable"); return
+        }
+        globe.press(forDuration: 1)
+        attachScreenshot("65-system-language-picker")
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        func italianPicker(in app: XCUIApplication) -> XCUIElement? {
+            let element = app.descendants(matching: .any).matching(NSPredicate(format: "label IN %@", ["Italiano", "Italian"])).firstMatch
+            return element.waitForExistence(timeout: 2) ? element : nil
+        }
+        guard let italian = italianPicker(in: safari) ?? italianPicker(in: springboard) else {
+            let tree = XCTAttachment(string: safari.debugDescription); tree.name = "65-picker-unavailable"; tree.lifetime = .keepAlways; add(tree)
+            XCTFail("HOLD: Italian system keyboard selection is not proved"); return
+        }
+        italian.tap()
+        let keyboard = safari.keyboards.firstMatch
+        let appeared = keyboard.waitForExistence(timeout: 5)
+        attachScreenshot("65-system-selection-result")
+        let selectionTree = XCTAttachment(string: safari.debugDescription)
+        selectionTree.name = "65-selection-result-tree"; selectionTree.lifetime = .keepAlways; add(selectionTree)
+        guard appeared, keyboard.keys["q"].exists || keyboard.keys["Q"].exists, copakyLanguageSwitchState() == nil else {
+            XCTFail("HOLD: system Latin keyboard/provider is not proved"); return
+        }
+        if environmentValue("COPAKY_BENCH_ORIENTATION") == "landscape" {
+            XCUIDevice.shared.orientation = .landscapeLeft
+            let deadline = Date().addingTimeInterval(5)
+            while safari.frame.width <= safari.frame.height, Date() < deadline { wait(0.2) }
+            guard safari.frame.width > safari.frame.height else {
+                XCTFail("The stock landscape comparison requires observed rotation"); return
+            }
+            wait(1)
+        }
+        defer { XCUIDevice.shared.orientation = .portrait }
+        attachScreenshot("65-apple-it-idle")
+        let tree = XCTAttachment(string: safari.debugDescription); tree.name = "65-apple-it-tree"; tree.lifetime = .keepAlways; add(tree)
+        let footerContainer = measuredKeyboardContainer()
+        let footerSource = keyboardContainerSource
+        let predictiveBar = safari.otherElements.matching(NSPredicate(
+            format: "label IN %@", ["Scrittura predittiva", "Predictive Text", "予測入力"]
+        )).firstMatch
+        // Copaky: the stock footer ancestor excludes QuickType, and the host proxy may lag.
+        // Select a real native container enclosing all three components; never union frames.
+        // Copaky: 予測行・キー・フッターを含む実在領域を選び、代理値や合成矩形は使わない。
+        let nativeWindow = safari.windows.containing(.button, identifier: "dictation").allElementsBoundByAccessibilityElement.last
+        guard let footerContainer, footerSource == "native_OS_footer_ancestor", predictiveBar.exists else {
+            XCTFail("The stock comparison requires a native footer and observed predictive row"); return
+        }
+        let predictiveFrame = predictiveBar.frame
+        let keyFrame = keyboard.frame
+        let viewport = safari.frame
+        let containers = nativeWindow?.otherElements.allElementsBoundByAccessibilityElement
+            .filter { $0.exists }.map(\.frame).filter { candidate in
+                viewport.insetBy(dx: -2, dy: -2).contains(candidate)
+                    && candidate.width >= viewport.width * 0.8
+                    && abs(candidate.maxY - viewport.maxY) <= 2
+                    && abs(candidate.minY - min(keyFrame.minY, min(predictiveFrame.minY, footerContainer.minY))) <= 2
+                    && frame(keyFrame, isInside: candidate)
+                    && frame(footerContainer, isInside: candidate)
+                    && frame(predictiveFrame, isInside: candidate)
+            } ?? []
+        guard let input = containers.min(by: { $0.height < $1.height }) else {
+            XCTFail("The stock comparison must include the observed predictive row, keys and OS footer in a real native container")
+            return
+        }
+        _ = emitJSON(["provider": "Apple", "language_selection": "Italiano", "viewport": NSCoder.string(for: safari.frame),
+                      "keyboardFrame": NSCoder.string(for: keyboard.frame), "inputViewFrame": NSCoder.string(for: input),
+                      "containerSource": "native_container_including_keys_predictive_row_and_footer",
+                      "nativeFooterContainerFrame": NSCoder.string(for: footerContainer),
+                      "footerContainerSource": footerSource,
+                      "predictiveRowFrame": NSCoder.string(for: predictiveBar.frame),
+                      "hostInputViewFrame": keyboardInputViewFrame(of: safari).map { NSCoder.string(for: $0) } ?? "unavailable",
+                      "field": "textarea-field", "text_before": currentFieldValue(field)], name: "system-keyboard-reference.json")
+    }
+
     func test63_clipboardReuseScenario() throws {
         let clips = ["Il tuo codice di verifica è 482913", "Ci prendiamo un caffè questa settimana?"]
         var checkpoints: [[String: Any]] = []

@@ -145,6 +145,23 @@ else:
         ("Let's catch up over coffee this week.", 260, None),
     ]
 
+# Copaky: an explicit toolbar pilot needs fresh synthetic clips throughout setup.
+# Copaky: 待機バーの試験時だけ、合成データを新しい時刻で作る。
+if os.environ.get("TEST_RUNNER_COPAKY_BENCH_RECENT_CLIPBOARD") == "1":
+    entries = [(text, age, pinned_age) for (text, _, pinned_age), age in zip(entries, [30, 0, 10, 20])]
+
+# Copaky: Unicode case expansion must never alter a saved clipboard item under Caps Lock.
+if os.environ.get("TEST_RUNNER_COPAKY_BENCH_CAPS_CLIPBOARD") == "1":
+    if lang != "it" or os.environ.get("TEST_RUNNER_COPAKY_BENCH_RECENT_CLIPBOARD") != "1":
+        raise SystemExit("Caps fixture requires recent Italian synthetic history")
+    entries[1] = ("Straße 👩🏽‍💻 日本", entries[1][1], entries[1][2])
+
+# Copaky: deterministic expiry pilot; no wall-clock waiting and no real clipboard data.
+if os.environ.get("TEST_RUNNER_COPAKY_BENCH_EXPIRED_CLIPBOARD") == "1":
+    if os.environ.get("TEST_RUNNER_COPAKY_BENCH_RECENT_CLIPBOARD") == "1":
+        raise SystemExit("Conflicting recent/expired clipboard fixtures")
+    entries = [(text, age, pinned_age) for (text, _, pinned_age), age in zip(entries, [3600, 121, 180, 260])]
+
 if include_yesterday:
     yesterday_text = {
         "ja": "昨日のメモ",

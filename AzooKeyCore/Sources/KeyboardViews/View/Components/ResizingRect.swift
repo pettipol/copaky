@@ -259,15 +259,17 @@ struct ResizingRect<Extension: ApplicationSpecificKeyboardViewExtension>: View {
 struct ResizingBindingFrame<Extension: ApplicationSpecificKeyboardViewExtension>: ViewModifier {
     private let initialSize: CGSize
     private let candidateBarCollapsed: Bool
+    private let candidateBarCompact: Bool
     @Binding private var position: CGPoint
     @Binding private var size: CGSize
     @EnvironmentObject private var variableStates: VariableStates
     private var hideResetButtonInOneHandedMode: Bool {
         Extension.SettingProvider.hideResetButtonInOneHandedMode
     }
-    init(size: Binding<CGSize>, position: Binding<CGPoint>, initialSize: CGSize, candidateBarCollapsed: Bool) {
+    init(size: Binding<CGSize>, position: Binding<CGPoint>, initialSize: CGSize, candidateBarCollapsed: Bool, candidateBarCompact: Bool) {
         self.initialSize = initialSize
         self.candidateBarCollapsed = candidateBarCollapsed
+        self.candidateBarCompact = candidateBarCompact
         self._size = size
         self._position = position
     }
@@ -289,7 +291,8 @@ struct ResizingBindingFrame<Extension: ApplicationSpecificKeyboardViewExtension>
             orientation: variableStates.keyboardOrientation,
             tab: variableStates.tabManager.existentialTab(),
             enabled: Extension.SettingProvider.enableQwertyNumberRow,
-            candidateBarCollapsed: candidateBarCollapsed
+            candidateBarCollapsed: candidateBarCollapsed,
+            candidateBarCompact: candidateBarCompact
         )
     }
 
@@ -456,7 +459,8 @@ struct ResizingBindingFrame<Extension: ApplicationSpecificKeyboardViewExtension>
 }
 
 extension View {
-    @MainActor func resizingFrame<Extension: ApplicationSpecificKeyboardViewExtension>(size: Binding<CGSize>, position: Binding<CGPoint>, initialSize: CGSize, candidateBarCollapsed: Bool = false, extension: Extension.Type) -> some View {
-        self.modifier(ResizingBindingFrame<Extension>(size: size, position: position, initialSize: initialSize, candidateBarCollapsed: candidateBarCollapsed))
+    @MainActor func resizingFrame<Extension: ApplicationSpecificKeyboardViewExtension>(size: Binding<CGSize>, position: Binding<CGPoint>, initialSize: CGSize, candidateBarCollapsed: Bool = false, candidateBarCompact: Bool = false, extension: Extension.Type) -> some View {
+        // Copaky: compact is disabled by the shared selector during resize; the inverse keeps the canonical height.
+        self.modifier(ResizingBindingFrame<Extension>(size: size, position: position, initialSize: initialSize, candidateBarCollapsed: candidateBarCollapsed, candidateBarCompact: candidateBarCompact))
     }
 }

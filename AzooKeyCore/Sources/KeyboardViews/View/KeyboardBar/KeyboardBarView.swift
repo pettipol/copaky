@@ -14,6 +14,7 @@ import SwiftUIUtils
 struct KeyboardBarView<Extension: ApplicationSpecificKeyboardViewExtension>: View {
     @EnvironmentObject private var variableStates: VariableStates
     @Binding private var isResultViewExpanded: Bool
+    private let compactIdleBar: Bool
     @Environment(Extension.Theme.self) private var theme
     // CursorBarは操作がない場合に非表示にする。これをハンドルするためのタスク
     @State private var dismissTask: Task<(), any Error>?
@@ -26,8 +27,9 @@ struct KeyboardBarView<Extension: ApplicationSpecificKeyboardViewExtension>: Vie
         Extension.SettingProvider.displayCursorBarAutomatically
     }
 
-    init(isResultViewExpanded: Binding<Bool>) {
+    init(isResultViewExpanded: Binding<Bool>, compactIdleBar: Bool = false) {
         self._isResultViewExpanded = isResultViewExpanded
+        self.compactIdleBar = compactIdleBar
     }
 
     var body: some View {
@@ -61,7 +63,7 @@ struct KeyboardBarView<Extension: ApplicationSpecificKeyboardViewExtension>: Vie
             case let .existential(.special(tab)) where tab == .emoji:
                 EmojiTabResultBar<Extension>()
             default:
-                ResultBar<Extension>(isResultViewExpanded: $isResultViewExpanded)
+                ResultBar<Extension>(isResultViewExpanded: $isResultViewExpanded, compactIdleBar: compactIdleBar)
             }
         }
     }
@@ -93,9 +95,15 @@ struct KeyboardBarButton<Extension: ApplicationSpecificKeyboardViewExtension>: V
     @EnvironmentObject private var variableStates: VariableStates
     private var action: () -> Void
     private let label: LabelType
+    // Copaky: compact sizing is opt-in for the enabled idle toolbar only.
+    // Copaky: コンパクト寸法は有効な待機時ツールバーだけで使用する。
+    private let compact: Bool
+    private let contentHeight: CGFloat?
 
-    init(label: LabelType, action: @escaping () -> Void) {
+    init(label: LabelType, compact: Bool = false, contentHeight: CGFloat? = nil, action: @escaping () -> Void) {
         self.label = label
+        self.compact = compact
+        self.contentHeight = contentHeight
         self.action = action
     }
 
@@ -108,14 +116,21 @@ struct KeyboardBarButton<Extension: ApplicationSpecificKeyboardViewExtension>: V
     }
 
     private var circleSize: CGFloat {
-        Design.keyboardBarHeight(interfaceHeight: variableStates.interfaceSize.height, orientation: variableStates.keyboardOrientation) * 0.8
+        compact ? min(32, max(0, compactHeight - 6)) : Design.keyboardBarHeight(interfaceHeight: variableStates.interfaceSize.height, orientation: variableStates.keyboardOrientation) * 0.8
     }
 
     private var iconSize: CGFloat {
-        Design.keyboardBarHeight(interfaceHeight: variableStates.interfaceSize.height, orientation: variableStates.keyboardOrientation) * 0.6
+        compact ? min(24, max(0, compactHeight - 10)) : Design.keyboardBarHeight(interfaceHeight: variableStates.interfaceSize.height, orientation: variableStates.keyboardOrientation) * 0.6
     }
 
-    var body: some View {
+    private var compactHeight: CGFloat {
+        if let contentHeight { return max(0, contentHeight) }
+        return Design.keyboardBarCompactContentHeight(interfaceHeight: variableStates.interfaceSize.height,
+                                               interfaceWidth: variableStates.interfaceSize.width,
+                                               orientation: variableStates.keyboardOrientation)
+    }
+
+    private var button: some View {
         Button(action: self.action) {
             ZStack {
                 Circle()
@@ -130,7 +145,22 @@ struct KeyboardBarButton<Extension: ApplicationSpecificKeyboardViewExtension>: V
                         .foregroundStyle(buttonLabelColor)
                 }
             }
+            .frame(width: compact ? 44 : nil, height: compact ? compactHeight : nil)
+            .contentShape(Rectangle())
         }
-        .padding(.all, 5)
+    }
+
+    var body: some View {
+        if compact {
+            // Copaky: constrain the actual control, not only its mark. The plain style avoids
+            // inherited button expansion when it is the toolbar's only accessible child.
+            // Copaky: ラベルだけでなく実ボタンを固定し、単独の操作要素でも行全体へ広げない。
+            button
+                .buttonStyle(.plain)
+                .frame(width: 44, height: compactHeight)
+                .contentShape(Rectangle())
+        } else {
+            button.padding(.all, 5)
+        }
     }
 }

@@ -167,7 +167,7 @@ UDID="${COPAKY_UDID:-E0552C62-FFDB-4DF6-9040-2734DB5B2458}"
 PROJECT="$REPO_DIR/azooKey.xcodeproj"
 TEST_CLASS="CopakyCampaignTests"
 case "$TEST" in
-  test59_keyboardGeometryBaseline|test60_benchDecoder|test62_realTypingScenarios|test63_clipboardReuseScenario)
+  test59_keyboardGeometryBaseline|test60_benchDecoder|test62_realTypingScenarios|test63_clipboardReuseScenario|test64_compactToolbarWorkflow|test65_systemKeyboardHeightReference|test66_compactToolbarPrivacy|test67_compactToolbarLandscapeGeometry)
     TEST_CLASS="CopakyBenchmarkTests"
     ;;
 esac
@@ -321,6 +321,22 @@ if [[ "$FRESH_INSTALL" == 1 ]]; then
     || die "App Group container missing after fresh install+launch (group.com.pettipol.copaky)"
 fi
 
+# Copaky [H-49]: updating the UI runner alone can leave an older keyboard installed.
+# Copaky: UIランナーの更新だけでは拡張が古いまま残るため、実行バイナリを必ず照合する。
+BUILT_APP="$DERIVED_DATA/Build/Products/$CONFIGURATION-iphonesimulator/azooKey.app"
+[[ -d "$BUILT_APP" ]] || die "built app bundle missing"
+if [[ "$FRESH_INSTALL" != 1 ]]; then
+  xcrun simctl terminate "$UDID" "$APP_BUNDLE" >/dev/null 2>&1 || true
+  xcrun simctl install "$UDID" "$BUILT_APP"
+fi
+INSTALLED_APP="$(xcrun simctl get_app_container "$UDID" "$APP_BUNDLE" app)"
+python3 "$REPO_DIR/scripts/ui_binary_provenance.py" "$BUILT_APP" "$INSTALLED_APP" --out "$RUN_DIR/binaries_before.json"   || die "installed app/keyboard do not match this build"
+
+# Copaky: a preceding secure-field run can leave Safari animation quiescence pending.
+# Close the host before timestamping fixtures, then reopen the unique page below.
+# Copaky: 前回のホスト状態を引き継がず、時刻付きデータの準備前にSafariを終了する。
+xcrun simctl terminate "$UDID" com.apple.mobilesafari >/dev/null 2>&1 || true
+
 if [[ -n "$CLIPBOARD_LANG" ]]; then
   # Clipboard tab/history seeding requires the App Group container created by a prior app launch.
   CLIPBOARD_SEED_ARGS=(--lang "$CLIPBOARD_LANG" --udid "$UDID")
@@ -421,6 +437,9 @@ xcodebuild test-without-building "${XCB_ARGS[@]}" \
   -parallel-testing-enabled NO -maximum-concurrent-test-simulator-destinations 1 \
   -collect-test-diagnostics "$COLLECT_DIAGNOSTICS" \
   -resultBundlePath "$RESULT_BUNDLE" || TEST_STATUS=$?
+# Recheck after test-without-building, which is also allowed to reinstall products.
+INSTALLED_APP="$(xcrun simctl get_app_container "$UDID" "$APP_BUNDLE" app)"
+python3 "$REPO_DIR/scripts/ui_binary_provenance.py" "$BUILT_APP" "$INSTALLED_APP" --out "$RUN_DIR/binaries_after.json"   || TEST_STATUS=1
 if [[ -d "$RESULT_BUNDLE" ]]; then
   xcrun xcresulttool get test-results summary --path "$RESULT_BUNDLE" --compact \
     > "$RUN_DIR/summary.json" || true

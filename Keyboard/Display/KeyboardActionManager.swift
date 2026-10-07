@@ -162,7 +162,10 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
             let input: String
             // Copaky: it_IT added — Shift/Caps must uppercase on the Italian keyboard exactly as it
             // does on the English one (both are Latin-script languages).
-            if (variableStates.boolStates.isCapsLocked || variableStates.boolStates.isShifted) && [.en_US, .el_GR, .it_IT].contains(variableStates.keyboardLanguage) {
+            // Copaky: direct inserts (saved clipboard, undo, explicit direct-input actions) are
+            // literal text. Case-transform only ordinary keys, including Unicode expansions.
+            // Copaky: 履歴・復元・直接入力の文字列を保ち、大文字変換は通常キーだけに適用する。
+            if !simpleInsert && (variableStates.boolStates.isCapsLocked || variableStates.boolStates.isShifted) && [.en_US, .el_GR, .it_IT].contains(variableStates.keyboardLanguage) {
                 input = text.uppercased()
             } else {
                 input = text

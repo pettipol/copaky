@@ -127,6 +127,16 @@ final class KeyboardViewController: UIInputViewController {
         )
     }
 
+    // Copaky: share the SwiftUI idle-toolbar selector with both UIKit height update paths.
+    @MainActor private static func usesCompactIdleBar() -> Bool {
+        variableStates.shouldUseCompactIdleBar(
+            for: variableStates.tabManager.existentialTab(),
+            copakyButtonVisible: DisplayTabBarButton.value,
+            hasMessageView: variableStates.hasVisibleMessageView,
+            hasTemporalMessage: variableStates.temporalMessage != nil
+        )
+    }
+
     // Copaky: pull the App Group setting at each appearance because the extension has no observer for
     // changes made in the containing app while this process remains alive.
     // Copaky: App側の設定変更を監視できないため、表示のたびにApp Group設定を読み直す。
@@ -246,7 +256,8 @@ final class KeyboardViewController: UIInputViewController {
                     orientation: KeyboardViewController.variableStates.keyboardOrientation,
                     tab: KeyboardViewController.variableStates.tabManager.existentialTab(),
                     enabled: EnableQwertyNumberRow.value,
-                    candidateBarCollapsed: candidateBarCollapsed
+                    candidateBarCollapsed: candidateBarCollapsed,
+                    candidateBarCompact: Self.usesCompactIdleBar()
                 )
                 let totalHeight = visibleBodyHeight + upsideComponentHeight + Design.keyboardScreenBottomPadding
 
@@ -333,6 +344,10 @@ final class KeyboardViewController: UIInputViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        // Copaky: invalidate retained preview permissions before mounting a keyboard in a new field.
+        // Copaky: 新しい入力欄に表示する前に、保持された履歴プレビューの権限を更新する。
+        Self.variableStates.setSecureEntry(Self.isSecureField(self.textDocumentProxy))
+        Self.variableStates.setHasFullAccess(self.hasFullAccess)
         KeyboardViewController.reseedLatinLanguageIfActiveLanguagesChanged()
         // サイズに関する情報はこのタイミングで設定する
         if #available(iOS 26, *) {
@@ -424,6 +439,7 @@ final class KeyboardViewController: UIInputViewController {
         SemiStaticStates.shared.setNeedsInputModeSwitchKey(self.needsInputModeSwitchKey)
         SemiStaticStates.shared.setHapticsAvailable()
         SemiStaticStates.shared.setHasFullAccess(self.hasFullAccess)
+        KeyboardViewController.variableStates.setHasFullAccess(self.hasFullAccess)
 
         Task { [weak self] in
             guard let self else { return }
@@ -545,6 +561,8 @@ final class KeyboardViewController: UIInputViewController {
     }
 
     override func viewWillDisappear(_ animated: Bool) {
+        // Copaky: a retained SwiftUI tree must not carry preview permission into its next presentation.
+        Self.variableStates.setHasFullAccess(false)
         debug("KeyboardViewController.viewWillDisappear: キーボードが閉じられます")
         KeyboardViewController.action.closeKeyboard()
         KeyboardViewController.variableStates.closeKeyboard()
@@ -600,7 +618,8 @@ final class KeyboardViewController: UIInputViewController {
             orientation: orientation,
             tab: variableStates.tabManager.existentialTab(),
             enabled: EnableQwertyNumberRow.value,
-            candidateBarCollapsed: candidateBarCollapsed
+            candidateBarCollapsed: candidateBarCollapsed,
+            candidateBarCompact: Self.usesCompactIdleBar()
         )
         let totalHeight = visibleBodyHeight + componentHeight + Design.keyboardScreenBottomPadding
         KeyboardViewController.variableStates.maximumHeight = max(variableStates.maximumHeight, bodyHeight)
@@ -679,6 +698,7 @@ final class KeyboardViewController: UIInputViewController {
         KeyboardViewController.variableStates.setTextContentType(self.textDocumentProxy.textContentType)
         KeyboardViewController.variableStates.setSecureEntry(Self.isSecureField(self.textDocumentProxy))
         self.armLatinAutoCapitalizationIfNeeded()
+        KeyboardViewController.variableStates.setHasFullAccess(self.hasFullAccess)
     }
 
     /// Reference: https://stackoverflow.com/questions/79077018/unable-to-open-main-app-from-action-extension-in-ios-18-previously-working-met
