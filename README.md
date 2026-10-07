@@ -5,7 +5,7 @@
 *English · [日本語](./README.ja.md)*
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
-[![Platform: iOS 17.6+](https://img.shields.io/badge/platform-iOS%2017.6%2B-lightgrey.svg)](#build)
+[![Platform: iOS 18.0+](https://img.shields.io/badge/platform-iOS%2018.0%2B-lightgrey.svg)](#build)
 [![Swift 6](https://img.shields.io/badge/Swift-6.0-F05138.svg)](#build)
 [![Version 0.1 pre-release](https://img.shields.io/badge/version-0.1%20(pre--release)-blue.svg)](./CHANGELOG.md)
 [![TestFlight: internal](https://img.shields.io/badge/TestFlight-internal%20beta-0D96F6.svg)](#installation)
@@ -15,13 +15,14 @@
 <br clear="left">
 
 **Copaky** is a privacy-focused Japanese keyboard for iPhone, with an **offline clipboard manager**.
-It is an **independent project** built on — and crediting — [azooKey](https://github.com/azooKey/azooKey)
-(MIT): it keeps azooKey's high-quality Japanese conversion engine while reworking the clipboard, privacy,
-and telemetry behaviour around a strict **on-device, no-network** model.
+Copaky is an independent project, based on the open-source software azooKey (MIT license), not affiliated
+with or endorsed by its authors. It keeps azooKey's Japanese conversion engine while reworking the clipboard,
+privacy, and telemetry behaviour around an **on-device, no-network** model.
 
 > [!IMPORTANT]
-> **Status: pre-release (v0.1).** Not on the App Store yet. Real-device validation is done and the
-> first signed build is on TestFlight for internal dogfooding, ahead of the first submission.
+> **Status: pre-release (v0.1).** Not on the App Store yet. TestFlight's internal group has build 8;
+> the current source includes later changes verified in the iOS Simulator that are not in that build.
+> A new build and further real-device testing are required before submission.
 > **v0.1 ships for iPhone only**: iPad is deferred to v0.2, because the App Store does not allow
 > dropping a device family once it has been shipped (ITMS-90101).
 
@@ -53,8 +54,10 @@ See [CREDITS.md](./CREDITS.md) for the full attribution and third-party licenses
 
 - **Japanese IME** — azooKey's conversion engine (live conversion, custom keys / custom tabs).
 - **Offline clipboard manager** — a privacy-compliant, **user-initiated** clipboard history. It detects
-  *that* the pasteboard changed (metadata only — no "pasted from…" banner on the default capture path) and
-  reads/stores the value only on an explicit user action. Password / secure fields are never captured.
+  *that* the pasteboard changed (metadata only) and reads/stores the value only on an explicit user
+  action. iOS may ask for permission when the clipboard is read; whether it does depends on the iOS
+  version, app, permission settings and paste path. Capture is disabled while typing in fields marked secure;
+  sensitive text copied elsewhere can still be saved if you explicitly capture it.
 - **Latin tab — English and Italian** — one QWERTY layout alongside Japanese. Italian predictions turn on
   automatically the first time the app runs on a phone whose system language is Italian; anywhere else it
   stays an opt-in ("Use Italian" in Settings, off by default; an explicit choice always wins over the
@@ -93,15 +96,15 @@ See [CREDITS.md](./CREDITS.md) for the full attribution and third-party licenses
 
 ## Privacy
 
-Nothing you type or copy ever leaves the device: the keyboard extension and the companion app make
-**zero network calls**, and clipboard history never travels off-device or to any account.
+Copaky processes keyboard input and stores clipboard history on device. It has no cloud account or
+sync service and is designed without telemetry or tracking.
 
 ## Installation
 
-Copaky is **pre-release** and not yet on the App Store. Right now it ships to a small internal
-TestFlight group for dogfooding ahead of the first public submission — there is no public beta
-sign-up link yet. Once it is submitted and approved, it will be installable from the App Store like
-any other app; this section will be updated with the link at that point.
+Copaky is **pre-release** and not yet on the App Store. Build 8 is available to a small internal
+TestFlight group; there is no public beta sign-up link. The current source has changes that are not
+in that distributed build. A new build and further real-device testing are required before an App
+Store submission. This section will be updated if public distribution becomes available.
 
 ## Architecture in short
 
