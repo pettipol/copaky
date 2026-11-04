@@ -657,13 +657,118 @@ class CopakyCampaignTests: XCTestCase {
         shot("00-notices-cleared")
     }
 
+    // Copaky: semantic fixture identity only; the orchestrator records its explicit launch URL.
+    // Full browser URL/host readback is NOT_VERIFIED by these accessibility checks.
+    private func keyboardFixturePresent(in web: XCUIElement) -> Bool {
+        let heading = web.staticTexts.matching(NSPredicate(format: "label == %@", "Copaky — keyboard test fields"))
+        let plain = web.textFields.matching(NSPredicate(format: "label == %@ OR placeholderValue == %@ OR identifier == %@", "plain-text", "plain-text", "plain-text"))
+        let multiline = web.textViews.matching(NSPredicate(format: "label == %@ OR placeholderValue == %@ OR identifier == %@", "textarea-field", "textarea-field", "textarea-field"))
+        return heading.firstMatch.waitForExistence(timeout: 6) && heading.count == 1
+            && plain.count == 1 && multiline.count == 1
+    }
+
+    /// Copaky: observation-only device prerequisite; no page taps, scrolling or dialog acceptance.
+    func test00b_deviceFixturePreflight() throws {
+        safari.activate()
+        let web = safari.webViews.firstMatch
+        let loaded = web.waitForExistence(timeout: 10)
+        let trustedFixture = loaded && keyboardFixturePresent(in: web)
+        note("00b-fixture-identity", "Semantic heading/typed-field check; full browser URL/host readback NOT_VERIFIED")
+        dump(safari, "00b-fixture-preflight")
+        shot("00b-fixture-preflight")
+        XCTAssertTrue(trustedFixture, "Prerequisite: pre-open the owned keyboard fixture with its exact heading, plain-text input and textarea-field")
+    }
+
     // MARK: - 01 · Enable keyboard in Settings (checklist A-01)
 
     /// Navigate Settings → Generali → Tastiera → keyboards list ("Aggiungi nuova tastiera" page).
     private func openKeyboardsList() {
         settings.launch()
-        tapFirst(in: settings, labels: L.general, scrollUpTo: 2)
-        tapFirst(in: settings, labels: L.keyboardRow, scrollUpTo: 4)
+        // Copaky: the VPN row can load late and move General between lookup and tap on device.
+        // Require each destination page; never search the root page for a Keyboard row after a miss.
+        // Copaky: VPN行の遅延表示で一般の位置が変わる。遷移先を確認し、失敗時は限定回数だけ再取得。
+        func pageVisible(_ labels: [String]) -> Bool {
+            settings.navigationBars.matching(NSPredicate(format: "label IN %@ OR identifier IN %@", labels, labels)).firstMatch.exists
+        }
+        func row(_ labels: [String], identifier: String? = nil) -> XCUIElement? {
+            let predicate = identifier.map { NSPredicate(format: "identifier == %@", $0) }
+                ?? NSPredicate(format: "label IN %@", labels)
+            let navigationBottom = settings.navigationBars.firstMatch.frame.maxY
+            // Copaky: taps on a hittable General row near floating Search did not navigate
+            // (row y755…807; Search field y808…836). Require the whole row in the central viewport.
+            // The 60 pt exclusion above the observed Search field is a conservative safety margin,
+            // not a coordinate to tap; rejected rows use the existing bounded scroll/re-resolution.
+            var usableBottom = settings.frame.maxY - settings.frame.height * 0.15
+            for search in settings.searchFields.allElementsBoundByIndex where search.exists {
+                let frame = search.frame
+                if frame.width > 0, frame.height > 0, frame.minY > navigationBottom,
+                   frame.minY >= settings.frame.minY + settings.frame.height * 0.7,
+                   frame.minY < settings.frame.maxY {
+                    usableBottom = min(usableBottom, frame.minY - 60)
+                }
+            }
+            // Real Settings row controls only, below the navigation bar and above Search's hit area.
+            for candidates in [settings.buttons.matching(predicate), settings.cells.matching(predicate)] {
+                if let match = candidates.allElementsBoundByIndex.first(where: {
+                    $0.exists && $0.isHittable && $0.frame.minY >= navigationBottom
+                        && $0.frame.maxY <= usableBottom
+                }) { return match }
+            }
+            return nil
+        }
+        func awaitPage(_ labels: [String]) -> Bool {
+            let deadline = Date().addingTimeInterval(3)
+            repeat {
+                if pageVisible(labels) { return true }
+                RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+            } while Date() < deadline
+            return false
+        }
+        let keyboardPageTitles = L.keyboardRow + ["Tastiere", "Keyboards"]
+        if firstMatch(in: settings, labels: L.addNewKeyboard, timeout: 1) != nil { return }
+        if !pageVisible(keyboardPageTitles) {
+            if !pageVisible(L.general) {
+                for attempt in 0..<3 {
+                    // Let asynchronous Settings rows settle, then resolve a fresh row every attempt.
+                    RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+                    if let general = row(L.general, identifier: "com.apple.settings.general") ?? row(L.general) {
+                        general.tap()
+                        if awaitPage(L.general) { break }
+                    } else if attempt < 2 {
+                        settings.swipeUp()
+                    }
+                }
+                guard pageVisible(L.general) else {
+                    dump(settings, "settings-general-navigation-failed")
+                    shot("settings-general-navigation-failed")
+                    XCTFail("Settings did not navigate to General after three bounded row attempts")
+                    return
+                }
+            }
+            var keyboardTaps = 0
+            var keyboardScrolls = 0
+            while keyboardTaps < 3 && keyboardScrolls <= 4 {
+                guard pageVisible(L.general) else { break }
+                if row(L.keyboardRow) != nil {
+                    keyboardTaps += 1
+                    RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+                    // Resolve again after settling, rather than tap the earlier row snapshot.
+                    guard let freshKeyboard = row(L.keyboardRow) else { continue }
+                    freshKeyboard.tap()
+                    if awaitPage(keyboardPageTitles) { break }
+                } else if keyboardScrolls < 4 {
+                    keyboardScrolls += 1
+                    settings.swipeUp()
+                    RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+                } else { break }
+            }
+            guard pageVisible(keyboardPageTitles) else {
+                dump(settings, "settings-keyboard-navigation-failed")
+                shot("settings-keyboard-navigation-failed")
+                XCTFail("Settings did not navigate from General to Keyboard")
+                return
+            }
+        }
         // "Tastiere" row (shows the enabled-keyboard count) — retry until the list page is open
         var hops = 0
         while firstMatch(in: settings, labels: L.addNewKeyboard, timeout: 3) == nil && hops < 3 {
@@ -674,6 +779,12 @@ class CopakyCampaignTests: XCTestCase {
             if row.exists && row.isHittable { row.tap() } else if btn.exists && btn.isHittable { btn.tap() }
             RunLoop.current.run(until: Date().addingTimeInterval(1.0))
             hops += 1
+        }
+        guard firstMatch(in: settings, labels: L.addNewKeyboard, timeout: 3) != nil else {
+            dump(settings, "settings-keyboards-list-navigation-failed")
+            shot("settings-keyboards-list-navigation-failed")
+            XCTFail("Settings did not reach the enabled-keyboards list after three row attempts")
+            return
         }
     }
 
@@ -773,6 +884,7 @@ class CopakyCampaignTests: XCTestCase {
             XCTFail("H-21 prerequisite: Copaky's Allow Full Access switch must be visible in iOS Settings")
             return
         }
+        note("03-initial-os-full-access", "iOS Allow Full Access value before the test transition: \(fa.value as? String ?? "unknown")")
         if fa.value as? String == "1" {
             fa.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
         }
@@ -895,7 +1007,24 @@ class CopakyCampaignTests: XCTestCase {
         // Relaunch: the containing app reads its Full Access state during setup.
         mainApp.terminate()
         mainApp.launch()
-        if let close = firstMatch(in: mainApp, labels: L.closeOnboarding, timeout: 4) { close.tap() }
+        guard !mainApp.alerts.firstMatch.exists else {
+            shot("03-unexpected-relaunch-alert")
+            XCTFail("H-21: unexpected app relaunch alert; no control was tapped")
+            return
+        }
+        if let close = firstMatch(in: mainApp, labels: L.closeOnboarding, timeout: 4) {
+            guard !mainApp.alerts.firstMatch.exists else {
+                shot("03-unexpected-relaunch-before-close-alert")
+                XCTFail("H-21: unexpected alert before closing relaunched onboarding; no control was tapped")
+                return
+            }
+            close.tap()
+        }
+        guard !mainApp.alerts.firstMatch.exists else {
+            shot("03-unexpected-relaunched-app-alert")
+            XCTFail("H-21: unexpected relaunched app alert; no confirmation was accepted")
+            return
+        }
         openSettingsTab()
         let showAll = mainApp.switches.matching(NSPredicate(format: "label IN %@", L.showAllSettings)).firstMatch
         if showAll.waitForExistence(timeout: 2), showAll.value as? String == "1" {
@@ -1150,6 +1279,50 @@ class CopakyCampaignTests: XCTestCase {
     // MARK: - 10 · Enable Full Access (B-01)
 
     func test10_phaseB_enableFullAccess() throws {
+        // Copaky: exact Italian OS confirmation observed on this device on 2026-11-04.
+        // Other OS languages/messages remain unqualified and are never accepted automatically.
+        // Copaky: 実機で確認済みのイタリア語OS文言だけを許可する。他言語の確認は未検証。
+        var consentitoUnaVolta = false
+        func acceptObservedFullAccessConfirmationIfPresent() -> Bool {
+            let alert = settings.alerts.firstMatch
+            guard alert.exists else { return true }
+            guard !consentitoUnaVolta else {
+                shot("10-second-confirmation-blocked")
+                XCTFail("Full Access confirmation already accepted once; no second permission action was attempted")
+                return false
+            }
+            let title = "Vuoi consentire l’accesso completo alle tastiere “Copaky”?"
+            let body = "L’accesso completo permette all’azienda di sviluppo della tastiera di trasmettere qualsiasi dato venga digitato, incluso ciò che è stato scritto in precedenza usando questa tastiera. Tali dati possono includere informazioni riservate, come il numero della carta di credito o il tuo indirizzo."
+            let allow = alert.buttons.matching(NSPredicate(format: "label == %@", "Consenti"))
+            let deny = alert.buttons.matching(NSPredicate(format: "label == %@", "Non consentire"))
+            guard settings.alerts.count == 1, alert.label == title,
+                  alert.staticTexts.count == 2,
+                  alert.staticTexts.matching(NSPredicate(format: "label == %@", title)).count == 1,
+                  alert.staticTexts.matching(NSPredicate(format: "label == %@", body)).count == 1,
+                  alert.buttons.count == 2, allow.count == 1, deny.count == 1,
+                  allow.firstMatch.isHittable, deny.firstMatch.exists else {
+                dump(settings, "10-unqualified-full-access-confirmation")
+                shot("10-unqualified-full-access-confirmation")
+                XCTFail("Unqualified Full Access confirmation: exact observed Italian title/body/buttons required; no permission action was accepted")
+                return false
+            }
+            shot("10-observed-italian-confirmation-before-allow")
+            consentitoUnaVolta = true
+            allow.firstMatch.tap()
+            let deadline = Date().addingTimeInterval(4)
+            while settings.alerts.firstMatch.exists && Date() < deadline {
+                RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+            }
+            guard !settings.alerts.firstMatch.exists else {
+                shot("10-confirmation-did-not-dismiss")
+                XCTFail("Full Access confirmation did not dismiss after one scoped permission action")
+                return false
+            }
+            return true
+        }
+        // A diagnostic run may have left this exact confirmation pending. Resolve it once first.
+        settings.activate()
+        guard acceptObservedFullAccessConfirmationIfPresent() else { return }
         openKeyboardsList()
         tapFirst(in: settings, labels: ["Copaky", "Copaky — Copaky", "Copaky, Copaky"], scrollUpTo: 2)
         shot("10-copaky-keyboard-page")
@@ -1160,22 +1333,104 @@ class CopakyCampaignTests: XCTestCase {
             return
         }
         if (fa.value as? String) != "1" {
+            guard !consentitoUnaVolta else {
+                shot("10-full-access-not-on-after-pending-confirmation")
+                XCTFail("Full Access is not ON after the pending confirmation was accepted; no second toggle was attempted")
+                return
+            }
             // the switch element spans the whole cell; tap its right side where the toggle sits
             fa.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
-            // Confirmation alert ("Consenti accesso completo…" → Consenti)
-            let allow = settings.alerts.buttons.matching(NSPredicate(format: "label IN %@", L.allowButton)).firstMatch
-            if allow.waitForExistence(timeout: 6) {
-                allow.tap()
-            } else if let anyAllow = firstMatch(in: settings, labels: L.allowButton, timeout: 3) {
-                anyAllow.tap()
-            }
+            _ = settings.alerts.firstMatch.waitForExistence(timeout: 6)
+            guard acceptObservedFullAccessConfirmationIfPresent() else { return }
             RunLoop.current.run(until: Date().addingTimeInterval(1.0))
+        }
+        guard !settings.alerts.firstMatch.exists else {
+            dump(settings, "10-unqualified-full-access-confirmation")
+            shot("10-unqualified-full-access-confirmation")
+            XCTFail("Unqualified Full Access confirmation remains; no permission action was accepted")
+            return
         }
         shot("10-full-access-on")
         XCTAssertEqual(fa.value as? String, "1", "Allow Full Access did not turn ON")
     }
 
     // MARK: - 11 · Prepared clipboard OFF → explicit opt-in enable (B-02)
+
+    // Copaky: a switch can be hittable beneath the app's floating tab bar. Require its entire
+    // frame in the central settings viewport; scrolling is bounded and never accepts an alert.
+    private func centralSettingsSwitch11And46(_ labels: [String], evidence: String) -> XCUIElement? {
+        guard labels == L.clipboardToggle || labels == L.realNumberRowToggle || labels == L.numberHintsToggle else {
+            XCTFail("Central switch lookup is limited to the three explicitly approved settings")
+            return nil
+        }
+        let predicate = NSPredicate(format: "label IN %@", labels)
+        for attempt in 0..<13 {
+            guard !mainApp.alerts.firstMatch.exists else {
+                dump(mainApp, "\(evidence)-unexpected-alert")
+                shot("\(evidence)-unexpected-alert")
+                XCTFail("Central switch lookup: unexpected alert; no confirmation was accepted")
+                return nil
+            }
+            let screen = mainApp.frame
+            var top = screen.minY + screen.height * 0.15
+            var bottom = screen.minY + screen.height * 0.85
+            if mainApp.navigationBars.firstMatch.exists {
+                top = max(top, mainApp.navigationBars.firstMatch.frame.maxY)
+            }
+            if mainApp.tabBars.firstMatch.exists, mainApp.tabBars.firstMatch.frame.height > 0 {
+                bottom = min(bottom, mainApp.tabBars.firstMatch.frame.minY)
+            }
+            let matches = mainApp.switches.matching(predicate)
+            guard matches.count <= 1 else {
+                dump(mainApp, "\(evidence)-ambiguous-switch")
+                shot("\(evidence)-ambiguous-switch")
+                XCTFail("Central switch lookup: exact switch label is ambiguous")
+                return nil
+            }
+            var scrollUp = attempt >= 4 // If virtualized, first search toward the top, then down.
+            if matches.count == 1, matches.firstMatch.exists {
+                let toggle = matches.firstMatch
+                let frame = toggle.frame
+                if frame.height > 0, frame.minY >= top, frame.maxY <= bottom, toggle.isHittable {
+                    return toggle
+                }
+                if frame.maxY > bottom { scrollUp = true }
+                else if frame.minY < top { scrollUp = false }
+            }
+            if attempt < 12 {
+                // Short central drag, away from the floating tab bar and the right-hand toggles.
+                let startY: CGFloat = scrollUp ? 0.65 : 0.40
+                let endY: CGFloat = scrollUp ? 0.40 : 0.65
+                mainApp.coordinate(withNormalizedOffset: CGVector(dx: 0.35, dy: startY))
+                    .press(forDuration: 0.05, thenDragTo: mainApp.coordinate(withNormalizedOffset: CGVector(dx: 0.35, dy: endY)))
+                RunLoop.current.run(until: Date().addingTimeInterval(0.4))
+            }
+        }
+        dump(mainApp, "\(evidence)-central-switch-not-found")
+        shot("\(evidence)-central-switch-not-found")
+        XCTFail("Exact switch was not wholly visible in the central viewport after twelve bounded scrolls")
+        return nil
+    }
+
+    // Copaky: read-only recovery from SwiftUI form reflow; never changes clipboard preferences.
+    private func verifyHistoryStateAfterReflow11(_ expected: String, evidence: String) -> Bool {
+        guard let toggle = centralSettingsSwitch11And46(L.clipboardToggle, evidence: evidence),
+              toggle.exists, toggle.isHittable, !mainApp.alerts.firstMatch.exists else {
+            dump(mainApp, "\(evidence)-readback-prerequisite-lost")
+            shot("\(evidence)-readback-prerequisite-lost")
+            XCTFail("History readback: switch visibility or alert prerequisite changed after central lookup")
+            return false
+        }
+        let observed = toggle.value as? String
+        note("\(evidence)-state", "Clipboard history observed value: \(observed ?? "unknown")")
+        shot("\(evidence)-state")
+        guard observed == expected else {
+            dump(mainApp, "\(evidence)-unexpected-state")
+            XCTFail("History readback: expected \(expected), observed \(observed ?? "unknown"); no toggle was tapped")
+            return false
+        }
+        return true
+    }
 
     func test11_phaseB_clipboardOptIn() throws {
         mainApp.launch()
@@ -1198,19 +1453,10 @@ class CopakyCampaignTests: XCTestCase {
             return
         }
         openSettingsTab()
-        // Find the clipboard SwiftUI Toggle (a .switch element) — scroll it into view if needed
-        let togglePred = NSPredicate(format: "label IN %@", L.clipboardToggle)
-        var toggle = mainApp.switches.matching(togglePred).firstMatch
-        var scrolls = 0
-        while (!toggle.exists || !toggle.isHittable) && scrolls < 6 {
-            mainApp.swipeUp()
-            RunLoop.current.run(until: Date().addingTimeInterval(0.5))
-            toggle = mainApp.switches.matching(togglePred).firstMatch
-            scrolls += 1
-        }
-        guard toggle.exists, toggle.isHittable else {
-            dump(mainApp, "11-no-toggle")
-            XCTFail("Clipboard toggle switch not found")
+        guard let toggle = centralSettingsSwitch11And46(L.clipboardToggle, evidence: "11-initial"),
+              toggle.exists, toggle.isHittable else {
+            shot("11-initial-central-switch-lost")
+            XCTFail("B-02 prerequisite: central clipboard switch disappeared or became unhittable")
             return
         }
         shot("11-initial-state")
@@ -1223,7 +1469,13 @@ class CopakyCampaignTests: XCTestCase {
         }
         note("11-prepared-state", "Clipboard history observed OFF from the prepared fixture, not asserted as a default")
         shot("11-prepared-off")
-        toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+        guard let centralToggle = centralSettingsSwitch11And46(L.clipboardToggle, evidence: "11-before-enable"),
+              centralToggle.exists, centralToggle.isHittable, !mainApp.alerts.firstMatch.exists,
+              centralToggle.value as? String == "0" else {
+            XCTFail("B-02 prerequisite: central clipboard switch must still be OFF before the enable tap")
+            return
+        }
+        centralToggle.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
         // Copaky: accept only the exact onEnabled message from the current EN/IT/JA catalog.
         let enabledMessages = [
             "Clipboard history is on. By default, long-press the 123 key on the letters tab or the ☆123 key on the Japanese flick keyboard to open the history tab. You can also enable the #+= key in Settings. If the «Allow Paste» dialog keeps appearing, set Settings ▸ Copaky ▸ «Paste from Other Apps» to «Allow».",
@@ -1249,9 +1501,33 @@ class CopakyCampaignTests: XCTestCase {
             XCTFail("B-02: an alert remains after enabling history")
             return
         }
-        let fresh = mainApp.switches.matching(togglePred).firstMatch
-        XCTAssertEqual(fresh.value as? String, "1", "Toggle is not ON after enabling")
+        guard verifyHistoryStateAfterReflow11("1", evidence: "11-after-enable") else { return }
         shot("11-enabled")
+    }
+
+    /// Copaky: verification only after a previous enable/reflow; never toggles or accepts alerts.
+    func test11b_verifyHistoryEnabledAfterReflow() throws {
+        mainApp.launch()
+        guard !mainApp.alerts.firstMatch.exists else {
+            shot("11b-unexpected-launch-alert")
+            XCTFail("History verification: unexpected launch alert")
+            return
+        }
+        let closeSetup = mainApp.buttons["setup-close"]
+        if closeSetup.exists {
+            guard closeSetup.isHittable, !mainApp.alerts.firstMatch.exists else {
+                XCTFail("History verification: explicit setup exit unavailable or blocked by an alert")
+                return
+            }
+            closeSetup.tap()
+        }
+        guard !mainApp.alerts.firstMatch.exists else {
+            shot("11b-unexpected-app-alert")
+            XCTFail("History verification: unexpected alert after setup exit")
+            return
+        }
+        openSettingsTab()
+        guard verifyHistoryStateAfterReflow11("1", evidence: "11b-history-on") else { return }
     }
 
     // MARK: - 12 · Capture on intent (B-03) — seed pasteboard in-process
@@ -1864,21 +2140,31 @@ class CopakyCampaignTests: XCTestCase {
     func activatePreNavigatedField(_ placeholder: String) -> XCUIElement {
         safari.activate()
         let web = safari.webViews.firstMatch
-        XCTAssertTrue(web.waitForExistence(timeout: 10), "Safari webview did not load (page must be pre-opened via simctl openurl)")
-        for closeLabel in ["Chiudi", "Close", "OK", "Continua", "Continue"] {
-            let x = safari.buttons.matching(NSPredicate(format: "label == %@", closeLabel)).firstMatch
-            if x.exists && x.isHittable {
-                x.tap()
-                RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+        // Copaky: never accept a dialog or touch/scroll an unrecognized page restored by Safari.
+        // Copaky: Safariが復元した未確認ページでは、ダイアログ承認・タップ・スクロールを行わない。
+        guard web.waitForExistence(timeout: 10), !safari.alerts.firstMatch.exists,
+              keyboardFixturePresent(in: web) else {
+            XCTFail("Prerequisite: Safari must show the owned keyboard fixture; no page interaction was attempted")
+            return web.textFields.matching(NSPredicate(format: "identifier == %@", "fixture-not-verified")).firstMatch
+        }
+        note("fixture-identity", "Owned keyboard fixture heading and typed fields verified; full browser URL/host readback NOT_VERIFIED")
+        let pred = NSPredicate(format: "label == %@ OR placeholderValue == %@ OR identifier == %@", placeholder, placeholder, placeholder)
+        func requestedField() -> XCUIElement? {
+            for query in [web.textFields.matching(pred), web.textViews.matching(pred),
+                          web.secureTextFields.matching(pred), web.searchFields.matching(pred)] {
+                if query.firstMatch.exists { return query.firstMatch }
             }
+            return nil
         }
-        let pred = NSPredicate(format: "label == %@ OR placeholderValue == %@ OR identifier == %@ OR value == %@", placeholder, placeholder, placeholder, placeholder)
-        var field = web.descendants(matching: .any).matching(pred).firstMatch
-        if !field.waitForExistence(timeout: 6) {
+        var field = requestedField()
+        if field == nil || field?.isHittable != true {
             web.swipeUp()
-            field = web.descendants(matching: .any).matching(pred).firstMatch
+            field = requestedField()
         }
-        XCTAssertTrue(field.waitForExistence(timeout: 6), "Field \(placeholder) not found in pre-navigated page")
+        guard let field, field.exists, field.isHittable else {
+            XCTFail("Field \(placeholder) not found/hittable in the verified keyboard fixture")
+            return web.textFields.matching(pred).firstMatch
+        }
         field.tap()
         return field
     }
@@ -4038,21 +4324,88 @@ class CopakyCampaignTests: XCTestCase {
 
     // MARK: - 46 · Copaky extension: real QWERTY number row grows without compressing letters
 
+    // Copaky: test46 changes only these two non-sensitive switches; never accepts an alert.
+    private func openNumberRowSettings46() -> Bool {
+        mainApp.launch()
+        guard !mainApp.alerts.firstMatch.exists else {
+            shot("46-settings-unexpected-launch-alert")
+            XCTFail("Number-row setup: unexpected launch alert; no control was tapped")
+            return false
+        }
+        let closeSetup = mainApp.buttons["setup-close"]
+        if closeSetup.exists {
+            guard closeSetup.isHittable, !mainApp.alerts.firstMatch.exists else {
+                XCTFail("Number-row setup: explicit setup exit unavailable or blocked by an alert")
+                return false
+            }
+            closeSetup.tap()
+        }
+        guard !mainApp.alerts.firstMatch.exists else {
+            XCTFail("Number-row setup: unexpected alert after setup exit")
+            return false
+        }
+        openSettingsTab()
+        guard !mainApp.alerts.firstMatch.exists else {
+            XCTFail("Number-row setup: unexpected settings alert")
+            return false
+        }
+        return true
+    }
+
+    private func setNumberRowSwitch46(_ labels: [String], to enabled: Bool) -> Bool {
+        guard labels == L.realNumberRowToggle || labels == L.numberHintsToggle else {
+            XCTFail("test46 switch helper accepts only the real number row or number hints")
+            return false
+        }
+        guard let toggle = centralSettingsSwitch11And46(labels, evidence: "46-setting-before"),
+              toggle.exists, toggle.isHittable, !mainApp.alerts.firstMatch.exists else {
+            dump(mainApp, "46-setting-prerequisite-lost")
+            shot("46-setting-prerequisite-lost")
+            XCTFail("Number-row setup: switch visibility or alert prerequisite changed after central lookup")
+            return false
+        }
+        let wanted = enabled ? "1" : "0"
+        guard let current = toggle.value as? String, current == "0" || current == "1" else {
+            XCTFail("Number-row setup: switch state is not observable")
+            return false
+        }
+        shot("46-setting-before")
+        if current != wanted {
+            guard let centralToggle = centralSettingsSwitch11And46(labels, evidence: "46-before-tap"),
+                  centralToggle.exists, centralToggle.isHittable, !mainApp.alerts.firstMatch.exists else {
+                shot("46-before-tap-central-switch-lost")
+                XCTFail("Number-row setup: central switch disappeared, became unhittable or was blocked before tap")
+                return false
+            }
+            centralToggle.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+        }
+        guard !mainApp.alerts.firstMatch.waitForExistence(timeout: 1) else {
+            shot("46-setting-unexpected-alert")
+            XCTFail("Number-row setup: unexpected alert; no confirmation was accepted")
+            return false
+        }
+        guard let readback = centralSettingsSwitch11And46(labels, evidence: "46-setting-readback"),
+              readback.exists, readback.isHittable, !mainApp.alerts.firstMatch.exists,
+              waitForFieldValue(readback, wanted) else {
+            shot("46-setting-readback-failed")
+            XCTFail("Number-row setup: requested switch state not observed")
+            return false
+        }
+        shot("46-setting-after")
+        return true
+    }
+
     /// Runs both states in one signed App Group session: OFF proves no standalone digit row, then ON
     /// proves the row, its tap action, and unchanged letter-key frames. Number hints are kept OFF so
     /// the two independent features remain distinguishable.
     func test46_realQwertyNumberRowPreservesLetterHeights() throws {
-        mainApp.launch()
-        if let close = firstMatch(in: mainApp, labels: L.closeOnboarding, timeout: 4) {
-            close.tap()
-        }
-        openSettingsTab()
-        guard driveSwitch(L.realNumberRowToggle, to: false) else {
+        guard openNumberRowSettings46() else { return }
+        guard setNumberRowSwitch46(L.realNumberRowToggle, to: false) else {
             dump(mainApp, "46-real-row-not-off")
-            XCTFail("Could not switch the real QWERTY number row OFF; run test46 through scripts/run_ui_test.sh --fresh-install")
+            XCTFail("Could not switch the real QWERTY number row OFF through the guarded app UI")
             return
         }
-        guard driveSwitch(L.numberHintsToggle, to: false) else {
+        guard setNumberRowSwitch46(L.numberHintsToggle, to: false) else {
             dump(mainApp, "46-number-hints-not-off")
             XCTFail("Could not isolate B-03 by switching the independent number hints OFF")
             return
@@ -4149,10 +4502,8 @@ class CopakyCampaignTests: XCTestCase {
         // （実測3回）。手動では生きたプロセスでも5段QWERTYが正しく出る＝プロダクトは健全。
         // test33と同じく「初回入場」の意味論で検証する：Safariを終了して新しいセッションで入る。
         safari.terminate()
-        mainApp.activate()
-        RunLoop.current.run(until: Date().addingTimeInterval(1.0))
-        openSettingsTab()
-        guard driveSwitch(L.realNumberRowToggle, to: true) else {
+        guard openNumberRowSettings46() else { return }
+        guard setNumberRowSwitch46(L.realNumberRowToggle, to: true) else {
             dump(mainApp, "46-real-row-not-on")
             XCTFail("Could not switch the real QWERTY number row ON")
             return
@@ -4227,6 +4578,13 @@ class CopakyCampaignTests: XCTestCase {
         RunLoop.current.run(until: Date().addingTimeInterval(0.6))
         XCTAssertEqual(onField.value as? String, "5", "Tapping the real 5 key must insert the plain digit 5")
         shot("46-real-number-row-on")
+    }
+
+    /// Copaky: explicit recovery after test46, including a failed OFF phase; hints are untouched.
+    func test46b_restoreExpandedNumberRow() throws {
+        guard openNumberRowSettings46(), setNumberRowSwitch46(L.realNumberRowToggle, to: true) else { return }
+        note("46b-restored-real-number-row", "Real QWERTY number row observed ON through app UI; number hints were not changed")
+        shot("46b-real-number-row-restored")
     }
 
     // MARK: - 47 · Copaky extension: slide the Latin QWERTY space bar to move the cursor
