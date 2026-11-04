@@ -11,7 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from memory_phase_c_validate import (  # noqa: E402
-    BUDGET_BYTES, EXECUTABLE_SUFFIX, PHASES, Sample, identities, load_samples, same_device, validate,
+    EXECUTABLE_SUFFIX, PHASES, Sample, identities, load_samples, same_device, validate,
 )
 
 
@@ -45,14 +45,17 @@ class MemoryPhaseValidationTests(unittest.TestCase):
         self.assertIn(error, report["errors"])
 
     def test_complete_run_and_decimal_budget_boundary(self):
-        samples = [Sample(s.timestamp, s.pid, BUDGET_BYTES) for s in self.samples]
-        self.assertEqual(self.report(samples=samples)["status"], "PASS")
-        samples[10] = Sample(samples[10].timestamp, 42, BUDGET_BYTES + 1)
-        report = self.report(samples=samples)
-        self.assertEqual(report["status"], "OVER_BUDGET")
-        self.assertEqual(report["measurement_status"], "COMPLETE")
-        self.assertEqual(report["peak_bytes"], 40_000_001)
-        self.assertAlmostEqual(report["peak_MiB"], 40_000_001 / 2**20)
+        # Copaky: the contract is strictly <40,000,000 decimal bytes, including equality rejection.
+        for peak, expected in ((39_999_999, "PASS"), (40_000_000, "OVER_BUDGET"),
+                               (40_000_001, "OVER_BUDGET")):
+            with self.subTest(peak=peak):
+                samples = list(self.samples)
+                samples[10] = Sample(samples[10].timestamp, 42, peak)
+                report = self.report(samples=samples)
+                self.assertEqual(report["status"], expected, "Release peak must be strictly below 40 MB")
+                self.assertEqual(report["measurement_status"], "COMPLETE")
+                self.assertEqual(report["peak_bytes"], peak)
+                self.assertAlmostEqual(report["peak_MiB"], peak / 2**20)
 
     def test_skipped_phase_cannot_count_as_work(self):
         for phase in ("clipboard", "it"):

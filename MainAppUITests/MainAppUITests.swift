@@ -710,9 +710,52 @@ class CopakyCampaignTests: XCTestCase {
         dump(safari, "02-copaky-tree")
     }
 
-    // MARK: - 03 · Clipboard toggle disabled without Full Access (A-03)
+    // MARK: - 03 · UI fixture history OFF, then clipboard disabled without Full Access (A-03)
 
     func test03_phaseA_clipboardToggleWithoutFA() throws {
+        // Copaky [H-21]: prepare history OFF through the real app UI before checking OS Full Access.
+        // This is authorized fixture preparation, not evidence of the default or a seeded OFF state.
+        // Copaky: OSフルアクセス確認前に実UIで履歴をOFFにする。初期値やシードの証明ではない。
+        mainApp.launch()
+        guard !mainApp.alerts.firstMatch.exists else {
+            shot("03-history-preparation-launch-alert")
+            XCTFail("H-21 fixture preparation: unexpected launch alert; no control was tapped")
+            return
+        }
+        if let close = firstMatch(in: mainApp, labels: L.closeOnboarding, timeout: 4) {
+            guard !mainApp.alerts.firstMatch.exists else {
+                shot("03-history-preparation-before-onboarding-close-alert")
+                XCTFail("H-21 fixture preparation: unexpected alert before closing onboarding; no control was tapped")
+                return
+            }
+            close.tap()
+        }
+        guard !mainApp.alerts.firstMatch.exists else {
+            shot("03-history-preparation-unrecognized-alert")
+            XCTFail("H-21 fixture preparation: unexpected app alert; no confirmation was accepted")
+            return
+        }
+        openSettingsTab()
+        let historyToggle = mainApp.switches.matching(NSPredicate(format: "label IN %@", L.clipboardToggle)).firstMatch
+        for _ in 0..<6 where !historyToggle.exists || !historyToggle.isHittable { mainApp.swipeUp() }
+        guard historyToggle.exists, historyToggle.isHittable else {
+            dump(mainApp, "03-history-preparation-toggle-missing")
+            XCTFail("H-21 fixture preparation: clipboard history switch not found")
+            return
+        }
+        shot("03-history-preparation-before")
+        note("03-history-preparation", "Real app UI history state before preparation: \(historyToggle.value as? String ?? "unknown")")
+        if historyToggle.value as? String == "1" {
+            historyToggle.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
+        }
+        guard waitForFieldValue(historyToggle, "0"), !mainApp.alerts.firstMatch.waitForExistence(timeout: 1) else {
+            shot("03-history-preparation-not-off-or-alert")
+            XCTFail("H-21 fixture preparation: history must be OFF without accepting an alert")
+            return
+        }
+        note("03-history-preparation", "Clipboard history observed OFF through the real app UI before the OS Full Access check")
+        shot("03-history-preparation-off")
+
         // Copaky [H-21]: the OS switch is the evidence; Show all settings only changes row visibility.
         // Copaky: OSのフルアクセスを確認する。「すべての設定」は表示範囲だけを変える。
         settings.launch()
@@ -1132,55 +1175,80 @@ class CopakyCampaignTests: XCTestCase {
         XCTAssertEqual(fa.value as? String, "1", "Allow Full Access did not turn ON")
     }
 
-    // MARK: - 11 · Clipboard opt-in default OFF → enable (B-02)
+    // MARK: - 11 · Prepared clipboard OFF → explicit opt-in enable (B-02)
 
     func test11_phaseB_clipboardOptIn() throws {
         mainApp.launch()
+        guard !mainApp.alerts.firstMatch.exists else {
+            shot("11-unexpected-launch-alert")
+            XCTFail("B-02 prerequisite: unexpected launch alert; no control was tapped")
+            return
+        }
         if let close = firstMatch(in: mainApp, labels: L.closeOnboarding, timeout: 4) {
+            guard !mainApp.alerts.firstMatch.exists else {
+                shot("11-unexpected-before-close-alert")
+                XCTFail("B-02 prerequisite: unexpected alert before closing onboarding; no control was tapped")
+                return
+            }
             close.tap()
+        }
+        guard !mainApp.alerts.firstMatch.exists else {
+            shot("11-unexpected-app-alert")
+            XCTFail("B-02 prerequisite: unexpected app alert; no confirmation was accepted")
+            return
         }
         openSettingsTab()
         // Find the clipboard SwiftUI Toggle (a .switch element) — scroll it into view if needed
         let togglePred = NSPredicate(format: "label IN %@", L.clipboardToggle)
         var toggle = mainApp.switches.matching(togglePred).firstMatch
         var scrolls = 0
-        while !toggle.exists && scrolls < 6 {
+        while (!toggle.exists || !toggle.isHittable) && scrolls < 6 {
             mainApp.swipeUp()
             RunLoop.current.run(until: Date().addingTimeInterval(0.5))
             toggle = mainApp.switches.matching(togglePred).firstMatch
             scrolls += 1
         }
-        guard toggle.exists else {
+        guard toggle.exists, toggle.isHittable else {
             dump(mainApp, "11-no-toggle")
             XCTFail("Clipboard toggle switch not found")
             return
         }
         shot("11-initial-state")
-        // Idempotent across reruns: drive to OFF (retrying the tap) so we exercise the opt-in enable
-        // path from a known state and leave it ON for the clipboard tests (12–15).
-        func currentToggle() -> XCUIElement { mainApp.switches.matching(togglePred).firstMatch }
-        var resets = 0
-        while currentToggle().value as? String == "1" && resets < 4 {
-            currentToggle().coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
-            // a "全て削除" style confirmation may appear on disable; dismiss any stray alert
-            if mainApp.alerts.buttons["OK"].waitForExistence(timeout: 1) { mainApp.alerts.buttons["OK"].tap() }
-            RunLoop.current.run(until: Date().addingTimeInterval(1.0))
-            resets += 1
+        // Copaky: test03 prepared OFF through the real UI; this is not a default-state claim.
+        // Copaky: test03で実UIからOFFを準備済み。初期値の証明ではない。再実行で自動リセットしない。
+        guard toggle.value as? String == "0", !mainApp.alerts.firstMatch.exists else {
+            shot("11-prepared-off-prerequisite-failed")
+            XCTFail("B-02 prerequisite: history must already be OFF with Full Access ON; no reset was attempted")
+            return
         }
-        // B-02: with Full Access on, the setting is available and rests OFF (opt-in)
-        XCTAssertEqual(currentToggle().value as? String, "0", "Clipboard history must be opt-in (OFF before enabling)")
-        shot("11-default-off")
-        currentToggle().coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
-        // onEnabled confirmation alert "タブバーに「コピー履歴」…" is the nice-to-have signal that the
-        // flip took effect; its exact timing is flaky when we toggle twice in one session, so we record
-        // it as evidence but do NOT hard-assert on it. The load-bearing checks are (a) opt-in default
-        // OFF above and (b) the toggle reaching ON below.
-        let alertOK = mainApp.alerts.buttons["OK"]
-        if alertOK.waitForExistence(timeout: 5) {
+        note("11-prepared-state", "Clipboard history observed OFF from the prepared fixture, not asserted as a default")
+        shot("11-prepared-off")
+        toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+        // Copaky: accept only the exact onEnabled message from the current EN/IT/JA catalog.
+        let enabledMessages = [
+            "Clipboard history is on. By default, long-press the 123 key on the letters tab or the ☆123 key on the Japanese flick keyboard to open the history tab. You can also enable the #+= key in Settings. If the «Allow Paste» dialog keeps appearing, set Settings ▸ Copaky ▸ «Paste from Other Apps» to «Allow».",
+            "La Cronologia appunti è attiva. Per impostazione predefinita, tieni premuto il tasto 123 nel tab delle lettere o il tasto ☆123 sulla tastiera flick giapponese per aprire la cronologia. Nelle Impostazioni puoi attivare anche il tasto #+=. Se la finestra «Consenti incolla» continua a comparire, imposta Impostazioni ▸ Copaky ▸ «Incolla da altre app» su «Consenti».",
+            "クリップボードの履歴がオンになりました。既定では文字タブの123キーとフリックの☆123キーを長押しすると履歴タブが開きます。設定で #+= キーも追加できます。「ペーストの許可」を求めるダイアログが繰り返し出る場合は、設定アプリ ▸ Copaky ▸「ほかの App からペースト」を「許可」にしてください。",
+        ]
+        let enabledAlert = mainApp.alerts.firstMatch
+        if enabledAlert.waitForExistence(timeout: 5) {
+            let message = enabledAlert.staticTexts.matching(NSPredicate(format: "label IN %@", enabledMessages)).firstMatch
+            let alertOK = enabledAlert.buttons["OK"]
+            guard message.exists, alertOK.exists, alertOK.isHittable, enabledAlert.buttons.count == 1 else {
+                shot("11-unexpected-enabled-alert")
+                dump(mainApp, "11-unexpected-enabled-alert")
+                XCTFail("B-02: unexpected alert after enabling history; no confirmation was accepted")
+                return
+            }
             shot("11-enabled-alert")
             alertOK.tap()
         }
         RunLoop.current.run(until: Date().addingTimeInterval(1.0))
+        guard !mainApp.alerts.firstMatch.exists else {
+            shot("11-alert-remains-after-enable")
+            XCTFail("B-02: an alert remains after enabling history")
+            return
+        }
         let fresh = mainApp.switches.matching(togglePred).firstMatch
         XCTAssertEqual(fresh.value as? String, "1", "Toggle is not ON after enabling")
         shot("11-enabled")

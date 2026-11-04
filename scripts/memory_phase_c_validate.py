@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Copaky: validate phase-C evidence without running Xcode or contacting a device.
 
-Exit 0: qualified device/Release run within 40,000,000 bytes; 1: over budget;
+Exit 0: qualified device/Release run strictly below 40,000,000 bytes; 1: at/over budget;
 2: incomplete/invalid measurement (including simulator-only observations).
 Monitor JSONL schema: pid/name/physFootprint/timestamp, observed in the 2026-08-29
 run. Identity snapshots use sysmon process single's list with execName, checked
@@ -208,7 +208,7 @@ def validate(log_text: str, samples: list[Sample], provenance: dict[str, Any],
     qualified_samples = [s for s in samples if len(pids) == 1 and s.pid == pids[0]]
     peak = max((s.byte_count for s in qualified_samples), default=None)
     observed_peak = max((s.byte_count for s in samples), default=None)
-    budget_status = "NOT_QUALIFIED" if errors else "OVER_BUDGET" if peak is not None and peak > BUDGET_BYTES else "WITHIN_BUDGET"
+    budget_status = "NOT_QUALIFIED" if errors else "OVER_BUDGET" if peak is not None and peak >= BUDGET_BYTES else "WITHIN_BUDGET"
     status = "MEASUREMENT_ERROR" if errors else "OVER_BUDGET" if budget_status == "OVER_BUDGET" else "PASS"
     return {"schema_version": 1, "status": status, "measurement_status": "INVALID" if errors else "COMPLETE",
             "budget_status": budget_status, "budget_bytes": BUDGET_BYTES, "budget_decimal_MB": 40,

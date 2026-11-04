@@ -13,6 +13,9 @@
 # Usage:
 #   scripts/memory_phase_c.sh --mode sim
 #   scripts/memory_phase_c.sh --mode device [--configuration Release]
+#   scripts/memory_phase_c.sh --mode device --prepared-xctestrun /path/tests.xctestrun \
+#     --prepared-app /path/azooKey.app --out /private/path/new-run
+# Prepared mode requires an already installed frozen Release app and runner; it never installs them.
 #
 # Prerequisite (not started by this script — see docs/UI_TESTING_PLAYBOOK.md §4.1): the field-fixture
 # server must already be serving http://127.0.0.1:8377/kbtest.html for `sim` mode:
@@ -22,10 +25,17 @@ set -uo pipefail
 
 MODE=""
 CONFIGURATION="${COPAKY_CONFIGURATION:-Release}"
+PREPARED_XCTESTRUN=""
+PREPARED_APP=""
+OUT_DIR=""
+PREPARED=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --mode) [[ $# -ge 2 ]] || exit 2; MODE="$2"; shift 2 ;;
     --configuration) [[ $# -ge 2 ]] || exit 2; CONFIGURATION="$2"; shift 2 ;;
+    --prepared-xctestrun) [[ $# -ge 2 ]] || exit 2; PREPARED_XCTESTRUN="$2"; shift 2 ;;
+    --prepared-app) [[ $# -ge 2 ]] || exit 2; PREPARED_APP="$2"; shift 2 ;;
+    --out) [[ $# -ge 2 ]] || exit 2; OUT_DIR="$2"; shift 2 ;;
     -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
     *) echo "ERROR: unknown argument '$1' (expected --mode device|sim)" >&2; exit 2 ;;
   esac
@@ -39,6 +49,15 @@ if [[ "$CONFIGURATION" != "Release" && "$CONFIGURATION" != "Debug" ]]; then
 fi
 if [[ "$MODE" == "device" && "$CONFIGURATION" != "Release" ]]; then
   echo "ERROR: device memory qualification requires Release" >&2; exit 2
+fi
+if [[ -n "$PREPARED_XCTESTRUN" || -n "$PREPARED_APP" || -n "$OUT_DIR" ]]; then
+  if [[ -z "$PREPARED_XCTESTRUN" || -z "$PREPARED_APP" || -z "$OUT_DIR" || "$MODE" != device || "$CONFIGURATION" != Release ]]; then
+    echo "ERROR: --prepared-xctestrun, --prepared-app and --out are required together in device/Release mode" >&2; exit 2
+  fi
+  if [[ "$OUT_DIR" != /* || -e "$OUT_DIR" || -L "$OUT_DIR" ]]; then
+    echo "ERROR: --out must be an absolute, not-yet-existing private output directory" >&2; exit 2
+  fi
+  PREPARED=1
 fi
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -59,8 +78,13 @@ DEVICE_UDID="${COPAKY_DEVICE_UDID:-}"   # lockdown UDID — for pymobiledevice3
 if [[ "$MODE" == "device" && ( -z "$DEVICE_UDID" || -z "$DEVICE_ID" ) ]]; then
   echo "ERROR: set COPAKY_DEVICE_ID and COPAKY_DEVICE_UDID for the same paired phone" >&2; exit 2
 fi
-LOG_DIR="$HOME/copaky_device_logs"
-mkdir -p "$LOG_DIR"
+LOG_DIR="${OUT_DIR:-$HOME/copaky_device_logs}"
+if [[ "$PREPARED" == 1 ]]; then
+  umask 077
+  mkdir "$LOG_DIR" || exit 2
+else
+  mkdir -p "$LOG_DIR"
+fi
 TS="$(date +%Y%m%d_%H%M%S)"
 CSV="$LOG_DIR/memc_${TS}.csv"
 XCLOG="$LOG_DIR/memc_${TS}_xcodebuild.log"
@@ -70,6 +94,96 @@ VALIDATOR="$REPO_DIR/scripts/memory_phase_c_validate.py"
 SUMMARY_JSON="$LOG_DIR/memc_${TS}_summary.json"
 PROVENANCE_JSON="$RAW_DIR/provenance.json"
 DERIVED_DATA="${COPAKY_MEMORY_DERIVED_DATA:-$HOME/Library/Developer/Xcode/DerivedData/CopakyMemoryPhaseC}"
+APP_PATH="$DERIVED_DATA/Build/Products/Release-iphoneos/azooKey.app"
+PREPARED_MANIFEST="$RAW_DIR/prepared.json"
+PREPARED_AFTER="$RAW_DIR/prepared_after.json"
+
+# Copaky: pure local preflight. No tool/device call may precede this fail-closed check.
+prepared_input_manifest() {
+  PYTHONDONTWRITEBYTECODE=1 python3 - "$REPO_DIR/scripts" "$PREPARED_XCTESTRUN" "$PREPARED_APP" "$1" "${2:-}" <<'PYPREPARED'
+import hashlib, json, os, plistlib, stat, sys
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+from memory_phase_c_validate import artifact_metadata
+from ui_binary_provenance import compare_bundles
+try:
+    run, app, output = map(Path, sys.argv[2:5])
+    if run.suffix != ".xctestrun" or not run.is_file() or not app.is_dir():
+        raise ValueError("prepared input paths are not an xctestrun file and app directory")
+    raw = run.read_bytes()
+    document = plistlib.loads(raw)
+    if "TestConfigurations" in document:
+        targets = [t for c in document["TestConfigurations"] for t in c["TestTargets"]]
+    else:
+        targets = [dict(v, BlueprintName=k) for k, v in document.items()
+                   if k != "__xctestrun_metadata__" and isinstance(v, dict)]
+    if len(targets) != 1 or targets[0].get("BlueprintName") != "azooKeyUITests":
+        raise ValueError("prepared xctestrun must contain only azooKeyUITests")
+    target = targets[0]
+    if target.get("UseDestinationArtifacts") is not True:
+        raise ValueError("UseDestinationArtifacts must be true")
+    if any(k in target for k in ("TestBundlePath", "TestHostPath", "UITargetAppPath")):
+        raise ValueError("destination artifacts must not include local install paths")
+    if target.get("UITargetAppBundleIdentifier") != "com.pettipol.copaky":
+        raise ValueError("unexpected UI target bundle identifier")
+    if target.get("TestHostBundleIdentifier") != "com.pettipol.copaky.uitests.xctrunner":
+        raise ValueError("unexpected test host bundle identifier")
+    if target.get("TestBundleDestinationRelativePath") != "__TESTHOST__/PlugIns/azooKeyUITests.xctest":
+        raise ValueError("unexpected destination test bundle path")
+    if compare_bundles(app, app)["status"] != "PASS":
+        raise ValueError("local app/extension executable metadata is invalid")
+    artifact = artifact_metadata(app)
+    if artifact["app"]["bundle_id"] != "com.pettipol.copaky" or artifact["extension"]["bundle_id"] != "com.pettipol.copaky.keyboard":
+        raise ValueError("unexpected prepared app/extension bundle identifier")
+    # Copaky: freeze every bundle entry, including resources, plist bytes, links and permissions.
+    # Do not follow symlink directories; their targets must stay within the frozen bundle.
+    root = app.resolve(strict=True)
+    bundle_entries = []
+    seen = set()
+    def walk_error(error):
+        raise error
+    for folder, directories, files in os.walk(root, followlinks=False, onerror=walk_error):
+        paths = [Path(folder)] + [Path(folder) / name for name in directories + files]
+        for entry in paths:
+            relative = entry.relative_to(root).as_posix()
+            if relative in seen:
+                continue
+            seen.add(relative)
+            metadata = entry.lstat()
+            row = {"path": relative, "mode": stat.S_IMODE(metadata.st_mode)}
+            if entry.is_symlink():
+                resolved = entry.resolve(strict=True)
+                if not resolved.is_relative_to(root):
+                    raise ValueError("bundle symlink escapes prepared app")
+                row.update(type="symlink", target=os.readlink(entry))
+            elif stat.S_ISREG(metadata.st_mode):
+                digest = hashlib.sha256()
+                with entry.open("rb") as source:
+                    for chunk in iter(lambda: source.read(1024 * 1024), b""):
+                        digest.update(chunk)
+                row.update(type="file", sha256=digest.hexdigest(), size_bytes=metadata.st_size)
+            elif stat.S_ISDIR(metadata.st_mode):
+                row["type"] = "directory"
+            else:
+                raise ValueError("unsupported entry in prepared app")
+            bundle_entries.append(row)
+    manifest = {"execution_mode": "prepared", "configuration_source": "caller_declared_Release",
+        "xctestrun_sha256": hashlib.sha256(raw).hexdigest(), "artifact": artifact,
+        "local_bundle_manifest": sorted(bundle_entries, key=lambda row: row["path"]),
+        "installed_binary_hash": "NOT_VERIFIED"}
+    if len(sys.argv) > 5 and sys.argv[5]:
+        if manifest != json.loads(Path(sys.argv[5]).read_text()):
+            raise ValueError("prepared inputs changed during campaign")
+    output.write_text(json.dumps(manifest, indent=2) + "\n")
+except (OSError, ValueError, KeyError, TypeError, AttributeError, RuntimeError, plistlib.InvalidFileException) as exc:
+    print(f"ERROR: prepared input validation failed: {exc}", file=sys.stderr)
+    sys.exit(2)
+PYPREPARED
+}
+if [[ "$PREPARED" == 1 ]]; then
+  APP_PATH="$PREPARED_APP"
+  prepared_input_manifest "$PREPARED_MANIFEST" || exit 2
+fi
 
 log() { echo "[$(date +%H:%M:%S)] $*"; }
 
@@ -255,6 +369,7 @@ else
   fi
   # Build and install BEFORE restarting the process, so an old Debug extension cannot survive
   # an apparent Release measurement. Execution remains in this single script's lane.
+  if [[ "$PREPARED" == 0 ]]; then
   xcodebuild build-for-testing -project "$PROJECT" -scheme "$SCHEME" \
     -configuration "$CONFIGURATION" -derivedDataPath "$DERIVED_DATA" \
     -destination "platform=iOS,id=$DEVICE_ID" -allowProvisioningUpdates \
@@ -269,6 +384,7 @@ else
   # 実機ではフィクスチャの公開コピーを先に開いておく（テスト側は activate のみ）。
   # Same stale-runner guard as sim mode (the phone keeps the previously installed xctrunner too).
   xcrun devicectl device uninstall app --device "$DEVICE_ID" com.pettipol.copaky.uitests.xctrunner >/dev/null 2>&1 || true
+  fi
   # Fresh extension process. iOS keeps a running keyboard-extension process alive across the app
   # (re)install xcodebuild performs, so without this the run measures the PREVIOUS binary (seen
   # 2026-08-15: the same pid, in the same bundle container, survived three runs — including the
@@ -294,12 +410,20 @@ else
   start_sampler
   # `-configuration Release` measures the SHIPPED kind of binary (Debug builds carry unoptimised
   # code and allocator debugging and read several MB higher — first device run: 47-51 MB Debug).
+  if [[ "$PREPARED" == 1 ]]; then
+    xcodebuild test-without-building -xctestrun "$PREPARED_XCTESTRUN" \
+      -destination "platform=iOS,id=$DEVICE_ID" \
+      -parallel-testing-enabled NO -maximum-concurrent-test-device-destinations 1 \
+      -only-testing:"$TEST_ID" -resultBundlePath "$RESULT_BUNDLE" \
+      2>&1 | tee "$XCLOG"
+  else
   xcodebuild test-without-building -project "$PROJECT" -scheme "$SCHEME" \
     -configuration "$CONFIGURATION" -derivedDataPath "$DERIVED_DATA" \
     -destination "platform=iOS,id=$DEVICE_ID" -allowProvisioningUpdates \
     -only-testing:"$TEST_ID" \
     -resultBundlePath "$RESULT_BUNDLE" \
     2>&1 | tee "$XCLOG"
+  fi
 fi
 XCODEBUILD_STATUS=$?
 
@@ -314,22 +438,37 @@ fi
 
 stop_sampler
 trap - EXIT
+if [[ "$PREPARED" == 1 ]]; then
+  prepared_input_manifest "$PREPARED_AFTER" "$PREPARED_MANIFEST" || XCODEBUILD_STATUS=2
+fi
 
 # ---- machine-readable, fail-closed summary ----------------------------------------------------
 # Copaky: record requested configuration and local build output separately from process identity.
 # This is not a remote hash attestation of the installed binary.
-python3 - "$PROVENANCE_JSON" "$MODE" "$CONFIGURATION" "$XCODEBUILD_STATUS" "$SAMPLER_DIED" "$REPO_DIR" <<'PYPROV'
+PYTHONDONTWRITEBYTECODE=1 python3 - "$PROVENANCE_JSON" "$MODE" "$CONFIGURATION" "$XCODEBUILD_STATUS" "$SAMPLER_DIED" "$REPO_DIR" "$PREPARED_MANIFEST" "$PREPARED_AFTER" <<'PYPROV'
 import json, subprocess, sys
 from pathlib import Path
-path, mode, configuration, status, sampler_died, repo = sys.argv[1:]
+path, mode, configuration, status, sampler_died, repo, prepared_manifest, prepared_after = sys.argv[1:]
 def git(*args):
     result = subprocess.run(["git", "-C", repo, *args], capture_output=True, text=True)
     return result.stdout.strip() if result.returncode == 0 else None
-Path(path).write_text(json.dumps({"mode": mode, "configuration": configuration,
+provenance = {"mode": mode, "configuration": configuration,
     "xcodebuild_status": int(status), "sampler_died": int(sampler_died),
     "device_mapping_verified": mode == "device",
     "source_commit": git("rev-parse", "HEAD"), "source_dirty": bool(git("status", "--porcelain")),
-    "installed_binary_hash": "NOT_VERIFIED", "test": "test42_memoryPhaseC_japaneseTypingAcrossKana"}, indent=2) + "\n")
+    "installed_binary_hash": "NOT_VERIFIED", "test": "test42_memoryPhaseC_japaneseTypingAcrossKana"}
+if Path(prepared_manifest).exists():
+    prepared = json.loads(Path(prepared_manifest).read_text())
+    provenance.update(prepared)
+    # Copaky: fail qualification if the caller's frozen local inputs changed during the campaign.
+    try:
+        unchanged = json.loads(Path(prepared_after).read_text()) == prepared
+    except (OSError, ValueError, KeyError, TypeError):
+        unchanged = False
+    provenance["prepared_input_integrity"] = "UNCHANGED" if unchanged else "CHANGED_OR_UNREADABLE"
+    if not unchanged:
+        provenance["xcodebuild_status"] = 2
+Path(path).write_text(json.dumps(provenance, indent=2) + "\n")
 PYPROV
 PROVENANCE_STATUS=$?
 if [[ "$PROVENANCE_STATUS" != 0 ]]; then log "ERROR: could not record provenance"; exit 2; fi
@@ -337,7 +476,7 @@ if [[ "$PROVENANCE_STATUS" != 0 ]]; then log "ERROR: could not record provenance
 SUMMARY_STATUS=0
 if [[ "$MODE" == "device" ]]; then
   python3 "$VALIDATOR" --log "$XCLOG" --csv "$CSV" --raw-dir "$RAW_DIR" \
-    --provenance "$PROVENANCE_JSON" --app "$DERIVED_DATA/Build/Products/Release-iphoneos/azooKey.app" \
+    --provenance "$PROVENANCE_JSON" --app "$APP_PATH" \
     --json "$SUMMARY_JSON" || SUMMARY_STATUS=$?
 else
   python3 "$VALIDATOR" --log "$XCLOG" --csv "$CSV" --provenance "$PROVENANCE_JSON" \
