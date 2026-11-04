@@ -25,10 +25,11 @@ For engine / conversion-level topics, the upstream azooKey docs (`docs/`) remain
 
 ## Local-first CI (the gate)
 
-This is an iOS / UIKit app, so it cannot build on free Linux runners, and hosted **macOS** CI minutes are
-billed 10×. The source of truth is therefore **local**:
+This iOS / UIKit app requires the Mac toolchain. Run the local gate before code commits and pushes;
+hosted checks complement it.
 
-- Full check: `scripts/ci-local.sh` (build MainApp + full `AzooKeyCore` test suite + advisory offline audit).
+- Full check: `scripts/ci-local.sh` (MainApp build, full `AzooKeyCore` suite, app-hosted `CopakyDictionaryTests`, harness tests, and required offline source audit).
+  The dictionary scheme tests the app implementation; the historical `azooKeyTests` converter suite is separate. Simulator results do not qualify device permissions, runtime traffic, or memory limits.
 - Fast check: `scripts/ci-local.sh --fast` (build + `ClipboardHistoryManagerTests`).
 - **Enable the git hooks once:**
   ```sh

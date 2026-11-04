@@ -41,9 +41,13 @@ struct ActiveKeyboardLanguagesSettingRows: View {
                     title: ActiveKeyboardLanguagesSetting.title,
                     explanation: ActiveKeyboardLanguagesSetting.explanation
                 )
+                .accessibilityIdentifier("active-language-help-button")
                 Spacer()
                 editButton
             }
+            // Copaky [H-41]: Form's automatic row action must not fire Help and Edit together.
+            // Copaky: Formの行アクションでヘルプと編集が同時に実行されないようにする。
+            .buttonStyle(.borderless)
             .onAppear { reload() }
 
             HStack {

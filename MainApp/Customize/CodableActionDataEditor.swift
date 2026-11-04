@@ -213,15 +213,8 @@ private struct CodableActionEditor: View {
                 let items = Dictionary(value.uniqued().map {(key: $0.first, value: $0.second)}, uniquingKeysWith: {first, _ in first})
                 return .replaceLastCharacters(items)
             }
-        case let .launchApplication(item):
-            if item.target.hasPrefix("run-shortcut?") {
-                ActionEditTextField("オプション", action: $action) {String(item.target.dropFirst("run-shortcut?".count))} convert: {value in
-                    .launchApplication(LaunchItem(scheme: .shortcuts, target: "run-shortcut?" + value))
-                }
-                FallbackLink("オプションの設定方法", destination: URL(string: "https://support.apple.com/ja-jp/guide/shortcuts/apd624386f42/ios")!)
-            } else {
-                Text("このアプリでは編集できないアクションです")
-            }
+        case .launchApplication:
+            Text("キーボードからアプリやショートカットは起動できません。ホーム画面から目的のアプリを開いてください。")
         case .selectCandidate(let item):
             ActionEditCandidateSelection(action: $action, initialValue: {item})
         case .replaceDefault:
@@ -1143,9 +1136,6 @@ private struct ActionPicker: View {
                 }
                 Button("カーソルバーの表示") {
                     process(.toggleCursorBar)
-                }
-                Button("ショートカットを実行") {
-                    process(.launchApplication(.init(scheme: .shortcuts, target: "run-shortcut?name=[名前]&input=[入力]&text=[テキスト]")))
                 }
                 Button("キーボードを閉じる") {
                     process(.dismissKeyboard)

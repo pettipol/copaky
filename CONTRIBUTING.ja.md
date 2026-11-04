@@ -25,10 +25,11 @@ Copaky は [azooKey](https://github.com/azooKey/azooKey)（MIT）を基盤とし
 
 ## ローカルファースト CI（ゲート）
 
-iOS / UIKit アプリのため無料の Linux ランナーではビルドできず、ホスト型 **macOS** CI の分数は
-10 倍で課金されます。そのため信頼できる情報源は**ローカル**です:
+この iOS / UIKit アプリには Mac のツールチェーンが必要です。コードのコミットと push の前に
+ローカルゲートを実行してください。ホスト型チェックはそれを補完します。
 
-- フルチェック: `scripts/ci-local.sh`（MainApp ビルド + `AzooKeyCore` 全テスト + オフライン監査）。
+- フルチェック: `scripts/ci-local.sh`（MainApp ビルド、`AzooKeyCore` 全テスト、アプリをホストとする `CopakyDictionaryTests`、ハーネステスト、必須のオフラインソース監査）。
+  辞書スキームはアプリの実装を検証します。従来の `azooKeyTests` 変換器テストは別です。シミュレータの結果は実機の権限、実行時通信、メモリ上限を保証しません。
 - 高速チェック: `scripts/ci-local.sh --fast`（ビルド + `ClipboardHistoryManagerTests`）。
 - **git フックを一度有効化してください:**
   ```sh

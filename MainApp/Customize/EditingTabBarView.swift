@@ -129,17 +129,7 @@ struct EditingTabBarView: View {
                             self.items.append(EditingTabBarItem(label: .image("keyboard.chevron.compact.down"), pinned: false, actions: [.dismissKeyboard]))
                         }
                     }
-                    Button("Copakyを開く", systemImage: "gearshape") {
-                        withAnimation(.interactiveSpring()) {
-                            self.items.append(
-                                EditingTabBarItem(
-                                    label: .image("gearshape"),
-                                    pinned: false,
-                                    actions: [.launchApplication(.init(scheme: .azooKey, target: ""))]
-                                )
-                            )
-                        }
-                    }
+
                 }
             }
             .onAppear {

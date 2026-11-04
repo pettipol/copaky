@@ -931,7 +931,6 @@ class CopakyCampaignTests: XCTestCase {
             dismissMainAppAlertIfAny()
             return activeLanguageElement(identifier: L.activeLanguagesEditorIdentifier)
         }
-        if editor().exists { return true }
         for _ in 0..<8 where !editor().exists {
             mainApp.swipeDown()
             RunLoop.current.run(until: Date().addingTimeInterval(0.3))
@@ -940,7 +939,29 @@ class CopakyCampaignTests: XCTestCase {
             mainApp.swipeUp()
             RunLoop.current.run(until: Date().addingTimeInterval(0.3))
         }
-        return editor().exists
+        guard editor().exists else { return false }
+        // Copaky [H-41]: an AX row may exist beneath the floating tab bar. Bring the whole
+        // editor into view before a gesture or an order screenshot; never repair its frames.
+        for _ in 0..<6 {
+            let english = activeLanguageElement(identifier: L.englishLanguageRowIdentifier)
+            let italian = activeLanguageElement(identifier: L.italianLanguageRowIdentifier)
+            let tabBar = mainApp.tabBars.firstMatch
+            guard tabBar.exists else { return false }
+            let bothRowsExist = english.exists && italian.exists
+            let bottom = tabBar.frame.minY - 12
+            let top = mainApp.navigationBars.firstMatch.exists
+                ? mainApp.navigationBars.firstMatch.frame.maxY + 8 : mainApp.frame.minY + 80
+            // SwiftUI may omit the lower row from AX until it scrolls into view.
+            let rowsBottom = bothRowsExist ? max(english.frame.maxY, italian.frame.maxY) : mainApp.frame.maxY
+            if bothRowsExist, editor().frame.minY > top, rowsBottom < bottom,
+               english.isHittable, italian.isHittable { return true }
+            let movingUp = rowsBottom >= bottom
+            let from = mainApp.coordinate(withNormalizedOffset: CGVector(dx: 0.12, dy: movingUp ? 0.65 : 0.40))
+            let to = mainApp.coordinate(withNormalizedOffset: CGVector(dx: 0.12, dy: movingUp ? 0.40 : 0.65))
+            from.press(forDuration: 0.05, thenDragTo: to)
+            RunLoop.current.run(until: Date().addingTimeInterval(0.4))
+        }
+        return false
     }
 
     /// Enable/disable Italian through the new list row, retaining the legacy localized-label fallback.
@@ -990,6 +1011,11 @@ class CopakyCampaignTests: XCTestCase {
         dismissMainAppAlertIfAny()
         edit.tap()
         RunLoop.current.run(until: Date().addingTimeInterval(0.6))
+        guard !mainApp.alerts.firstMatch.exists else {
+            dump(mainApp, "33-edit-opened-help")
+            XCTFail("Edit must not also activate the adjacent Help button")
+            return false
+        }
         defer {
             let done = mainApp.buttons
                 .matching(NSPredicate(format: "identifier == %@", L.activeLanguagesEditButtonIdentifier))
@@ -997,6 +1023,7 @@ class CopakyCampaignTests: XCTestCase {
             if done.exists, done.isHittable {
                 done.tap()
                 RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+                XCTAssertFalse(mainApp.alerts.firstMatch.exists, "Done must not activate the adjacent Help button")
             }
         }
 
@@ -1924,6 +1951,10 @@ class CopakyCampaignTests: XCTestCase {
     /// `keyboard_type_en=roman` exposes the cycle key; JP stays flick. A signed run also proves the
     /// live first-Latin reseed; a persistent unsigned extension may retain a manual Latin choice.
     func test33_italianJoinsTheLanguageCycle() throws {
+        // Copaky [H-41]: signed simulators can expose the same App Group too. The runner
+        // establishes this prerequisite after install; never infer it from a successful cycle.
+        let sharedSettings = isDevice || ProcessInfo.processInfo.environment["COPAKY_SHARED_SETTINGS_AVAILABLE"] == "1"
+        note("33-settings-domain", sharedSettings ? "shared-container" : "split-simulator-domains")
         // 1. Exercise the inline editor itself: enable IT, establish EN→IT, then drag IT before EN.
         mainApp.launch()
         if let close = firstMatch(in: mainApp, labels: L.closeOnboarding, timeout: 4) {
@@ -1949,12 +1980,21 @@ class CopakyCampaignTests: XCTestCase {
             XCTFail("Italian activation toggle did not turn ON")
             return
         }
+        // Copaky [H-41]: Help remains usable, independently of Edit/Done in the same Form row.
+        let help = mainApp.buttons["active-language-help-button"]
+        guard help.exists, help.isHittable else {
+            XCTFail("The active-languages help button must be reachable")
+            return
+        }
+        help.tap()
+        XCTAssertTrue(mainApp.alerts.firstMatch.waitForExistence(timeout: 3), "Help must still open its explanation")
+        dismissMainAppAlertIfAny()
         guard setLatinLanguageOrder(italianFirst: false) else {
             dump(mainApp, "33-reorder-failed")
             XCTFail("Could not establish canonical English-before-Italian order")
             return
         }
-        if isDevice {
+        if sharedSettings {
             // Make the live extension observe the intermediate canonical list. This gives the next
             // appearance a real EN→IT-first setting transition even when its static state survived
             // an earlier test invocation.
@@ -1967,6 +2007,16 @@ class CopakyCampaignTests: XCTestCase {
                 return
             }
         }
+        var restoreCanonicalOrder = true
+        defer {
+            if restoreCanonicalOrder {
+                mainApp.activate()
+                openSettingsTab()
+                _ = revealActiveLanguagesEditor()
+                _ = setLatinLanguageOrder(italianFirst: false)
+            }
+        }
+        XCTAssertTrue(latinLanguageRowsHaveOrder(italianFirst: false), "The real UI must start with English before Italian")
         guard setLatinLanguageOrder(italianFirst: true) else {
             dump(mainApp, "33-reorder-failed")
             XCTFail("Could not move Italian before English through EditMode/onMove")
@@ -1980,15 +2030,18 @@ class CopakyCampaignTests: XCTestCase {
         XCTAssertLessThan(italianAfterMove.frame.midY, englishAfterMove.frame.midY, "Italian must be ordered before English")
         shot("33-active-languages-jp-it-en")
 
-        var restoreCanonicalOrder = true
-        defer {
-            if restoreCanonicalOrder {
-                mainApp.activate()
-                openSettingsTab()
-                _ = revealActiveLanguagesEditor()
-                _ = setLatinLanguageOrder(italianFirst: false)
-            }
+
+        // Copaky [H-41]: a visible move is not enough; a fresh app process must reload it.
+        mainApp.terminate()
+        mainApp.launch()
+        if let close = firstMatch(in: mainApp, labels: L.closeOnboarding, timeout: 4) { close.tap() }
+        openSettingsTab()
+        guard revealActiveLanguagesEditor(), latinLanguageRowsHaveOrder(italianFirst: true) else {
+            dump(mainApp, "33-order-not-persisted")
+            XCTFail("The Italian-before-English order must survive a real app relaunch")
+            return
         }
+        shot("33-order-persisted-after-relaunch")
 
         // 2. Start on JP flick. On a signed run the observed list change makes ABC enter IT first.
         _ = activatePreNavigatedField("plain-text")
@@ -2007,8 +2060,8 @@ class CopakyCampaignTests: XCTestCase {
         let seededFlick = flickKanaVisible(in: safari)
         XCTAssertTrue(seededItalianLatin, "JP→IT must land on Latin QWERTY")
         XCTAssertFalse(seededFlick, "JP→IT must not remain on Japanese flick")
-        if isDevice {
-            // 3 (device). The shared App Group lets the extension observe the app-side reorder, so
+        if sharedSettings {
+            // 3 (shared container). The extension must observe the app-side reorder, so
             // the STRICT proof runs: IT is the first Latin, and the key closes IT→EN→JP in order.
             guard let italianCurrent = languageSwitchElement(current: "IT", next: "A", in: safari) else {
                 dump(safari, "33-first-latin-not-italian")
@@ -2029,11 +2082,9 @@ class CopakyCampaignTests: XCTestCase {
             XCTAssertTrue(flickKanaVisible(in: safari, timeout: 4), "EN→JP must close the cycle on Japanese flick")
             shot("33-cycle-jp-it-en-jp")
         } else {
-            // 3 (Simulator). Split preference domains: the unsigned extension can NEVER observe the
-            // app-side reorder, so the reordered-cycle proof is impossible here by construction. The
-            // honest keyboard-phase check is that the key cycles the SEEDED canonical list
-            // (JP▸EN▸IT): A→IT, IT→あ, and the tap closes on the flick tab. The reordered cycle
-            // stays a device assert above; the editor-side reorder was already proven on the rows.
+            // 3 (unprovisioned Simulator). Without a shared container, only the seeded canonical
+            // keyboard cycle is in scope. The app-side move and reload were verified above.
+            // A shared-container run must use the stricter reordered-cycle branch instead.
             var englishCurrent = languageSwitchElement(current: "A", next: "IT", in: safari)
             if englishCurrent == nil {
                 // ABC lands on whichever Latin was last active; align to EN via the direct menu.
@@ -2226,7 +2277,13 @@ class CopakyCampaignTests: XCTestCase {
                     XCTFail("Japanese flick か+な must offer 仮名")
                     return
                 }
+                // Copaky: the visible candidate list does not select a homophone. Space must
+                // commit the actual displayed composition, regardless of its live ranking.
                 let beforeSpace = field.value as? String ?? ""
+                guard !beforeSpace.isEmpty, beforeSpace != "plain-text" else {
+                    XCTFail("Japanese flick typing must produce text before the space check")
+                    return
+                }
                 let conversionSpace = safari.descendants(matching: .any)
                     .matching(NSPredicate(format: "label == %@", "空白")).firstMatch
                 guard conversionSpace.exists, conversionSpace.isHittable else {
@@ -2234,13 +2291,24 @@ class CopakyCampaignTests: XCTestCase {
                     return
                 }
                 conversionSpace.tap()
-                RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+                XCTAssertTrue(waitForFieldValue(field, beforeSpace + " "), "Japanese space must preserve the displayed composition and append exactly one space")
                 let afterSpace = field.value as? String ?? ""
-                XCTAssertNotEqual(afterSpace, beforeSpace, "Japanese 「空白」 conversion action was a no-op")
-                XCTAssertTrue(
-                    afterSpace.contains("仮名"),
-                    "Japanese 「空白」 must immediately commit the visible 仮名 conversion"
-                )
+                note("33b-space-values", "before=\(beforeSpace.debugDescription); after=\(afterSpace.debugDescription)")
+                XCTAssertEqual(afterSpace, beforeSpace + " ")
+
+                // Copaky: prove the specific conversion by selecting it explicitly, then check
+                // that a subsequent space neither replaces nor duplicates the committed text.
+                clearFocusedField(field, placeholder: "plain-text", in: safari)
+                tapKeys(["か", "な"], in: safari)
+                guard candidate.waitForExistence(timeout: 4) else {
+                    XCTFail("Japanese flick must offer 仮名 for explicit selection")
+                    return
+                }
+                candidate.tap()
+                XCTAssertTrue(waitForFieldValue(field, "仮名"), "Selecting 仮名 must commit exactly 仮名")
+                conversionSpace.tap()
+                XCTAssertTrue(waitForFieldValue(field, "仮名 "), "Space after explicit selection must preserve 仮名 and append one space")
+                note("33b-selected-space-value", (field.value as? String ?? "").debugDescription)
                 shot("33b-menu-japanese-intact")
 
             case 1:
@@ -4541,60 +4609,118 @@ class CopakyCampaignTests: XCTestCase {
         shot("52-shift-cycle-complete")
     }
 
-    // MARK: - 54 · Language-key menu opens Copaky Settings
+    // MARK: - 54 · Keyboard settings instructions stay inside the host app
 
-    /// Copaky [G-03]: the final held-menu item launches copaky://settings and selects Settings.
-    func test54_languageKeyMenuOpensCopakySettings() throws {
-        guard #available(iOS 18.0, *) else {
-            throw XCTSkip("Opening a containing app through the keyboard responder chain requires iOS 18+")
-        }
+    /// Copaky [H-17]: manual instructions replace the former containing-app launch.
+    func test54_languageKeyMenuShowsManualSettingsInstructions() throws {
         mainApp.launch()
         if let close = firstMatch(in: mainApp, labels: L.closeOnboarding, timeout: 4) { close.tap() }
         mainApp.terminate()
-
         _ = activatePreNavigatedField("plain-text")
         switchToCopaky(in: safari)
         dismissCopakyNotice(in: safari)
         guard switchToLatinQwertyTab(in: safari) else {
-            dump(safari, "54-latin-tab-missing")
-            shot("54-latin-tab-missing")
             XCTFail("Could not establish Latin QWERTY before opening the language menu")
             return
         }
         guard selectActiveLanguageMenuIndex(3, in: safari) else { return }
-        guard mainApp.wait(for: .runningForeground, timeout: 8) else {
-            dump(safari, "54-app-not-opened-safari")
-            dump(mainApp, "54-app-not-opened-mainapp")
-            shot("54-app-not-opened")
-            XCTFail("The final language-menu item did not bring Copaky to the foreground")
+        let instructions = [
+            "To change settings, open Copaky from the Home Screen and select the Settings tab.",
+            "Per modificare le impostazioni, apri Copaky dalla schermata Home e seleziona la scheda Impostazioni.",
+            "設定を変更するには、ホーム画面からCopakyアプリを開き、「設定」タブを選んでください。"
+        ]
+        guard firstMatch(in: safari, labels: instructions, timeout: 5) != nil else {
+            dump(safari, "54-manual-instructions-missing")
+            XCTFail("The settings help must show localized manual-opening instructions")
             return
         }
+        XCTAssertEqual(safari.state, .runningForeground, "The keyboard must keep the host app in front")
+        XCTAssertNotEqual(mainApp.state, .runningForeground, "The keyboard must not launch Copaky")
+        shot("54-manual-settings-instructions")
+        guard let ok = firstMatch(in: safari, labels: ["OK"], timeout: 3) else {
+            XCTFail("Manual instructions must remain visible until acknowledged")
+            return
+        }
+        ok.tap()
+        XCTAssertTrue(copakyActive(in: safari), "Acknowledging help must leave the keyboard usable")
+    }
+
+    /// Copaky [H-23]: setup advances by an explicit statement, without guessing keyboard identity.
+    func test54b_keyboardSetupRequiresExplicitConfirmation() throws {
+        mainApp.launch()
+        if let close = firstMatch(in: mainApp, labels: L.closeOnboarding, timeout: 4) { close.tap() }
         let settingsTab = mainApp.descendants(matching: .any)
             .matching(NSPredicate(format: "identifier == %@", "main-tab-settings")).firstMatch
-        // [26th session: F-harness] The "Show all settings" switch sits below the fold in the short
-        // settings list and never entered the accessibility tree without scrolling (26th-session UI dump), so we
-        // verify the route selected the Settings tab instead — its own tab or nav bar, not that switch.
-        // 「すべての設定を表示」は短い設定リストでは折り返し線の下にあり、スクロールしないとアクセシビリティツリーに現れない（第26セッションのUIダンプで確認）。
-        // そのスイッチではなく、Settingsタブへの遷移自体（タブ選択またはナビゲーションバー）を検証する。
-        let settingsTitles = ["Impostazioni", "Settings", "設定"]
-        let settingsNavBar = mainApp.navigationBars
-            .matching(NSPredicate(format: "identifier IN %@ OR label IN %@", settingsTitles, settingsTitles))
-        let settingsRouteDeadline = Date().addingTimeInterval(8)
-        var settingsRouteSelected = false
-        repeat {
-            if (settingsTab.exists && settingsTab.isSelected) || settingsNavBar.firstMatch.exists {
-                settingsRouteSelected = true
-                break
-            }
-            RunLoop.current.run(until: Date().addingTimeInterval(0.5))
-        } while Date() < settingsRouteDeadline
-        guard settingsRouteSelected else {
-            dump(mainApp, "54-settings-route-missing")
-            shot("54-settings-route-missing")
-            XCTFail("copaky://settings opened the app without selecting the Settings tab")
+        XCTAssertTrue(settingsTab.waitForExistence(timeout: 5))
+        settingsTab.tap()
+        let review = mainApp.buttons["setup-review-keyboard"]
+        XCTAssertTrue(review.waitForExistence(timeout: 5))
+        let wasPreviouslyConfirmed = mainApp.staticTexts["setup-user-confirmed-status"].exists
+        review.tap()
+        let steps = mainApp.buttons["setup-show-steps"]
+        XCTAssertTrue(steps.waitForExistence(timeout: 5))
+        let closeSetup = mainApp.buttons["setup-close"]
+        XCTAssertTrue(closeSetup.waitForExistence(timeout: 5), "Initial setup must always offer an explicit exit")
+        closeSetup.tap()
+        XCTAssertTrue(review.waitForExistence(timeout: 5), "Closing setup must restore access to the app")
+        XCTAssertEqual(mainApp.staticTexts["setup-user-confirmed-status"].exists, wasPreviouslyConfirmed,
+                       "Closing setup must not record a successful keyboard check")
+        review.tap()
+        XCTAssertTrue(steps.waitForExistence(timeout: 5))
+        steps.tap()
+        let added = mainApp.buttons["setup-added-keyboard"]
+        if !added.isHittable { mainApp.swipeUp() }
+        XCTAssertTrue(added.waitForExistence(timeout: 5))
+        added.tap()
+        let finish = mainApp.buttons["setup-finish-settings"]
+        if !finish.isHittable { mainApp.swipeUp() }
+        XCTAssertTrue(finish.waitForExistence(timeout: 5))
+        finish.tap()
+        let confirm = mainApp.buttons["setup-confirm-keyboard"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5), "Confirmation must stay available even without detecting Copaky")
+        let field = mainApp.textFields["setup-keyboard-test-field"]
+        XCTAssertTrue(field.exists, "Setup must offer a manual typing check")
+        guard field.isHittable else {
+            XCTFail("The real setup field must be reachable before opening the keyboard")
             return
         }
-        shot("54-copaky-settings-open")
+        field.tap()
+        // Copaky [H-23]: the keyboard can be UIKit's Keyboard or a custom inputView.
+        // The confirmation must remain reachable through ordinary scrolling after real focus.
+        let softwareKeyboard = mainApp.keyboards.firstMatch
+        let systemKeyboardVisible = softwareKeyboard.waitForExistence(timeout: 3)
+        let customKeyboardFrame = systemKeyboardVisible ? nil : waitForKeyboardInputViewFrame(of: mainApp, timeout: 5)
+        guard systemKeyboardVisible || customKeyboardFrame != nil else {
+            dump(mainApp, "54b-software-keyboard-missing")
+            XCTFail("Focusing the setup field must show a software keyboard")
+            return
+        }
+        shot("54b-setup-keyboard-visible")
+        let scroll = mainApp.scrollViews.firstMatch
+        for _ in 0..<4 where !confirm.isHittable {
+            guard scroll.exists, scroll.isHittable else { break }
+            scroll.swipeUp()
+        }
+        guard confirm.isHittable else {
+            dump(mainApp, "54b-confirm-unreachable-after-keyboard")
+            shot("54b-confirm-unreachable-after-keyboard")
+            XCTFail("Confirmation must be reachable with normal scrolling after the software keyboard opens")
+            return
+        }
+        shot("54b-setup-manual-confirmation")
+        confirm.tap()
+        XCTAssertTrue(review.waitForExistence(timeout: 5), "Only explicit confirmation completes setup")
+        XCTAssertTrue(mainApp.staticTexts["setup-user-confirmed-status"].exists,
+                      "Completed setup must be described as the user's confirmation")
+        mainApp.terminate()
+        mainApp.launch()
+        XCTAssertFalse(mainApp.buttons["setup-show-steps"].exists, "The user's completion statement must persist across launch")
+        let reopenedSettings = mainApp.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier == %@", "main-tab-settings")).firstMatch
+        XCTAssertTrue(reopenedSettings.waitForExistence(timeout: 5))
+        reopenedSettings.tap()
+        XCTAssertTrue(mainApp.staticTexts["setup-user-confirmed-status"].waitForExistence(timeout: 5),
+                      "A fresh process must read the saved explicit confirmation")
     }
 
     // MARK: - 55 · Clipboard history from Japanese flick ☆123

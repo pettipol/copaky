@@ -116,10 +116,15 @@ case "$TEST" in
     ;;
 esac
 case "$TEST" in
+  test33b_longPressLanguageMenuSelectsEveryActiveLanguage)
+    # Copaky: pin live conversion; check the displayed text, not a particular homophone rank.
+    # Copaky: ライブ変換を有効にし、同音語の順位ではなく表示中の文字列を検証する。
+    SEEDS+=(live_conversion=true)
+    ;;
   test52_shiftKeyCycleAndCapsLock)
     SEEDS+=(use_shift_key=true keep_deprecated_shift_key_behavior=false hide_empty_candidate_bar_on_latin=true display_tab_bar_button=false enable_latin_auto_capitalization=false)
     ;;
-  test54_languageKeyMenuOpensCopakySettings)
+  test54_languageKeyMenuShowsManualSettingsInstructions)
     SEEDS+=(keyboard_type_en=roman enable_italian_keyboard_language=true)
     ;;
   test55_flickStar123LongPressOpensClipboardHistory)
@@ -413,6 +418,15 @@ if [[ -n "$PBSEED_BYTES" ]]; then
   /usr/bin/python3 -c 'import sys; sys.stdout.write("COPAKY_OVERSIZED_SEED_" + "X" * int(sys.argv[1]))' "$PBSEED_BYTES" \
     | xcrun simctl pbcopy "$UDID"
   export TEST_RUNNER_COPAKY_PASTEBOARD_PRESEEDED=1
+fi
+
+# Copaky [H-41]: a signed simulator may share settings just like the app/extension pair.
+# Determine the prerequisite after installation; the UI test must still prove the live order.
+# Copaky: インストール後の共有コンテナを確認し、UIテストでは実際の順序反映を検証する。
+SHARED_SETTINGS_CONTAINER="$(xcrun simctl get_app_container "$UDID" "$APP_BUNDLE" group.com.pettipol.copaky 2>/dev/null || true)"
+export TEST_RUNNER_COPAKY_SHARED_SETTINGS_AVAILABLE=0
+if [[ -n "$SHARED_SETTINGS_CONTAINER" && -d "$SHARED_SETTINGS_CONTAINER" ]]; then
+  export TEST_RUNNER_COPAKY_SHARED_SETTINGS_AVAILABLE=1
 fi
 
 # The extension snapshots settings and tab state at process launch, so kill it after all seeding.

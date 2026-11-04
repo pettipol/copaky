@@ -27,7 +27,6 @@ struct SettingTabView: View {
         showAllSections || !searchQuery.isEmpty
     }
     @Environment(\.requestReview) var requestReview
-    @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var appStates: MainAppStates
     private func canFlickLayout(_ layout: LanguageLayout) -> Bool {
         if layout == .flick {
@@ -54,16 +53,19 @@ struct SettingTabView: View {
     }
 
     @ViewBuilder
-    private var keyboardActivationSettingsRow: some View {
+    private var keyboardSetupSettingsRow: some View {
         Group {
-            if !appStates.isKeyboardActivated {
-                Text("キーボードを有効化する")
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        appStates.requireFirstOpenView = true
-                    }
-            } else if let url = URL(string: UIApplication.openSettingsURLString) {
+            if appStates.hasCompletedKeyboardSetup {
+                Text("設定完了はご自身で確認済みです。有効状態はiOSの設定で確認してください。")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("setup-user-confirmed-status")
+            }
+            Button("キーボードの設定を確認する") {
+                appStates.requireFirstOpenView = true
+            }
+            .accessibilityIdentifier("setup-review-keyboard")
+            if let url = URL(string: UIApplication.openSettingsURLString) {
                 Button("設定アプリを開く") {
                     UIApplication.shared.open(url, options: [:], completionHandler: nil)
                 }
@@ -79,7 +81,7 @@ struct SettingTabView: View {
                     // Copaky: the short list. Same views as below — a row is defined once and shown
                     // here or in its own section, never duplicated in behaviour.
                     Section("基本設定") {
-                        keyboardActivationSettingsRow
+                        keyboardSetupSettingsRow
                         NavigationLink("キーボードの種類を設定する") {
                             KeyboardLayoutTypeDetailsView()
                         }
@@ -125,7 +127,7 @@ struct SettingTabView: View {
 
                 if showsEverything {
                 Section("キーボードの種類") {
-                    keyboardActivationSettingsRow
+                    keyboardSetupSettingsRow
                     NavigationLink("キーボードの種類を設定する") {
                         KeyboardLayoutTypeDetailsView()
                     }
@@ -363,18 +365,11 @@ struct SettingTabView: View {
                 }
             }
             .onAppear {
-                // Copaky [F-03]: refresh after returning from iOS Settings; launch state can be stale.
-                // Copaky [F-03]: iOS設定から戻った後に再判定し、起動時の古い状態を残さない。
-                appStates.isKeyboardActivated = SharedStore.checkKeyboardActivation()
                 if appStates.requestReviewManager.shouldTryRequestReview, appStates.requestReviewManager.shouldRequestReview() {
                     requestReview()
                 }
             }
-            .onChange(of: scenePhase) { (_, phase) in
-                if phase == .active {
-                    appStates.isKeyboardActivated = SharedStore.checkKeyboardActivation()
-                }
-            }
+
         }
         .searchable(text: $searchQuery, prompt: Text("検索"))
     }

@@ -11,8 +11,8 @@ import KeyboardViews
 import SwiftUI
 
 final class MainAppStates: ObservableObject {
-    /// キーボードが有効化（キーボードリストに追加）されているかどうかを示す
-    @Published var isKeyboardActivated: Bool
+    /// Copaky [H-23]: setup completion explicitly confirmed by the user; not live activation.
+    @Published var hasCompletedKeyboardSetup: Bool
     @Published var requireFirstOpenView: Bool
     @Published var japaneseLayout: LanguageLayout = .flick
     @Published var englishLayout: LanguageLayout = .flick
@@ -21,9 +21,9 @@ final class MainAppStates: ObservableObject {
     @Published var requestReviewManager = RequestReviewManager()
 
     @MainActor init() {
-        let keyboardActivation = SharedStore.checkKeyboardActivation()
-        self.isKeyboardActivated = keyboardActivation
-        self.requireFirstOpenView = !keyboardActivation
+        let setupCompleted = SharedStore.hasCompletedKeyboardSetup()
+        self.hasCompletedKeyboardSetup = setupCompleted
+        self.requireFirstOpenView = !setupCompleted
         @KeyboardSetting(.japaneseKeyboardLayout) var japaneseKeyboardLayout
         self.japaneseLayout = japaneseKeyboardLayout
         @KeyboardSetting(.englishKeyboardLayout) var englishKeyboardLayout
@@ -31,6 +31,12 @@ final class MainAppStates: ObservableObject {
         self.custardManager = CustardManager.load()
         SemiStaticStates.shared.setHapticsAvailable()
         SemiStaticStates.shared.setScreenWidth(UIScreen.main.bounds.width)
+    }
+
+    @MainActor func confirmKeyboardSetup() {
+        UserDefaults.standard.set(true, forKey: "copaky_keyboard_setup_confirmed")
+        hasCompletedKeyboardSetup = true
+        requireFirstOpenView = false
     }
 
     func setTutorialProgress(_ progress: EnableAzooKeyViewProgress) {

@@ -701,30 +701,9 @@ final class KeyboardViewController: UIInputViewController {
         KeyboardViewController.variableStates.setHasFullAccess(self.hasFullAccess)
     }
 
-    /// Reference: https://stackoverflow.com/questions/79077018/unable-to-open-main-app-from-action-extension-in-ios-18-previously-working-met
-    @objc @discardableResult func openURL(_ url: URL) -> Bool {
-        var responder: UIResponder? = self
-        while let r = responder {
-            if let application = r as? UIApplication {
-                if #available(iOS 18.0, *) {
-                    application.open(url, options: [:], completionHandler: nil)
-                    return true
-                } else {
-                    return application.perform(#selector(openURL(_:)), with: url) != nil
-                }
-            }
-            responder = r.next
-        }
-        return false
-    }
-
+    // Copaky [H-17]: old/custom actions stay decodable, but keyboard extensions never launch apps.
+    // Copaky [H-17]: 旧カスタムアクションは読み込めるが、キーボードからアプリを起動しない。
     func openApp(scheme: String) {
-        // 日本語のURLは使えないので、パーセントエンコーディングを適用する
-        guard let encoded = scheme.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let url = URL(string: encoded) else {
-            debug("無効なschemeです", scheme, scheme.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? scheme)
-            return
-        }
-        self.openURL(url)
+        Self.variableStates.temporalMessage = .blockedAppLaunch(scheme: scheme)
     }
 }

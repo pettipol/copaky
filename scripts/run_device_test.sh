@@ -77,32 +77,34 @@ check_tool() {
   fi
 }
 
-# ---- perimetro di supporto Xcode → iOS device, dedotto da `xcodebuild -version` --------------------
+# ---- riferimento tabellare Xcode/iOS; non è un attestato di compatibilità --------------------------
 xcode_ios_range() {
-  local xcode_ver major
+  local xcode_ver
   xcode_ver="$(xcodebuild -version 2>/dev/null | sed -n '1p' | awk '{print $2}')"
-  major="${xcode_ver%%.*}"
-  case "$major" in
-    27) echo "17-27" ;;
-    26) echo "15-26.5" ;;
-    *) echo "" ;;   # perimetro non tabulato per questa versione: niente verdetto automatico
-  esac
+  python3 "$REPO_DIR/scripts/device_preflight_support.py" range "$xcode_ver"
 }
 
-ios_in_range() {
-  local ios="$1" range="$2" lo hi
-  [[ -n "$range" ]] || return 2
-  lo="${range%-*}"; hi="${range#*-}"
-  python3 -c '
-import sys
-def v(s):
-    parts = [int(x) for x in s.split(".")]
-    while len(parts) < 3:
-        parts.append(0)
-    return tuple(parts)
-ios, lo, hi = sys.argv[1], sys.argv[2], sys.argv[3]
-sys.exit(0 if v(lo) <= v(ios) <= v(hi) else 1)
-' "$ios" "$lo" "$hi"
+ios_table_assessment() {
+  python3 "$REPO_DIR/scripts/device_preflight_support.py" classify "$1" "$2"
+}
+
+print_ios_table_assessment() {
+  local assessment
+  assessment="$(ios_table_assessment "$1" "$2")"
+  case "$assessment" in
+    IN_TABLE)
+      echo "  versione iOS nell'intervallo indicato in tabella ($2); compatibilità device/DDI/runtime da verificare"
+      ;;
+    OUTSIDE_TABLE)
+      echo "  versione iOS precedente all'intervallo indicato in tabella ($2); compatibilità non determinata"
+      ;;
+    INVALID)
+      echo "  versione iOS non interpretabile; compatibilità non determinata"
+      ;;
+    *)
+      echo "  versione iOS non determinata dalla tabella (${2:-non tabulata}); compatibilità device/DDI/runtime da verificare"
+      ;;
+  esac
 }
 
 # ---- preflight: device fisici noti a devicectl, versione iOS, confronto col perimetro Xcode -------
@@ -116,7 +118,7 @@ do_preflight() {
   local xcode_ver range
   xcode_ver="$(xcodebuild -version 2>/dev/null | sed -n '1p')"
   range="$(xcode_ios_range)"
-  echo "toolchain: $xcode_ver — perimetro device dichiarato: ${range:-non tabulato}"
+  echo "toolchain: $xcode_ver — riferimento tabellare (non attestazione di compatibilità): ${range:-non tabulato}"
   echo
 
   local list_json
@@ -159,11 +161,7 @@ for dev in d.get("result", {}).get("devices", []):
     echo "device: $name — $udid — stato $state — iOS ${ios:-sconosciuta}"
     [[ "$state" == connected/* ]] && any_connected=1
     if [[ -n "$ios" ]]; then
-      if ios_in_range "$ios" "$range"; then
-        echo "  ✓ versione iOS entro il perimetro dichiarato per $xcode_ver ($range)"
-      else
-        echo "  ✘ versione iOS FUORI dal perimetro dichiarato per $xcode_ver ($range)"
-      fi
+      print_ios_table_assessment "$ios" "$range"
     else
       # xcrun devicectl device info details espone osVersionNumber/productVersion più affidabilmente
       # per i device solo appaiati (non connessi ora): tentativo aggiuntivo, mai fatale.
@@ -182,11 +180,7 @@ if v:
 ' 2>/dev/null || true)"
       if [[ -n "$ios2" ]]; then
         echo "  iOS (da device info details): $ios2"
-        if ios_in_range "$ios2" "$range"; then
-          echo "  ✓ versione iOS entro il perimetro dichiarato per $xcode_ver ($range)"
-        else
-          echo "  ✘ versione iOS FUORI dal perimetro dichiarato per $xcode_ver ($range)"
-        fi
+        print_ios_table_assessment "$ios2" "$range"
       else
         echo "  versione iOS non leggibile (device non raggiungibile ora)"
       fi

@@ -32,9 +32,8 @@ All notable changes to **Copaky** (an independent project based on azooKey). For
   (8acebd79). The third upstream fix (111e78d7, a tap released right at the long-press threshold) is
   deferred to v0.2: the counter-review found a race between the gesture's lifecycle state and the long-press
   action that this tranche did not resolve.
-- **Fail-soft App Group and guarded KVC lookup** (H-21/H-23): the App Group UserDefaults suite no longer
-  force-unwraps (falls back to standard defaults with a logged fault); the private KVC lookup of the active
-  keyboard identifier is guarded.
+- **Fail-soft App Group** (H-21): the App Group UserDefaults suite no longer force-unwraps;
+  it falls back to standard defaults with a logged fault when unavailable.
 - **Toolchain moved to Xcode 27** (H-18/Q-23): built with Xcode 27.0 (SDK iOS 27); two upstream files
   adjusted to compile under the iOS 27 SDK (StrokeAndFill, EditingGridFitCustardView); minimum iOS raised
   from 17.6 to 18.0 (no iOS 17.x/18.x simulator runtime is available to verify older releases).
@@ -53,8 +52,14 @@ All notable changes to **Copaky** (an independent project based on azooKey). For
   and Japanese-flick `☆123` to open Clipboard history; existing saved slot choices are preserved.
 - **Number-row long-press variants** (G-05): real QWERTY digits now offer superscripts and common
   fractions; Japanese also offers the corresponding full-width digit first.
-- **Settings from the language key** (G-03): the language-key long-press menu now ends with a
-  shortcut that opens Copaky directly on its Settings tab.
+- **Settings help from the language key** (G-03/H-17): the last menu item explains how to open
+  Copaky manually from the Home Screen. The keyboard no longer launches the containing app or
+  Shortcuts; saved/imported launch actions remain readable and show instructions instead.
+- **Explicit setup confirmation** (H-23): users check typing themselves and confirm completion.
+  Setup can be closed without confirming; the app does not infer keyboard identity through private APIs.
+- **Independent language-list controls** (H-41): Edit/Done no longer also opens the adjacent help alert.
+- **App dictionary regression gate** (H-30): the full local check includes hosted tests for deletion,
+  Unicode preservation and storage round trips. Device sharing and conversion output remain separate checks.
 - **Focused clipboard options** (G-07): clipboard long-press shortcut choices now live on a
   dedicated details screen below the main history switch.
 - **Clearer language scope in Settings** (G-08): live conversion, Latin autocorrect and Italian

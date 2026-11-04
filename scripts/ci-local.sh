@@ -73,6 +73,15 @@ if [ $fail = 0 ]; then
 fi
 
 if [ $FAST = 0 ]; then
+  # Copaky: run the app's real dictionary regressions in their isolated hosted bundle.
+  # Copaky: アプリ実装の辞書回帰テストを独立したホスト付きバンドルで実行する。
+  echo "▶ [2/3] Test: MainApp dictionary regressions…"
+  xcodebuild test -project "$REPO/azooKey.xcodeproj" -scheme CopakyDictionaryTests \
+    -destination "$SIM" -parallel-testing-enabled NO \
+    -maximum-concurrent-test-simulator-destinations 1 \
+    CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO -quiet \
+    || { echo "✘ dictionary regression tests FAILED"; fail=1; }
+
   # Copaky: both findings and incomplete scans fail the full gate. Keep the scope,
   # exceptions and independent static verdict visible; this is not runtime evidence.
   echo "▶ [3/3] Harness regression tests (unittest discovery: test_*.py)…"

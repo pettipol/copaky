@@ -41,6 +41,7 @@
 		55950E542AF8E09400ACACAB /* KeyboardExtensionUtils in Frameworks */ = {isa = PBXBuildFile; productRef = 55950E532AF8E09400ACACAB /* KeyboardExtensionUtils */; };
 		55EA62DF2BD4FD4F0056B5BA /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 55EA62DE2BD4FCF20056B5BA /* PrivacyInfo.xcprivacy */; };
 		55EE424B2B8091B400C75B3D /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 55EE424A2B8091B400C75B3D /* PrivacyInfo.xcprivacy */; };
+		C03000000000000000000001 /* UserDictionaryRegressionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C03000000000000000000002 /* UserDictionaryRegressionTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -64,6 +65,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 1A3DC1F82500D488002CAA93;
 			remoteInfo = Keyboard;
+		};
+		C03000000000000000000004 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1A3DC1BA2500D44A002CAA93 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1A3DC1C12500D44A002CAA93;
+			remoteInfo = MainApp;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -127,6 +135,8 @@
 		55EA62DE2BD4FCF20056B5BA /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		55EE424A2B8091B400C75B3D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		55FA896B2D870FED001BF3B8 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		C03000000000000000000002 /* UserDictionaryRegressionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = azooKeyTests/UserDictionaryRegressionTests.swift; sourceTree = SOURCE_ROOT; };
+		C03000000000000000000003 /* CopakyDictionaryTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CopakyDictionaryTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -222,6 +232,12 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C03000000000000000000005 /* PBXFrameworksBuildPhase */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -233,6 +249,7 @@
 				1AA346B42567F26000B41A16 /* Resources */,
 				1A3DC1C42500D44A002CAA93 /* MainApp */,
 				559E905E2CAC29E900E016FA /* azooKeyTests */,
+				C03000000000000000000002 /* UserDictionaryRegressionTests.swift */,
 				559E90652CAC29EC00E016FA /* MainAppUITests */,
 				1A3DC1FA2500D488002CAA93 /* Keyboard */,
 				1A3DC1C32500D44A002CAA93 /* Products */,
@@ -245,6 +262,7 @@
 			children = (
 				1A3DC1C22500D44A002CAA93 /* azooKey.app */,
 				1A3DC1D82500D44E002CAA93 /* azooKeyTests.xctest */,
+				C03000000000000000000003 /* CopakyDictionaryTests.xctest */,
 				1A3DC1E32500D44E002CAA93 /* azooKeyUITests.xctest */,
 				1A3DC1F92500D488002CAA93 /* Keyboard.appex */,
 			);
@@ -436,6 +454,22 @@
 			productReference = 1A3DC1F92500D488002CAA93 /* Keyboard.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		C03000000000000000000009 /* CopakyDictionaryTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C0300000000000000000000C /* Build configuration list for PBXNativeTarget "CopakyDictionaryTests" */;
+			buildPhases = (
+				C03000000000000000000007 /* Sources */,
+				C03000000000000000000005 /* PBXFrameworksBuildPhase */,
+				C03000000000000000000006 /* PBXResourcesBuildPhase */,
+			);
+			buildRules = ();
+			dependencies = (C03000000000000000000008 /* PBXTargetDependency */, );
+			name = CopakyDictionaryTests;
+			packageProductDependencies = ();
+			productName = CopakyDictionaryTests;
+			productReference = C03000000000000000000003 /* CopakyDictionaryTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -447,6 +481,10 @@
 				LastUpgradeCheck = 1630;
 				ORGANIZATIONNAME = DevEn3;
 				TargetAttributes = {
+					C03000000000000000000009 = {
+						CreatedOnToolsVersion = 27.2;
+						TestTargetID = 1A3DC1C12500D44A002CAA93;
+					};
 					1A3DC1C12500D44A002CAA93 = {
 						CreatedOnToolsVersion = 11.6;
 					};
@@ -482,6 +520,7 @@
 			targets = (
 				1A3DC1C12500D44A002CAA93 /* azooKey */,
 				1A3DC1D72500D44E002CAA93 /* azooKeyTests */,
+				C03000000000000000000009 /* CopakyDictionaryTests */,
 				1A3DC1E22500D44E002CAA93 /* azooKeyUITests */,
 				1A3DC1F82500D488002CAA93 /* Keyboard */,
 			);
@@ -530,6 +569,12 @@
 				557D9E022ABF320F0028F3A0 /* Localizable.xcstrings in Resources */,
 				1A7F547126A96A5F0032E91E /* AzooKeyIcon-Regular.otf in Resources */,
 			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C03000000000000000000006 /* PBXResourcesBuildPhase */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
@@ -609,6 +654,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C03000000000000000000007 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C03000000000000000000001 /* UserDictionaryRegressionTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -626,6 +679,11 @@
 			isa = PBXTargetDependency;
 			target = 1A3DC1F82500D488002CAA93 /* Keyboard */;
 			targetProxy = 1A3DC1FE2500D488002CAA93 /* PBXContainerItemProxy */;
+		};
+		C03000000000000000000008 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1A3DC1C12500D44A002CAA93 /* azooKey */;
+			targetProxy = C03000000000000000000004 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -997,6 +1055,40 @@
 			};
 			name = Release;
 		};
+		C0300000000000000000000A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@loader_path/Frameworks", );
+				PRODUCT_BUNDLE_IDENTIFIER = com.pettipol.copaky.dictionary-tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/azooKey.app/azooKey";
+			};
+			name = Debug;
+		};
+		C0300000000000000000000B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@loader_path/Frameworks", );
+				PRODUCT_BUNDLE_IDENTIFIER = com.pettipol.copaky.dictionary-tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/azooKey.app/azooKey";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1044,6 +1136,12 @@
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
+		};
+		C0300000000000000000000C /* Build configuration list for PBXNativeTarget "CopakyDictionaryTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (C0300000000000000000000A /* Debug */, C0300000000000000000000B /* Release */, );
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
 

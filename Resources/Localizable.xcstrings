@@ -13649,7 +13649,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Scegli l\u2019input flick o QWERTY per inglese e italiano. Le due lingue condividono questo layout."
+            "value" : "Scegli l’input flick o QWERTY per inglese e italiano. Le due lingue condividono questo layout."
           }
         },
         "ja" : {
@@ -15263,6 +15263,236 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Premi rapidamente due volte lo spazio per inserire il punto. Puoi disattivare questa funzione nelle Impostazioni."
+          }
+        }
+      }
+    },
+    "Copakyの設定を開く方法" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How to open Copaky settings"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Come aprire le impostazioni di Copaky"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copakyの設定を開く方法"
+          }
+        }
+      }
+    },
+    "設定を変更するには、ホーム画面からCopakyアプリを開き、「設定」タブを選んでください。" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "To change settings, open Copaky from the Home Screen and select the Settings tab."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Per modificare le impostazioni, apri Copaky dalla schermata Home e seleziona la scheda Impostazioni."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定を変更するには、ホーム画面からCopakyアプリを開き、「設定」タブを選んでください。"
+          }
+        }
+      }
+    },
+    "キーボードからアプリやショートカットは起動できません。ホーム画面から目的のアプリを開いてください。" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apps and shortcuts cannot be launched from the keyboard. Open the app you need from the Home Screen."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La tastiera non può avviare app o comandi rapidi. Apri l’app desiderata dalla schermata Home."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キーボードからアプリやショートカットは起動できません。ホーム画面から目的のアプリを開いてください。"
+          }
+        }
+      }
+    },
+    "キーボードを確認する" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check your keyboard"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verifica la tastiera"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キーボードを確認する"
+          }
+        }
+      }
+    },
+    "下の入力欄をタップし、地球儀ボタンを長押ししてCopakyを選び、文字を入力してください。" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap the field below, hold the globe button, select Copaky, and type some text."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tocca il campo qui sotto, tieni premuto il globo, seleziona Copaky e scrivi del testo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下の入力欄をタップし、地球儀ボタンを長押ししてCopakyを選び、文字を入力してください。"
+          }
+        }
+      }
+    },
+    "アプリはキーボードの有効状態を自動判定しません。Copakyで入力できたことをご自身で確認してください。" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The app does not automatically detect whether the keyboard is enabled. Check that you can type with Copaky yourself."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’app non rileva automaticamente se la tastiera è abilitata. Verifica personalmente di riuscire a scrivere con Copaky."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリはキーボードの有効状態を自動判定しません。Copakyで入力できたことをご自身で確認してください。"
+          }
+        }
+      }
+    },
+    "Copakyで入力できました" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I could type with Copaky"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sono riuscito a scrivere con Copaky"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copakyで入力できました"
+          }
+        }
+      }
+    },
+    "設定でCopakyを追加しました" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I added Copaky in Settings"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ho aggiunto Copaky nelle Impostazioni"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定でCopakyを追加しました"
+          }
+        }
+      }
+    },
+    "キーボードの設定を確認する" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check keyboard setup"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verifica la configurazione della tastiera"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キーボードの設定を確認する"
+          }
+        }
+      }
+    },
+    "設定完了はご自身で確認済みです。有効状態はiOSの設定で確認してください。" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定完了はご自身で確認済みです。有効状態はiOSの設定で確認してください。"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You confirmed setup completion. Check iOS Settings to see whether the keyboard is enabled."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hai confermato di aver completato la configurazione. Verifica nelle Impostazioni di iOS se la tastiera è abilitata."
           }
         }
       }

@@ -77,9 +77,9 @@ struct QwertyLanguageSwitchKeyModel<Extension: ApplicationSpecificKeyboardViewEx
                 actions: actions(for: language)
             )
         } : []
-        // Copaky [G-03]: keep app settings reachable even when only one keyboard language is active.
+        // Copaky [H-17]: show manual settings instructions even with only one active language.
         elements.append(QwertyVariationsModel.VariationElement(
-            label: .image("gearshape", accessibilityLabel: "Copakyの設定"),
+            label: .image("gearshape", accessibilityLabel: "Copakyの設定を開く方法"),
             actions: [.openApp("copaky://settings")]
         ))
         return .linear(elements, direction: .right)

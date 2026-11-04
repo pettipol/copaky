@@ -46,7 +46,7 @@ struct ContentView: View {
                     .tag(TabSelection.settings)
             }
             .onAppear {
-                if appStates.isKeyboardActivated && !appStates.tutorialFinishedSuccessfully() {
+                if appStates.hasCompletedKeyboardSetup && !appStates.tutorialFinishedSuccessfully() {
                     appStates.requireFirstOpenView = true
                 }
             }
@@ -56,7 +56,7 @@ struct ContentView: View {
             }
             .fullScreenCover(isPresented: $appStates.requireFirstOpenView, content: {
                 // キーボードは有効化されているが正しく終了していない場合
-                if appStates.isKeyboardActivated && !appStates.tutorialFinishedSuccessfully() {
+                if appStates.hasCompletedKeyboardSetup && !appStates.tutorialFinishedSuccessfully() {
                     // 「最初の設定」を再表示する
                     EnableAzooKeyView(resumeProgress: .setting)
                 } else {

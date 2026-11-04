@@ -9,7 +9,6 @@
 import AzooKeyUtils
 import SwiftUI
 import SwiftUIUtils
-import func SwiftUtils.debug
 
 enum EnableAzooKeyViewProgress: String, Hashable, Codable, Sendable {
     case menu
@@ -27,11 +26,21 @@ struct EnableAzooKeyView: View {
         }
     }
     @State private var text = ""
-    @State private var showDoneMessage = false
 
     init(resumeProgress: EnableAzooKeyViewProgress? = nil) {
         if let resumeProgress {
             self._step = .init(initialValue: resumeProgress)
+        }
+    }
+
+    // Copaky [H-23]: leaving setup never records a successful manual keyboard check.
+    // Copaky [H-23]: 設定を閉じる操作では、入力確認済みの状態を保存しない。
+    private var closeSetupButton: some View {
+        CenterAlignedView {
+            EnableAzooKeyViewButton("閉じる", systemName: "xmark", style: .destructive) {
+                appStates.requireFirstOpenView = false
+            }
+            .accessibilityIdentifier("setup-close")
         }
     }
 
@@ -51,7 +60,9 @@ struct EnableAzooKeyView: View {
                                 EnableAzooKeyViewButton("手順を見る", systemName: "arrowtriangle.right.fill") {
                                     self.step = .append
                                 }
+                                .accessibilityIdentifier("setup-show-steps")
                             }
+                            closeSetupButton
                         }
                         .onAppear {
                             value.scrollTo(0, anchor: .top)
@@ -78,6 +89,12 @@ struct EnableAzooKeyView: View {
                                 }
                             }
                             EnableAzooKeyViewText("この設定をしないとキーボードが使えません", with: "exclamationmark.triangle.fill")
+                            CenterAlignedView {
+                                EnableAzooKeyViewButton("設定でCopakyを追加しました", systemName: "checkmark") {
+                                    self.step = .setting
+                                }
+                                .accessibilityIdentifier("setup-added-keyboard")
+                            }
                             CenterAlignedView {
                                 EnableAzooKeyViewButton("閉じる", systemName: "xmark", style: .destructive) {
                                     appStates.requireFirstOpenView = false
@@ -108,7 +125,9 @@ struct EnableAzooKeyView: View {
                                 EnableAzooKeyViewButton("完了", systemName: "checkmark") {
                                     self.step = .finish
                                 }
+                                .accessibilityIdentifier("setup-finish-settings")
                             }
+                            closeSetupButton
                         }
                         .onAppear {
                             value.scrollTo(0, anchor: .top)
@@ -116,102 +135,27 @@ struct EnableAzooKeyView: View {
 
                     case .finish:
                         VStack(alignment: .leading, spacing: 20) {
-                            EnableAzooKeyViewHeader("Copakyが使えます！")
-                            EnableAzooKeyViewText("準備は完了です！", with: "checkmark")
-                            if showDoneMessage {
-                                EnableAzooKeyViewText("Copakyが開かれました！", with: "checkmark")
-                                CenterAlignedView {
-                                    EnableAzooKeyViewButton("始める", systemName: "arrowshape.turn.up.right.fill") {
-                                        appStates.requireFirstOpenView = false
-                                    }
-                                }
-                            } else {
-                                EnableAzooKeyViewText("キーボードの地球儀ボタンを長押しし、Copakyを選択してください", with: "globe")
-                            }
+                            EnableAzooKeyViewHeader("キーボードを確認する")
+                            EnableAzooKeyViewText("下の入力欄をタップし、地球儀ボタンを長押ししてCopakyを選び、文字を入力してください。", with: "globe")
                             TextField("キーボードを開く", text: $text)
                                 .textFieldStyle(.roundedBorder)
-                                .submitLabel(.continue)
-                                .onSubmit {
-                                    appStates.requireFirstOpenView = false
+                                .accessibilityIdentifier("setup-keyboard-test-field")
+                            EnableAzooKeyViewText("アプリはキーボードの有効状態を自動判定しません。Copakyで入力できたことをご自身で確認してください。", with: "info.circle")
+                            CenterAlignedView {
+                                EnableAzooKeyViewButton("Copakyで入力できました", systemName: "checkmark") {
+                                    appStates.confirmKeyboardSetup()
                                 }
-                            if !showDoneMessage {
-                                CenterAlignedView {
-                                    EnableAzooKeyViewImage(.initSettingGlobeTap)
-                                }
+                                .accessibilityIdentifier("setup-confirm-keyboard")
                             }
-                            EnableAzooKeyViewText("Copakyをお楽しみください！", with: "star.fill")
-                            if !showDoneMessage {
-                                CenterAlignedView {
-                                    EnableAzooKeyViewButton("始める", systemName: "arrowshape.turn.up.right.fill") {
-                                        appStates.requireFirstOpenView = false
-                                    }
-                                }
-                            }
+                            closeSetupButton
                         }
-                        .onAppear {
-                            value.scrollTo(0, anchor: .top)
-                        }
-                        .onTapGesture {
-                            UIApplication.shared.closeKeyboard()
-                        }
-                        .onReceive(NotificationCenter.default.publisher(for: UIApplication.keyboardDidShowNotification)) {_ in
-                            // キーボードが開いた時
-                            if checkActiveKeyboardIsAzooKey() {
-                                showDoneMessage = true
-                            }
-                        }
-                        .onReceive(NotificationCenter.default.publisher(for: UITextInputMode.currentInputModeDidChangeNotification)) {_ in
-                            // アクティブなキーボードが変化したとき
-                            if checkActiveKeyboardIsAzooKey() {
-                                showDoneMessage = true
-                            }
-                        }
+                        .onAppear { value.scrollTo(0, anchor: .top) }
+
                     }
                 }
                 .id(0)
             }
         }
         .animation(.interactiveSpring(), value: step)
-        .animation(.spring(), value: showDoneMessage)
-        .task {
-            // 0.2秒に一度チェックを挟んでkeyboardの状態をチェックする
-            while !Task.isCancelled && !appStates.isKeyboardActivated {
-                if SharedStore.checkKeyboardActivation() {
-                    self.step = .setting
-                    appStates.isKeyboardActivated = true
-                }
-                do {
-                    try await Task.sleep(nanoseconds: 0_200_000_000)
-                } catch {
-                    debug(error)
-                }
-            }
-        }
-    }
-
-    private func checkActiveKeyboardIsAzooKey() -> Bool {
-        // キーボードが開いた時
-        // 参考：https://stackoverflow.com/questions/26153336/how-do-i-find-out-the-current-keyboard-used-on-ios8
-        // Copaky [H-23]: both `isDisplayed` and `identifier` below are private KVC keys inherited from
-        // upstream (not NSPredicate, which relied on the same unprotected KVC internally); each access
-        // is guarded so a missing accessor degrades to "not detected" instead of crashing.
-        // Copaky [H-23]: 以下の`isDisplayed`と`identifier`はいずれも上流由来の非公開KVCキー（旧NSPredicate
-        // も内部的に同じ非保護KVCに依存していた）。各アクセスをガードし、アクセサが無ければクラッシュせず
-        // 「未検出」に留める。
-        let currentKeyboardIdentifier = UITextInputMode.activeInputModes
-            .first { mode in
-                guard mode.responds(to: Selector(("isDisplayed"))),
-                      let displayed = mode.value(forKey: "isDisplayed") as? Bool else {
-                    return false
-                }
-                return displayed
-            }
-            .flatMap { mode -> String? in
-                guard mode.responds(to: Selector(("identifier"))) else {
-                    return nil
-                }
-                return mode.value(forKey: "identifier") as? String
-            }
-        return currentKeyboardIdentifier?.hasPrefix(SharedStore.bundleName) == true
     }
 }

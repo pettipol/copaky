@@ -5,9 +5,18 @@
 //  Created by ensan on 2023/07/22.
 //
 
+import Foundation
 import struct SwiftUI.LocalizedStringKey
 
-public enum TemporalMessage: Sendable {
+public enum TemporalMessage: Equatable, Sendable {
+    // Copaky [H-17]: explicit acknowledgement keeps manual-opening instructions readable.
+    case openCopakyManually
+    case appLaunchUnavailable
+
+    public static func blockedAppLaunch(scheme: String) -> Self {
+        URL(string: scheme)?.scheme?.lowercased() == "copaky" ? .openCopakyManually : .appLaunchUnavailable
+    }
+
     case doneForgetCandidate
     case clipboardCaptureTooLarge
     /// Copaky [G-38]
@@ -17,6 +26,10 @@ public enum TemporalMessage: Sendable {
 
     var title: LocalizedStringKey {
         switch self {
+        case .openCopakyManually:
+            return "設定を変更するには、ホーム画面からCopakyアプリを開き、「設定」タブを選んでください。"
+        case .appLaunchUnavailable:
+            return "キーボードからアプリやショートカットは起動できません。ホーム画面から目的のアプリを開いてください。"
         case .doneForgetCandidate:
             return "候補の学習をリセットしました"
         case .clipboardCaptureTooLarge:
@@ -37,6 +50,7 @@ public enum TemporalMessage: Sendable {
 
     var dismissCondition: DismissCondition {
         switch self {
+        case .openCopakyManually, .appLaunchUnavailable: return .ok
         case .doneForgetCandidate: return .auto
         case .clipboardCaptureTooLarge, .clipboardHistoryFull, .clipboardHistoryUnavailable, .clipboardHistorySaveFailed: return .auto
         }
