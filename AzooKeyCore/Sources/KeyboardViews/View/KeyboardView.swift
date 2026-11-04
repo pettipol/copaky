@@ -199,6 +199,13 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
                             }
                         }
                         keyboardView(tab: activeTab)
+                            // Copaky: reserve the real half-spacing above hidden-bar Latin touch cells.
+                            // Copaky: バーを隠したラテン文字のタッチ領域上部に実際の半間隔を確保する。
+                            .padding(.top, Design.keyboardCollapsedBarTopInset(
+                                interfaceWidth: variableStates.interfaceSize.width,
+                                orientation: variableStates.keyboardOrientation,
+                                tab: activeTab, candidateBarCollapsed: !showsCandidateBar
+                            ))
                             .zIndex(1)
                     }
                 }

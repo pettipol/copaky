@@ -237,6 +237,21 @@ public enum Design {
         max(6, keyboardVerticalSpacing(interfaceWidth: interfaceWidth, orientation: orientation) / 2)
     }
 
+    /// Copaky: keep the first Latin key's expanded touch cell inside a collapsed keyboard body.
+    /// Copaky: ラテン文字の候補バーを隠しても、最上段の拡張タッチ領域を本体内に保つ。
+    public static func keyboardCollapsedBarTopInset(
+        interfaceWidth: CGFloat, orientation: KeyboardOrientation,
+        tab: KeyboardTab.ExistentialTab, candidateBarCollapsed: Bool
+    ) -> CGFloat {
+        guard candidateBarCollapsed else { return 0 }
+        switch tab {
+        case .qwerty_abc, .qwerty_numbers, .qwerty_symbols:
+            return keyboardVerticalSpacing(interfaceWidth: interfaceWidth, orientation: orientation) / 2
+        default:
+            return 0
+        }
+    }
+
     @MainActor public static func keyboardBarCompactContentHeight(
         interfaceHeight: CGFloat, interfaceWidth: CGFloat, orientation: KeyboardOrientation
     ) -> CGFloat {
@@ -307,7 +322,11 @@ public enum Design {
             interfaceHeight: standardInterfaceHeight, interfaceWidth: interfaceWidth, orientation: orientation,
             collapsed: candidateBarCollapsed, compact: candidateBarCompact
         )
-        let standardVisibleHeight = max(0, standardInterfaceHeight - reserved + visibleReserved)
+        let topInset = keyboardCollapsedBarTopInset(
+            interfaceWidth: interfaceWidth, orientation: orientation,
+            tab: tab, candidateBarCollapsed: candidateBarCollapsed
+        )
+        let standardVisibleHeight = max(0, standardInterfaceHeight - reserved + visibleReserved) + topInset
         let layout = qwertyNumberRowLayout(
             for: tab,
             enabled: enabled,
@@ -328,8 +347,12 @@ public enum Design {
         candidateBarCollapsed: Bool
     ) -> CGFloat {
         guard enabled, QwertyNumberRowLayoutDecision.supportsNumberRow(tab) else {
+            let topInset = keyboardCollapsedBarTopInset(
+                interfaceWidth: interfaceWidth, orientation: orientation,
+                tab: tab, candidateBarCollapsed: candidateBarCollapsed
+            )
             return candidateBarCollapsed
-                ? keyboardInterfaceHeight(keysHeight: renderedVisibleHeight, orientation: orientation)
+                ? keyboardInterfaceHeight(keysHeight: max(0, renderedVisibleHeight - topInset), orientation: orientation)
                 : renderedVisibleHeight
         }
         let target = max(0, renderedVisibleHeight)

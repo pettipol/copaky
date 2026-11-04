@@ -104,11 +104,45 @@ final class CompactIdleBarTests: XCTestCase {
                         let firstRowOverlap = width / (orientation == .vertical ? 100 : 214)
                         XCTAssertGreaterThanOrEqual(visible - content + 0.0001, firstRowOverlap, "Toolbar controls must clear the expanded first-row touch cells")
                         XCTAssertEqual(normal - compact, reserved - visible, accuracy: 0.0001)
-                        XCTAssertEqual(compact - hidden, visible, accuracy: 0.0001,
-                                       "Only the toolbar changes; keys and optional number row keep the same height")
+                        XCTAssertEqual(compact - hidden, visible - firstRowOverlap, accuracy: 0.0001,
+                                       "Hiding the toolbar retains only the first-row touch overhang; key heights stay unchanged")
                         XCTAssertLessThanOrEqual(compact, normal, "A narrow or resized toolbar must never increase height")
                     }
                 }
+            }
+        }
+    }
+
+    // Copaky: fixed geometry fixtures distinguish hidden-bar inset from compact-toolbar clearance.
+    // Copaky: 固定の寸法例で、非表示バーの余白と縮小ツールバーの保護間隔を区別する。
+    func testCollapsedLatinTopInsetMatchesTouchOverhangWithoutMinimumToolbarClearance() {
+        let fixtures: [(width: CGFloat, orientation: KeyboardOrientation, inset: CGFloat)] = [
+            (375, .vertical, 3.75),
+            (440, .vertical, 4.4),
+            (722, .horizontal, 3.3738317757009346),
+            (956, .horizontal, 4.4672897196261685)
+        ]
+        let latinTabs: [KeyboardTab.ExistentialTab] = [.qwerty_abc, .qwerty_numbers, .qwerty_symbols]
+        let otherTabs: [KeyboardTab.ExistentialTab] = [
+            .qwerty_hira, .flick_hira, .flick_abc, .flick_numbersymbols,
+            .special(.clipboard_history_tab), .special(.emoji)
+        ]
+        for fixture in fixtures {
+            for tab in latinTabs {
+                XCTAssertEqual(Design.keyboardCollapsedBarTopInset(
+                    interfaceWidth: fixture.width, orientation: fixture.orientation,
+                    tab: tab, candidateBarCollapsed: true), fixture.inset, accuracy: 0.000_001,
+                    "The hidden bar must reserve the actual touch overhang, with no 6 pt minimum")
+                XCTAssertEqual(Design.keyboardCollapsedBarTopInset(
+                    interfaceWidth: fixture.width, orientation: fixture.orientation,
+                    tab: tab, candidateBarCollapsed: false), 0,
+                    "Visible normal and compact bars already provide top clearance")
+            }
+            for tab in otherTabs {
+                XCTAssertEqual(Design.keyboardCollapsedBarTopInset(
+                    interfaceWidth: fixture.width, orientation: fixture.orientation,
+                    tab: tab, candidateBarCollapsed: true), 0,
+                    "Tabs outside the Latin collapse policy retain their geometry")
             }
         }
     }
