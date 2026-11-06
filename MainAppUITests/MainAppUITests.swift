@@ -21,6 +21,8 @@
 
 import UIKit
 import XCTest
+import Network
+import CoreFoundation
 
 private let fieldsPageURL = "http://127.0.0.1:8377/kbtest.html"
 
@@ -3845,7 +3847,12 @@ class CopakyCampaignTests: XCTestCase {
         let field = activatePreNavigatedField("textarea-field")
         #endif
         switchToCopaky(in: safari)
-        clearFocusedField(field, placeholder: "textarea-field", in: safari)
+        guard field.exists, field.isHittable, let initialValue = field.value as? String,
+              initialValue.isEmpty || (field.placeholderValue == "textarea-field" && initialValue == field.placeholderValue),
+              !safari.alerts.firstMatch.exists else {
+            XCTFail("Memory workload requires a new, empty owned textarea fixture; no initial text was deleted")
+            return
+        }
 
         // Copaky: PASS is emitted only after the body and the Copaky liveness check succeed.
         // Copaky: 負荷とCopaky生存確認の成功後だけPASSを出す。
@@ -3861,22 +3868,58 @@ class CopakyCampaignTests: XCTestCase {
             XCTFail("Required memory phase \(phase) was not exercised: \(reason)")
             return false
         }
+        // Copaky: local key lookup excludes page text, candidate Buttons and label-sized glyphs.
+        // ページ本文・候補Button・小さなラベルを入力キーとして使わない。
+        func workloadKey(labels: [String], identifiers: [String] = []) -> XCUIElement? {
+            guard let input = keyboardInputViewFrame(of: safari) else { return nil }
+            let matches = safari.descendants(matching: .any).matching(NSPredicate(
+                format: "label IN %@ OR identifier IN %@", labels, identifiers
+            ))
+            for index in 0..<min(matches.count, 20) {
+                let key = matches.element(boundBy: index)
+                guard key.exists, key.elementType != .button else { continue }
+                let frame = key.frame
+                guard frame.width > 15, frame.height >= 30, input.contains(frame),
+                      key.isHittable else { continue }
+                return key
+            }
+            return nil
+        }
         func pressKeys(_ labels: [String]) -> Bool {
             guard copakyActive(in: safari) else { return false }
             for label in labels {
-                let predicate = NSPredicate(format: "label ==[c] %@", label)
-                let text = safari.staticTexts.matching(predicate).firstMatch
-                let key = text.waitForExistence(timeout: 1) ? text
-                    : safari.descendants(matching: .any).matching(predicate).firstMatch
-                guard key.waitForExistence(timeout: 2), key.isHittable,
-                      key.frame.minY >= safari.frame.height * 0.45 else { return false }
+                guard !safari.alerts.firstMatch.exists,
+                      let key = workloadKey(labels: [label, label.uppercased()]) else { return false }
                 key.tap()
             }
             return true
         }
         func fieldIsEmpty() -> Bool {
-            let value = field.value as? String
-            return value == "" || value == "textarea-field"
+            guard let value = field.value as? String else { return false }
+            return value.isEmpty || (field.placeholderValue == "textarea-field" && value == field.placeholderValue)
+        }
+        // Copaky: only this test's already-proved synthetic content may be deleted, one real key at
+        // a time. Live conversion's displayed grapheme count is not the composition input count.
+        // 合成入力の検証済みフィールドだけを実削除キーで消す。表示文字数から回数を推測しない。
+        func clearSyntheticLoad(maximumKeyTaps: Int, evidence: String) -> Bool {
+            guard maximumKeyTaps > 0, maximumKeyTaps <= 80 else { return false }
+            for count in 0...maximumKeyTaps {
+                guard field.exists, field.isHittable, !safari.alerts.firstMatch.exists,
+                      keyboardFixturePresent(in: safari.webViews.firstMatch),
+                      copakyActive(in: safari), let value = field.value as? String else { return false }
+                if fieldIsEmpty() {
+                    note("42-\(evidence)-clear", "exact empty/placeholder readback after \(count) bounded Backspace taps")
+                    return true
+                }
+                guard count < maximumKeyTaps,
+                      let delete = workloadKey(labels: L.deleteKey, identifiers: L.deleteKeyIdentifiers) else {
+                    note("42-\(evidence)-clear-FAIL", "bounded Backspace exhausted/unavailable; observed=\(value)")
+                    return false
+                }
+                delete.tap()
+                RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+            }
+            return false
         }
         func typeJapaneseGroup(_ group: [String]) -> String? {
             guard let flick = ensureJapaneseTab(in: safari) else { return "japanese-tab-not-reached" }
@@ -3885,12 +3928,30 @@ class CopakyCampaignTests: XCTestCase {
                           "は": "ha", "ま": "ma", "や": "ya", "ら": "ra", "わ": "wa"]
             let keys = flick ? group : group.flatMap { (romaji[$0] ?? "").map { String($0) } }
             guard pressKeys(keys) else { return "japanese-key-missing" }
-            guard waitForFieldValue(field, group.joined()) else { return "japanese-text-not-inserted" }
+            let reading = group.joined()
+            // Copaky: live conversion normally needs both full-value and reading candidate Buttons.
+            // Only the two long groups may use the separately logged full-field system-reading path.
+            // 通常は実在するAX候補対が必須。長い2群だけ別記録のシステム全文読みを許可する。
+            guard let proof = exactJapaneseReadingProof(
+                field: field, reading: reading, in: safari,
+                allowLongStressSystemReading: ["かさた", "はまや"].contains(reading)
+            ) else {
+                note("42-japanese-readback-FAIL", "reading=\(reading); field=\(String(describing: field.value)); exact kana/candidate-pair/scoped-system-reading unproved; offscreen candidates never inferred")
+                return "japanese-exact-reading-and-conversion-unproved"
+            }
+            note("42-japanese-readback-PASS", "reading=\(reading); field=\(proof.value); evidence=\(proof.evidence); conversion/candidate selection NOT_TESTED")
             RunLoop.current.run(until: Date().addingTimeInterval(3))
-            clearFocusedField(field, placeholder: "textarea-field", in: safari)
-            return fieldIsEmpty() ? nil : "japanese-load-did-not-clear"
+            return clearSyntheticLoad(maximumKeyTaps: keys.count + 3, evidence: "japanese-\(reading)")
+                ? nil : "japanese-load-did-not-clear"
         }
 
+        #if !targetEnvironment(simulator)
+        // Copaky: give sysmon time to attach after presentation; the host still requires real
+        // boundary samples. This observation warmup does not qualify cold-start memory.
+        // 実機のみ計測接続を10秒待つ。実サンプルの前後確認はホスト側で必須。
+        note("42-measurement-attach-window", "10 seconds before marked workload; cold start NOT_QUALIFIED")
+        RunLoop.current.run(until: Date().addingTimeInterval(10))
+        #endif
         memcMarker("begin", "start")
         for (index, group) in kanaGroups.enumerated() {
             guard runPhase("jp-\(index)", { typeJapaneseGroup(group) }) else { return }
@@ -3928,28 +3989,56 @@ class CopakyCampaignTests: XCTestCase {
             }
             guard currentLanguageSwitchState(in: safari, timeout: 2)?.current == "IT",
                   latinQwertyVisible(in: safari, timeout: 2) else { return "italian-not-active" }
+            guard fieldIsEmpty() else { return "field-not-empty-before-italian-load" }
             print("MEMC-INFO|latin-language-active|italian")
-            for word in ["perche", "citta", "andro", "piu", "cosi", "puo", "societa", "grazie"] {
-                let before = field.value as? String
-                guard pressKeys(word.map { String($0) }) else { return "italian-key-missing" }
-                tapLatinSpace(in: safari)
-                RunLoop.current.run(until: Date().addingTimeInterval(0.3))
-                guard let after = field.value as? String, after != before, !after.isEmpty,
-                      after != "textarea-field" else { return "italian-text-not-inserted" }
+            // Copaky: accept only this workload's plain/accent forms; never any changed value.
+            // Settings stay untouched. H-46 protects "cosi" from automatic correction.
+            // 入力済み全文と語ごとの許可形を照合。設定変更・候補の自動選択は行わない。
+            let words: [(typed: String, committed: [String])] = [
+                ("perche", ["perche", "perché"]), ("citta", ["citta", "città"]),
+                ("andro", ["andro", "andrò"]), ("piu", ["piu", "più"]),
+                ("cosi", ["cosi"]), ("puo", ["puo", "può"]),
+                ("societa", ["societa", "società"]), ("grazie", ["grazie"]),
+            ]
+            for (index, entry) in words.enumerated() {
+                guard let observedBefore = field.value as? String else { return "italian-value-unobservable" }
+                let before = observedBefore == "textarea-field" ? "" : observedBefore
+                guard pressKeys(entry.typed.map { String($0) }) else { return "italian-key-missing-\(index)" }
+                guard let space = workloadKey(labels: L.spaceKey.filter { $0 != "空白" }) else {
+                    return "italian-real-space-key-missing-\(index)"
+                }
+                space.tap()
+                let allowed = entry.committed.map { before + $0 + " " }
+                let deadline = Date().addingTimeInterval(3)
+                var matched = false
+                repeat {
+                    if let after = field.value as? String, allowed.contains(after) { matched = true; break }
+                    RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+                } while Date() < deadline
+                guard matched else {
+                    note("42-italian-token-\(index)-FAIL", "typed=\(entry.typed); expected=\(allowed); observed=\(String(describing: field.value))")
+                    return "italian-exact-token-readback-failed-\(index)"
+                }
+                note("42-italian-token-\(index)-PASS", "typed=\(entry.typed); exact committed readback=\(String(describing: field.value))")
             }
             RunLoop.current.run(until: Date().addingTimeInterval(3))
             guard currentLanguageSwitchState(in: safari, timeout: 1)?.current == "IT" else {
                 return "italian-language-changed-during-load"
             }
             shot("42-italian-typed")
-            clearFocusedField(field, placeholder: "textarea-field", in: safari)
-            return fieldIsEmpty() ? nil : "italian-load-did-not-clear"
+            let syntheticKeyCount = words.reduce(0) { $0 + $1.typed.count + 1 }
+            return clearSyntheticLoad(maximumKeyTaps: syntheticKeyCount + 3, evidence: "italian")
+                ? nil : "italian-load-did-not-clear"
         }) else { return }
 
         for (index, group) in kanaGroups.prefix(3).enumerated() {
             guard runPhase("jp-final-\(index)", { typeJapaneseGroup(group) }) else { return }
         }
         memcMarker("end", "end")
+        #if !targetEnvironment(simulator)
+        // Copaky: keep the process observable for a sample after the marked workload.
+        RunLoop.current.run(until: Date().addingTimeInterval(1.5))
+        #endif
     }
 
     // MARK: - 43 · Device Q-06: keyboard usable across rotation (landscape L/R, back to portrait)
@@ -4585,6 +4674,138 @@ class CopakyCampaignTests: XCTestCase {
         guard openNumberRowSettings46(), setNumberRowSwitch46(L.realNumberRowToggle, to: true) else { return }
         note("46b-restored-real-number-row", "Real QWERTY number row observed ON through app UI; number hints were not changed")
         shot("46b-real-number-row-restored")
+    }
+
+    /// Copaky H-56: ordinary coordinate touch, separate from test46's AX geometry contract.
+    /// Requires an already-enabled real number row and a new, empty owned fixture. No setting writes.
+    /// 実数字行ONと空の専用fixtureが前提。通常タッチのみ。VoiceOverの合格は推論しない。
+    func test46c_H56OrdinaryTouchOnPreparedNumberRow() throws {
+        let field = activatePreNavigatedField("plain-text")
+        func fieldIsEmpty() -> Bool {
+            guard let value = field.value as? String else { return false }
+            return value.isEmpty || (field.placeholderValue == "plain-text" && value == field.placeholderValue)
+        }
+        guard field.exists, fieldIsEmpty(), !safari.alerts.firstMatch.exists else {
+            XCTFail("H-56 requires a fresh fixture with an exactly empty plain-text value; no text was cleared")
+            return
+        }
+        switchToCopaky(in: safari)
+        guard switchToLatinQwertyTab(in: safari), copakyActive(in: safari),
+              !safari.alerts.firstMatch.exists else {
+            XCTFail("H-56 requires the Copaky Latin QWERTY keyboard with no alert")
+            return
+        }
+
+        // Copaky: use stable LETTER geometry; malformed digit AX positions remain diagnostic data.
+        // 数字のAX座標は判定対象として記録し、通常タッチの座標には使わない。
+        func letter(_ labels: [String], reference: CGRect? = nil) -> CGRect? {
+            let matches = safari.descendants(matching: .any)
+                .matching(NSPredicate(format: "label IN %@", labels))
+            var frames: [CGRect] = []
+            for index in 0..<min(matches.count, 12) {
+                let element = matches.element(boundBy: index)
+                guard element.exists, element.isHittable else { continue }
+                let frame = element.frame
+                guard frame.minY >= safari.frame.height * 0.45,
+                      frame.height > 25, frame.width > 15,
+                      frame.width < safari.frame.width * 0.2 else { continue }
+                if let reference {
+                    guard abs(frame.height - reference.height) < 2,
+                          abs(frame.width - reference.width) < 2 else { continue }
+                }
+                frames.append(frame)
+            }
+            return frames.min { $0.minY < $1.minY }
+        }
+        func geometry() -> [CGRect]? {
+            guard let q = letter(["q", "Q"]),
+                  let w = letter(["w", "W"], reference: q),
+                  let t = letter(["t", "T"], reference: q),
+                  let a = letter(["a", "A"], reference: q),
+                  let z = letter(["z", "Z"], reference: q) else { return nil }
+            return [q, w, t, a, z]
+        }
+        var previous: [CGRect]?
+        var stable: [CGRect]?
+        var stableSamples = 0
+        for _ in 0..<12 {
+            if let current = geometry() {
+                if let previous, zip(previous, current).allSatisfy({
+                    abs($0.0.midX - $0.1.midX) < 0.5 && abs($0.0.midY - $0.1.midY) < 0.5
+                        && abs($0.0.height - $0.1.height) < 0.5
+                }) {
+                    stableSamples += 1
+                    if stableSamples >= 2 { stable = current; break }
+                } else { stableSamples = 0 }
+                previous = current
+            } else { stableSamples = 0; previous = nil }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+        }
+        guard let frames = stable else {
+            shot("46c-h56-unstable-letters")
+            XCTFail("H-56 requires three stable samples of key-sized Q/W/T/A/Z geometry")
+            return
+        }
+        let q = frames[0], w = frames[1], t = frames[2], a = frames[3], z = frames[4]
+        let rowPitch = a.midY - q.midY
+        let columnPitch = w.midX - q.midX
+        guard rowPitch > 25, rowPitch < 100, columnPitch > 15,
+              abs(z.midY - a.midY - rowPitch) < 2,
+              abs(w.midY - q.midY) < 1, abs(t.midY - q.midY) < 1,
+              abs(t.midX - q.midX - 4 * columnPitch) < 2 else {
+            XCTFail("H-56 letter geometry does not support the measured five-row QWERTY model")
+            return
+        }
+
+        // Ten standalone controls prove the real row is present, independently of their AX origins.
+        // 実数字キー10個と最下段の空白キーを確認。AX位置の正常性とは別の前提条件。
+        let digits = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
+        for digit in digits {
+            let matches = safari.descendants(matching: .any)
+                .matching(identifier: "keyboard-number-row-\(digit)")
+            guard matches.count == 1 else {
+                XCTFail("H-56 requires exactly one standalone control for digit \(digit); number row must already be ON")
+                return
+            }
+            let key = matches.element(boundBy: 0)
+            let rect = key.frame
+            note("46c-h56-ax-\(digit)", "frame=\(rect); accessibility activation checked separately")
+            guard key.label == digit, abs(rect.height - q.height) < 2,
+                  abs(rect.width - q.width) < 2 else {
+                XCTFail("H-56 standalone digit identity/size prerequisite failed")
+                return
+            }
+        }
+        let spaces = safari.descendants(matching: .any)
+            .matching(NSPredicate(format: "label IN %@", L.spaceKey))
+        let bottomRowPresent = (0..<min(spaces.count, 12)).contains { index in
+            let key = spaces.element(boundBy: index)
+            return key.exists && key.isHittable && key.frame.width > q.width * 2
+                && abs(key.frame.midY - z.midY - rowPitch) < 2
+        }
+        let target = CGPoint(x: t.midX, y: q.midY - rowPitch)
+        guard bottomRowPresent,
+              safari.frame.insetBy(dx: q.width / 2, dy: q.height / 2).contains(target),
+              target.y > safari.frame.height * 0.4,
+              fieldIsEmpty(), !safari.alerts.firstMatch.exists,
+              let final = geometry(), zip(frames, final).allSatisfy({
+                  abs($0.0.midX - $0.1.midX) < 0.5 && abs($0.0.midY - $0.1.midY) < 0.5
+              }) else {
+            XCTFail("H-56 five-row, empty-field or final geometry prerequisite was lost; no digit touch sent")
+            return
+        }
+        note("46c-h56-touch-model", "Five rows: digit identifiers + Q/A/Z + space; q=\(q); t=\(t); rowPitch=\(rowPitch); target=\(target)")
+        dump(safari, "46c-h56-before-touch-ax")
+        shot("46c-h56-before-ordinary-touch")
+        safari.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: target.x - safari.frame.minX, dy: target.y - safari.frame.minY)).tap()
+        let exactFive = waitForFieldValue(field, "5")
+        note("46c-h56-actual-before-assert", "expected=5; actual=\(String(describing: field.value)); exact=\(exactFive)")
+        shot("46c-h56-actual-before-assert")
+        XCTAssertTrue(exactFive, "H-56 ordinary touch must insert exactly the plain digit 5")
+        XCTAssertEqual(field.value as? String, "5", "H-56 exact field readback")
+        note("46c-h56-scope", "Coordinate touch only; test46 AX contract unchanged; VoiceOver NOT_TESTED")
+        shot("46c-h56-after-ordinary-touch")
     }
 
     // MARK: - 47 · Copaky extension: slide the Latin QWERTY space bar to move the cursor
@@ -5657,3 +5878,445 @@ class CopakyCampaignTests: XCTestCase {
         }
     }
 }
+
+// Copaky: H-55's UI mutation lane is deliberately separate from test63's exact insertion checks.
+// Copaky: H-55のUI変更検証。文字挿入の完全一致は既存のtest63を再利用する。
+extension CopakyCampaignTests {
+    func test68_simulatorSyntheticClipboardPinReopenSelectiveDelete() throws {
+        guard !isDevice else { throw XCTSkip("H-55 synthetic mutation test is Simulator-only") }
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["COPAKY_CLIPBOARD_PRESEEDED"] == "1",
+              let token = environment["COPAKY_H55_TOKEN"],
+              UUID(uuidString: token)?.uuidString.lowercased() == token else {
+            XCTFail("H-55 requires the explicit isolated-simulator seed and its canonical UUID token")
+            return
+        }
+        let prefix = "COPAKY-H55-\(token)"
+        let target = prefix + "-target-à-日本"
+        let keepPin = prefix + "-keep-pin"
+        let keepPlain = prefix + "-keep-plain"
+        let back = safari.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier == %@", "copaky_clipboard_back")).firstMatch
+
+        func requireNoAlerts() throws {
+            guard !springboard.alerts.firstMatch.exists, !safari.alerts.firstMatch.exists else {
+                shot("68-unexpected-alert")
+                throw NSError(domain: "CopakyH55", code: 1,
+                              userInfo: [NSLocalizedDescriptionKey: "Unexpected alert: no alert was accepted"])
+            }
+        }
+        func exactTile(_ text: String) throws -> XCUIElement {
+            try requireNoAlerts()
+            let matches = safari.buttons.matching(NSPredicate(
+                format: "identifier == %@ AND label == %@", "copaky_clipboard_text_tile", text))
+            guard matches.firstMatch.waitForExistence(timeout: 4), matches.count == 1,
+                  matches.firstMatch.isHittable else {
+                dump(safari, "68-exact-tile-missing")
+                throw NSError(domain: "CopakyH55", code: 2,
+                              userInfo: [NSLocalizedDescriptionKey: "Exact synthetic tile missing, ambiguous, or unhittable"])
+            }
+            return matches.firstMatch
+        }
+        func isPinned(_ tile: XCUIElement) -> Bool {
+            guard let value = tile.value as? String else { return false }
+            return [", Pinned", ", Fissato", ", 固定済み"].contains { value.hasSuffix($0) }
+        }
+        func verifyInventory(_ expected: Set<String>) throws {
+            try requireNoAlerts()
+            let tiles = safari.buttons.matching(NSPredicate(format: "identifier == %@", "copaky_clipboard_text_tile"))
+            let observed = tiles.allElementsBoundByIndex.map(\.label)
+            guard observed.count == expected.count, Set(observed) == expected else {
+                dump(safari, "68-inventory-mismatch")
+                throw NSError(domain: "CopakyH55", code: 3,
+                              userInfo: [NSLocalizedDescriptionKey: "Synthetic inventory differs; no cleanup of unexpected entries attempted"])
+            }
+            XCTAssertTrue(isPinned(try exactTile(keepPin)), "The unrelated synthetic pin must remain pinned")
+            XCTAssertFalse(isPinned(try exactTile(keepPlain)), "The unrelated synthetic plain entry must remain unpinned")
+        }
+        func openHistory() throws {
+            try requireNoAlerts()
+            if back.exists, back.isHittable { return }
+            guard switchToLatinQwertyTab(in: safari) else {
+                throw NSError(domain: "CopakyH55", code: 4,
+                              userInfo: [NSLocalizedDescriptionKey: "Latin keyboard prerequisite missing"])
+            }
+            try requireNoAlerts()
+            let shortcut = safari.descendants(matching: .any)
+                .matching(NSPredicate(format: "label IN %@", L.tabBarToggleKey)).firstMatch
+            guard shortcut.waitForExistence(timeout: 4), shortcut.isHittable else {
+                throw NSError(domain: "CopakyH55", code: 5,
+                              userInfo: [NSLocalizedDescriptionKey: "Clipboard shortcut missing"])
+            }
+            shortcut.press(forDuration: 1.0)
+            XCTAssertTrue(back.waitForExistence(timeout: 4), "The real clipboard panel must open")
+            try requireNoAlerts()
+        }
+        func contextAction(on text: String, pinning: Bool) throws {
+            let tile = try exactTile(text)
+            tile.press(forDuration: 1.2)
+            try requireNoAlerts()
+            let pinLabels = pinning ? ["固定", "Pin", "Fissa"] : ["固定解除", "Unpin", "Rimuovi fissaggio"]
+            func menuButtons(_ labels: [String]) -> [XCUIElement] {
+                safari.buttons.matching(NSPredicate(format: "label IN %@", labels)).allElementsBoundByIndex.filter {
+                    $0.exists && $0.isHittable && $0.frame.width >= 100 && $0.frame.height >= 35
+                }
+            }
+            // Require both context-menu actions; a narrow keyboard Delete key cannot match.
+            let deadline = Date().addingTimeInterval(4)
+            var pins = menuButtons(pinLabels)
+            var deletes = menuButtons(["削除", "Delete", "Cancella"])
+            while (pins.count != 1 || deletes.count != 1), Date() < deadline {
+                RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+                try requireNoAlerts()
+                pins = menuButtons(pinLabels)
+                deletes = menuButtons(["削除", "Delete", "Cancella"])
+            }
+            guard pins.count == 1, deletes.count == 1 else {
+                dump(safari, "68-context-menu-missing")
+                throw NSError(domain: "CopakyH55", code: 6,
+                              userInfo: [NSLocalizedDescriptionKey: "Exact pin/delete context-menu pair missing or ambiguous"])
+            }
+            shot(pinning ? "68-pin-menu" : "68-delete-pinned-menu")
+            try requireNoAlerts()
+            (pinning ? pins[0] : deletes[0]).tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.6))
+            try requireNoAlerts()
+        }
+
+        try requireNoAlerts()
+        _ = activatePreNavigatedField("plain-text")
+        switchToCopaky(in: safari)
+        try openHistory()
+        try verifyInventory([target, keepPin, keepPlain])
+        XCTAssertFalse(isPinned(try exactTile(target)), "The run-unique target must start unpinned")
+        shot("68-before-pin")
+        try contextAction(on: target, pinning: true)
+        XCTAssertTrue(isPinned(try exactTile(target)), "The real context menu must pin the exact target")
+        try verifyInventory([target, keepPin, keepPlain])
+        shot("68-after-pin")
+
+        // This is a host/panel reopen, not a claim that iOS terminated the extension process.
+        safari.terminate()
+        _ = activatePreNavigatedField("plain-text")
+        switchToCopaky(in: safari)
+        try openHistory()
+        try verifyInventory([target, keepPin, keepPlain])
+        XCTAssertTrue(isPinned(try exactTile(target)), "Pin state must survive the host/panel reopen")
+        shot("68-reopened-pin")
+        try contextAction(on: target, pinning: false)
+        try verifyInventory([keepPin, keepPlain])
+        XCTAssertFalse(safari.buttons.matching(NSPredicate(
+            format: "identifier == %@ AND label == %@", "copaky_clipboard_text_tile", target)).firstMatch.exists,
+                       "Only the exact run-unique target must disappear")
+        shot("68-after-selective-delete")
+        note("68-scope", "Synthetic seeded-history UI pin/reopen/selective delete; no capture, OS permission or extension-process restart claim. Disk postcondition is checked externally.")
+    }
+}
+
+// Copaky: explicit runner-only network positive control; never called by other tests.
+// Copaky: 通信の陽性対照は明示選択したUIテストランナー内だけで実行する。
+extension CopakyCampaignTests {
+    func test69_networkControlDuringSyntheticTyping() throws {
+        guard ProcessInfo.processInfo.environment["COPAKY_NETWORK_CONTROL"] == "1" else {
+            throw XCTSkip("Select the explicit runner network-control configuration to enable this probe")
+        }
+        let executable = Bundle.main.executableURL?.path ?? ""
+        guard executable.hasSuffix("/azooKeyUITests-Runner.app/azooKeyUITests-Runner") else {
+            XCTFail("Network control requires the verified azooKeyUITests runner executable identity")
+            return
+        }
+        // Reuse the ordinary-touch contract unchanged; a failed/partial probe cannot trigger TCP.
+        try test46c_H56OrdinaryTouchOnPreparedNumberRow()
+        let field = activatePreNavigatedField("plain-text")
+        guard field.exists, field.value as? String == "5", !safari.alerts.firstMatch.exists else {
+            XCTFail("Network control requires exact synthetic typing readback 5")
+            return
+        }
+        let pid = ProcessInfo.processInfo.processIdentifier
+        let clock = ISO8601DateFormatter()
+        clock.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        note("69-control-before", "runnerPID=\(pid); utc=\(clock.string(from: Date())); exactReadback=5; TCP-only; no payload")
+        let ready = XCTestExpectation(description: "Runner TCP connection reached ready")
+        ready.assertForOverFulfill = false
+        let connection = NWConnection(host: "copaky.app", port: 443, using: .tcp)
+        connection.stateUpdateHandler = { state in
+            if case .ready = state { ready.fulfill() }
+        }
+        defer {
+            connection.stateUpdateHandler = nil
+            connection.cancel()
+        }
+        connection.start(queue: DispatchQueue(label: "copaky.ui-test.network-control"))
+        let result = XCTWaiter.wait(for: [ready], timeout: 12)
+        connection.cancel()
+        note("69-control-after", "runnerPID=\(pid); utc=\(clock.string(from: Date())); ready=\(result == .completed); cancelled=true")
+        XCTAssertEqual(result, .completed, "The runner-only TCP positive control must reach ready within 12 seconds")
+        note("69-scope", "One runner NWConnection to approved project host:443; no send/receive payload; DVT event attribution is checked externally; VoiceOver NOT_TESTED")
+    }
+}
+
+// Copaky: bounded two-field regression probe, without clearing or committing Japanese input.
+// Copaky: 日本語未確定入力のフォーカス移動。専用fixtureの二欄だけを使う。
+extension CopakyCampaignTests {
+    func test70_crossFieldJapaneseCompositionDoesNotLeakIntoLatin() throws {
+        guard let prepared = prepareCrossFieldJapaneseOrigin(evidencePrefix: "70") else { return }
+        let origin = prepared.origin
+        let target = prepared.target
+
+        // Normal focus change; no return, space, candidate selection, deletion or host restart.
+        _ = activatePreNavigatedField("plain-text")
+        note("70-after-focus-before-latin", "origin=\(String(describing: origin.value)); target=\(String(describing: target.value))")
+        guard crossFieldProbeEmpty(target, placeholder: "plain-text"), switchToLatinQwertyTab(in: safari),
+              copakyActive(in: safari), crossFieldProbeEmpty(target, placeholder: "plain-text"),
+              !safari.alerts.firstMatch.exists, !springboard.alerts.firstMatch.exists else {
+            dump(safari, "70-focus-or-latin-precondition-failed")
+            shot("70-focus-or-latin-precondition-failed")
+            XCTFail("Target must remain exactly empty after focus and Latin tab changes")
+            return
+        }
+        let q = safari.staticTexts.matching(NSPredicate(format: "label IN %@", ["q", "Q"])).firstMatch
+        guard q.waitForExistence(timeout: 3), q.isHittable,
+              let input = keyboardInputViewFrame(of: safari), input.contains(q.frame),
+              ["q", "Q"].contains(q.label) else {
+            XCTFail("A real Latin Q key is required; no number AX geometry is used")
+            return
+        }
+        let expected = q.label
+        note("70-before-latin-key", "origin=\(String(describing: origin.value)); targetEmpty=true; selectedKeyLabel=\(expected); expectedExactCharacter=\(expected)")
+        shot("70-before-latin-key")
+        q.tap()
+        let exact = waitForFieldValue(target, expected)
+        note("70-after-latin-key", "origin=\(String(describing: origin.value)); target=\(String(describing: target.value)); expected=\(expected); exact=\(exact)")
+        dump(safari, "70-after-latin-key")
+        shot("70-after-latin-key")
+        XCTAssertTrue(exact, "Cross-field target must contain only the single Latin key, without Japanese composition")
+        XCTAssertEqual(target.value as? String, expected, "Exact target readback; no prefix stripping")
+        note("70-scope", "Same-host normal focus transition only; no clipboard, settings write, explicit Japanese commit or relaunch; markedTextRange NOT_OBSERVABLE_BY_XCUI")
+    }
+}
+
+// Copaky: shared observation contract for test42 and test70; never selects a candidate.
+// Copaky: AX候補行の上端がinputViewを少し跨いでも、中心と過半面積の重なりで確認する。
+extension CopakyCampaignTests {
+    private func exactJapaneseReadingProof(
+        field: XCUIElement, reading: String, in app: XCUIApplication,
+        allowLongStressSystemReading: Bool = false
+    ) -> (value: String, evidence: String)? {
+        let deadline = Date().addingTimeInterval(4)
+        repeat {
+            if let value = field.value as? String, value == reading {
+                return (value, "direct-exact-kana")
+            }
+            if let converted = field.value as? String, !converted.isEmpty,
+               converted != "textarea-field", converted != reading,
+               let input = keyboardInputViewFrame(of: app), copakyActive(in: app) {
+                let readings = app.buttons.matching(NSPredicate(format: "label == %@", reading))
+                let conversions = app.buttons.matching(NSPredicate(format: "label == %@", converted))
+                for index in 0..<min(conversions.count, 12) {
+                    let conversion = conversions.element(boundBy: index)
+                    guard conversion.exists else { continue }
+                    let rect = conversion.frame
+                    let overlap = input.intersection(rect)
+                    let area = rect.width * rect.height
+                    guard rect.width > 0, rect.height > 0,
+                          input.contains(CGPoint(x: rect.midX, y: rect.midY)),
+                          !overlap.isNull, overlap.width * overlap.height > area * 0.5,
+                          rect.midY < input.minY + input.height * 0.28,
+                          conversion.isHittable else { continue }
+                    for readingIndex in 0..<min(readings.count, 12) {
+                        let candidate = readings.element(boundBy: readingIndex)
+                        guard candidate.exists else { continue }
+                        let readingRect = candidate.frame
+                        guard readingRect.width > 0, readingRect.height > 0,
+                              readingRect.minX >= input.minX,
+                              abs(readingRect.midY - rect.midY) <= 2,
+                              abs(readingRect.height - rect.height) <= 2,
+                              readingRect.minX >= rect.maxX - 1 || readingRect.maxX <= rect.minX + 1,
+                              field.value as? String == converted else { continue }
+                        // Reading may extend horizontally beyond the viewport; do not query its
+                        // hittability, and never infer that it can be selected or is marked text.
+                        return (converted, "candidate-pair; inputFrame=\(input); readingFrame=\(readingRect); convertedFrame=\(rect); convertedOverlapFraction=\(overlap.width * overlap.height / area); readingInsideInput=\(input.contains(readingRect)); readingNotSelected=true")
+                    }
+                    // Copaky: only test42's two long groups may use this distinct, fail-closed
+                    // reading oracle when the literal reading is not instantiated in AX at all.
+                    // Copaky: test42の長い2群だけ。読み候補がAXに存在する場合は従来の対を必須にする。
+                    if allowLongStressSystemReading, ["かさた", "はまや"].contains(reading),
+                       readings.count == 0,
+                       let system = copakyCompleteJapaneseSystemReading(converted),
+                       system.kana == reading, field.value as? String == converted,
+                       conversion.exists, conversion.isHittable {
+                        return (converted, "system-reading-full-field; locale=ja_JP; fullContiguousUTF16=\(system.utf16Length); tokenCount=\(system.tokenCount); exactReading=\(system.kana); convertedCandidateVisible=true; inputFrame=\(input); convertedFrame=\(rect); convertedOverlapFraction=\(overlap.width * overlap.height / area); literalReadingAXAbsent=true; compositionAndLexicalUniqueness=NOT_PROVED")
+                    }
+                }
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+        } while Date() < deadline
+        return nil
+    }
+}
+
+// Copaky: same preparation for ordinary focus and orchestrated host-relaunch probes.
+// Copaky: フォーカス移動前の準備を共有し、再起動自体は外部の明示操作に委ねる。
+extension CopakyCampaignTests {
+    private func crossFieldProbeEmpty(_ field: XCUIElement, placeholder: String) -> Bool {
+        guard field.exists, let value = field.value as? String else { return false }
+        return value.isEmpty || (field.placeholderValue == placeholder && value == placeholder)
+    }
+
+    private func prepareCrossFieldJapaneseOrigin(
+        evidencePrefix prefix: String
+    ) -> (origin: XCUIElement, target: XCUIElement)? {
+        safari.activate()
+        let web = safari.webViews.firstMatch
+        guard web.waitForExistence(timeout: 10), keyboardFixturePresent(in: web),
+              !safari.alerts.firstMatch.exists, !springboard.alerts.firstMatch.exists else {
+            XCTFail("Cross-field probe requires the verified owned fixture without alerts")
+            return nil
+        }
+        let origin = web.textViews.matching(NSPredicate(
+            format: "label == %@ OR placeholderValue == %@ OR identifier == %@",
+            "textarea-field", "textarea-field", "textarea-field")).firstMatch
+        let target = web.textFields.matching(NSPredicate(
+            format: "label == %@ OR placeholderValue == %@ OR identifier == %@",
+            "plain-text", "plain-text", "plain-text")).firstMatch
+        guard crossFieldProbeEmpty(origin, placeholder: "textarea-field"), crossFieldProbeEmpty(target, placeholder: "plain-text") else {
+            XCTFail("Both owned fields must start exactly empty; no clearing attempted")
+            return nil
+        }
+        _ = activatePreNavigatedField("textarea-field")
+        switchToCopaky(in: safari)
+        switchToJapaneseFlickTab(in: safari)
+        guard copakyActive(in: safari), flickKanaVisible(in: safari, timeout: 3),
+              crossFieldProbeEmpty(origin, placeholder: "textarea-field"), crossFieldProbeEmpty(target, placeholder: "plain-text"),
+              !safari.alerts.firstMatch.exists, !springboard.alerts.firstMatch.exists else {
+            XCTFail("Japanese flick and two empty fields are required before controlled input")
+            return nil
+        }
+        for kana in ["さ", "か"] {
+            let key = safari.staticTexts.matching(NSPredicate(format: "label == %@", kana)).firstMatch
+            guard key.waitForExistence(timeout: 3), key.isHittable,
+                  let input = keyboardInputViewFrame(of: safari), input.contains(key.frame) else {
+                XCTFail("Controlled Japanese flick key missing from the real keyboard")
+                return nil
+            }
+            key.tap()
+        }
+        guard let proof = exactJapaneseReadingProof(field: origin, reading: "さか", in: safari),
+              crossFieldProbeEmpty(target, placeholder: "plain-text") else {
+            dump(safari, "\(prefix)-japanese-reading-unproved")
+            shot("\(prefix)-japanese-reading-unproved")
+            XCTFail("Origin must have exact kana or a visible converted candidate matching the full field and an actual same-row AX reading candidate; target must remain empty")
+            return nil
+        }
+        note("\(prefix)-origin-before-focus", "typedReading=さか; exactOrigin=\(proof.value); evidence=\(proof.evidence); candidateNotSelected=true; explicitCommitSent=false; markedTextRange NOT_OBSERVABLE_BY_XCUI")
+        dump(safari, "\(prefix)-before-focus-origin-candidate")
+        shot("\(prefix)-before-focus-origin-candidate")
+
+        return (origin, target)
+    }
+
+    func test71_prepareJapaneseCompositionForHostRelaunch() throws {
+        guard let prepared = prepareCrossFieldJapaneseOrigin(evidencePrefix: "71") else { return }
+        let clock = ISO8601DateFormatter()
+        clock.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        note("71-prepared-for-host-relaunch", "runnerPID=\(ProcessInfo.processInfo.processIdentifier); utc=\(clock.string(from: Date())); origin=\(String(describing: prepared.origin.value)); target=\(String(describing: prepared.target.value)); typedReading=さか; explicitCommitSent=false; focusStillOrigin=true; markedTextRange NOT_OBSERVABLE_BY_XCUI; hostRelaunch NOT_RUN_BY_TEST")
+        shot("71-prepared-for-host-relaunch")
+    }
+}
+
+// Copaky: one explicitly opted-in physical-device host restart, without a test teardown gap.
+// Copaky: 実機限定・明示許可時のみ、専用fixtureを新URLで開き直す。
+extension CopakyCampaignTests {
+    func test72_singleSessionHostRelaunchWhileComposing() throws {
+        guard isDevice,
+              ProcessInfo.processInfo.environment["COPAKY_HOST_RELAUNCH_CONTROL"] == "1" else {
+            throw XCTSkip("Physical phone and COPAKY_HOST_RELAUNCH_CONTROL=1 required")
+        }
+        guard #available(iOS 16.4, *) else {
+            throw XCTSkip("XCUIApplication.open requires iOS 16.4 or later")
+        }
+        guard let prepared = prepareCrossFieldJapaneseOrigin(evidencePrefix: "72"),
+              let proof = exactJapaneseReadingProof(field: prepared.origin, reading: "さか", in: safari),
+              crossFieldProbeEmpty(prepared.target, placeholder: "plain-text"),
+              !safari.alerts.firstMatch.exists, !springboard.alerts.firstMatch.exists else {
+            XCTFail("Host restart requires proven Japanese origin and an exactly empty target")
+            return
+        }
+        note("72-before-host-terminate", "origin=\(proof.value); evidence=\(proof.evidence); targetEmpty=true; explicitCommitSent=false; markedTextRange NOT_OBSERVABLE_BY_XCUI")
+        shot("72-before-host-terminate")
+        let caseID = "host-relaunch-" + UUID().uuidString.lowercased()
+        guard let url = URL(string: "https://copaky.app/kbtest?case=" + caseID) else {
+            XCTFail("Approved fixture URL construction failed")
+            return
+        }
+        safari.terminate()
+        safari.open(url)
+        let web = safari.webViews.firstMatch
+        guard web.waitForExistence(timeout: 15), keyboardFixturePresent(in: web),
+              !safari.alerts.firstMatch.exists, !springboard.alerts.firstMatch.exists else {
+            shot("72-reopened-fixture-missing")
+            XCTFail("Restarted Safari must show the owned fixture without an alert")
+            return
+        }
+        let target = web.textFields.matching(NSPredicate(
+            format: "label == %@ OR placeholderValue == %@ OR identifier == %@",
+            "plain-text", "plain-text", "plain-text")).firstMatch
+        note("72-after-host-open-before-touch", "case=\(caseID); actualTarget=\(String(describing: target.value)); requestedApprovedFixture=true; fullURLReadback NOT_VERIFIED")
+        shot("72-after-host-open-before-touch")
+        guard crossFieldProbeEmpty(target, placeholder: "plain-text") else {
+            XCTFail("New-document target must start exactly empty; no clearing attempted")
+            return
+        }
+        try test46c_H56OrdinaryTouchOnPreparedNumberRow()
+        note("72-after-h56", "case=\(caseID); expected=5; actual=\(String(describing: target.value)); markedTextRange NOT_OBSERVABLE_BY_XCUI")
+        shot("72-after-h56")
+        XCTAssertEqual(target.value as? String, "5", "Host-relaunch probe requires exactly 5 without a Japanese prefix")
+    }
+}
+
+// BEGIN COPAKY_SYSTEM_READING_ORACLE
+// Copaky: the Mac regression extracts this exact block, so the tested tokenizer cannot drift.
+// Copaky: Macの回帰テストはこの同一ブロックを抽出する。読みは一意性や未確定状態を証明しない。
+private struct CopakySystemReadingEvidence {
+    let kana: String
+    let utf16Length: Int
+    let tokenCount: Int
+}
+
+private func copakyCompleteJapaneseSystemReading(_ input: String) -> CopakySystemReadingEvidence? {
+    func permittedSource(_ scalar: Unicode.Scalar) -> Bool {
+        (0x3041...0x3096).contains(scalar.value)
+            || (0x3400...0x4DBF).contains(scalar.value)
+            || (0x4E00...0x9FFF).contains(scalar.value)
+    }
+    let source = input as NSString
+    guard source.length > 0, source.length <= 32,
+          input.unicodeScalars.allSatisfy(permittedSource) else { return nil }
+    let options = kCFStringTokenizerUnitWordBoundary | kCFStringTokenizerAttributeLatinTranscription
+    guard let tokenizer = CFStringTokenizerCreate(
+        kCFAllocatorDefault, input as CFString, CFRange(location: 0, length: source.length), options,
+        CFLocaleCreate(kCFAllocatorDefault, CFLocaleIdentifier(rawValue: "ja_JP" as CFString))
+    ) else { return nil }
+    var cursor = 0
+    var fullReading = ""
+    var count = 0
+    while CFStringTokenizerAdvanceToNextToken(tokenizer).rawValue != 0 {
+        let range = CFStringTokenizerGetCurrentTokenRange(tokenizer)
+        guard range.location == cursor, range.length > 0,
+              range.length <= source.length - cursor,
+              let latin = CFStringTokenizerCopyCurrentTokenAttribute(
+                tokenizer, kCFStringTokenizerAttributeLatinTranscription
+              ) as? String,
+              !latin.isEmpty, latin.unicodeScalars.allSatisfy({ (0x61...0x7A).contains($0.value) }),
+              let kana = latin.applyingTransform(StringTransform("Latin-Hiragana"), reverse: false),
+              !kana.isEmpty, kana.unicodeScalars.allSatisfy({ (0x3041...0x3096).contains($0.value) }) else {
+            return nil
+        }
+        cursor += range.length
+        count += 1
+        fullReading += kana
+    }
+    guard cursor == source.length, count > 0 else { return nil }
+    return CopakySystemReadingEvidence(kana: fullReading, utf16Length: cursor, tokenCount: count)
+}
+// END COPAKY_SYSTEM_READING_ORACLE

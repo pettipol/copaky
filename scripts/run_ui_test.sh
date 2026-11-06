@@ -167,6 +167,13 @@ SEEDS+=(${USER_SEEDS[@]+"${USER_SEEDS[@]}"})
 [[ -z "$PBSEED_BYTES" || "$PBSEED_BYTES" =~ ^[0-9]+$ ]] \
   || die "--pbseed-bytes must be a non-negative integer"
 
+if [[ -n "${TEST_RUNNER_COPAKY_H55_TOKEN:-}" ]]; then
+  [[ "$TEST_RUNNER_COPAKY_H55_TOKEN" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$ ]] \
+    || die "H-55 token must be a canonical lowercase UUID"
+  [[ "${COPAKY_UDID:-}" =~ ^[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12}$ ]] \
+    || die "H-55 requires an explicit simulator UUID in COPAKY_UDID"
+fi
+
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 UDID="${COPAKY_UDID:-E0552C62-FFDB-4DF6-9040-2734DB5B2458}"
 PROJECT="$REPO_DIR/azooKey.xcodeproj"
@@ -378,26 +385,41 @@ COPAKY_SEED_REQUIRE_CONTAINER="$FRESH_INSTALL" \
 # 20th session, measured: on a container created moments earlier the direct plist writes can lose
 # against a cfprefsd cache flush on the app's next launch — mirror read-back said OK, yet at test
 # time keyboard_type_en was gone and English fell back to flick (the E-14 trap on fresh containers).
-# The race never reproduced on a warm domain, so: warm the domain with one app launch, then verify
-# every seeded key is still there; one re-seed heals a lost write, a second loss is a hard failure.
-if [[ "$FRESH_INSTALL" == 1 ]]; then
+# Verify exact values after app launch. A mismatch permits one restart of ONLY this simulator,
+# followed by one re-seed; no preference process on the host is signalled.
+if [[ "$FRESH_INSTALL" == 1 || -n "${TEST_RUNNER_COPAKY_H55_TOKEN:-}" ]]; then
   SHARED_PLIST="$(xcrun simctl get_app_container "$UDID" "$APP_BUNDLE" group.com.pettipol.copaky 2>/dev/null || true)/Library/Preferences/group.com.pettipol.copaky.plist"
   for attempt in 1 2; do
     xcrun simctl launch "$UDID" "$APP_BUNDLE" >/dev/null 2>&1
     sleep 2
     xcrun simctl terminate "$UDID" "$APP_BUNDLE" >/dev/null 2>&1 || true
     SEEDS_LOST=0
-    for pair in "${SEEDS[@]}"; do
-      key="${pair%%=*}"
-      /usr/libexec/PlistBuddy -c "Print :$key" "$SHARED_PLIST" >/dev/null 2>&1 || { SEEDS_LOST=1; echo "seed lost after app launch: $key" >&2; }
-    done
-    for key in ${DELETE_KEYS[@]+"${DELETE_KEYS[@]}"}; do
-      /usr/libexec/PlistBuddy -c "Print :$key" "$SHARED_PLIST" >/dev/null 2>&1 \
-        && { SEEDS_LOST=1; echo "deleted key returned after app launch: $key" >&2; }
-    done
+    python3 - "$SHARED_PLIST" "${SEEDS[@]}" -- ${DELETE_KEYS[@]+"${DELETE_KEYS[@]}"} <<'PY' || SEEDS_LOST=1
+import plistlib, sys
+arguments = sys.argv[2:]
+boundary = arguments.index("--")
+expected = {}
+for pair in arguments[:boundary]:
+    key, value = pair.split("=", 1)
+    expected[key] = (value == "true") if value in ("true", "false") else int(value) if value.isascii() and value.isdigit() else value
+try:
+    with open(sys.argv[1], "rb") as stream:
+        observed = plistlib.load(stream)
+except (OSError, ValueError) as error:
+    raise SystemExit("seed read-back failed: " + type(error).__name__)
+lost = [key for key, value in expected.items()
+        if key not in observed or type(observed[key]) is not type(value) or observed[key] != value]
+lost += [key for key in arguments[boundary + 1:] if key in observed]
+if lost:
+    raise SystemExit("seed mismatch after app launch: " + ", ".join(lost))
+print("Exact seed values survived app launch (file read-back)")
+PY
     [[ "$SEEDS_LOST" == 0 ]] && break
-    [[ "$attempt" == 2 ]] && die "seeded keys vanished from the shared App Group container twice — aborting instead of testing an unseeded state"
-    echo "re-seeding the shared container once (cfprefsd race on fresh container)" >&2
+    [[ "$attempt" == 2 ]] && die "seed mismatch survived selected-simulator restart/re-seed — aborting"
+    echo "restarting ONLY selected simulator $UDID, then re-seeding once after mismatch" >&2
+    xcrun simctl shutdown "$UDID"
+    xcrun simctl boot "$UDID"
+    xcrun simctl bootstatus "$UDID" -b
     COPAKY_SEED_REQUIRE_CONTAINER=1 \
       bash "$REPO_DIR/scripts/seed_sim_settings.sh" "${SEED_SCRIPT_ARGS[@]}"
   done

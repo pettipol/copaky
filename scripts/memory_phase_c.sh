@@ -187,6 +187,73 @@ fi
 
 log() { echo "[$(date +%H:%M:%S)] $*"; }
 
+# Copaky: real samples must bracket the marked workload; cold start remains unqualified.
+# 実測サンプルで負荷の前後を確認。最初のサンプル以前の起動ピークは保証しない。
+check_workload_sample_coverage() {
+  PYTHONDONTWRITEBYTECODE=1 python3 - "$RAW_DIR" "$XCLOG" "$RAW_DIR/workload_coverage.json" <<'PYCOVERAGE'
+import json, sys
+from datetime import datetime
+from pathlib import Path
+raw, log, output = map(Path, sys.argv[1:])
+report = {"status": "INVALID", "cold_start": "NOT_QUALIFIED", "raw_records": 0,
+          "valid_samples": 0, "workload_samples": None, "before_workload": None, "after_workload": None}
+def timestamp(value):
+    result = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if result.tzinfo is None:
+        raise ValueError("timestamp needs timezone")
+    return result
+try:
+    samples = []
+    for path in sorted(raw.glob("attach_*.jsonl")):
+        for line in path.read_text().splitlines():
+            if not line.strip():
+                continue
+            report["raw_records"] += 1
+            row = json.loads(line)
+            if row["name"] != "Keyboard" or type(row["pid"]) is not int or row["pid"] <= 0:
+                raise ValueError("invalid monitor identity")
+            if type(row["physFootprint"]) is not int or row["physFootprint"] <= 0:
+                raise ValueError("invalid monitor footprint")
+            samples.append((timestamp(row["timestamp"]), row["pid"]))
+    report["valid_samples"] = len(samples)
+    if samples:
+        report["first_observed_sample"] = min(time for time, pid in samples).isoformat()
+        report["last_observed_sample"] = max(time for time, pid in samples).isoformat()
+    markers = {}
+    for line in log.read_text(errors="replace").splitlines():
+        line = line.strip()
+        for prefix, name in (("MEMC|begin|start|", "begin"), ("MEMC|end|end|", "end")):
+            if line.startswith(prefix):
+                if name in markers:
+                    raise ValueError("duplicate workload boundary")
+                markers[name] = timestamp(line[len(prefix):])
+    begin, end = markers["begin"], markers["end"]
+    if end <= begin:
+        raise ValueError("invalid workload boundaries")
+    workload = [(time, pid) for time, pid in samples if begin <= time <= end]
+    report["workload_samples"] = len(workload)
+    pids = {pid for time, pid in workload}
+    if len(pids) != 1:
+        raise ValueError("missing or changed workload PID")
+    pid = next(iter(pids))
+    qualified = sorted(time for time, sample_pid in samples if sample_pid == pid)
+    before = [time for time in qualified if time <= begin]
+    after = [time for time in qualified if time >= end]
+    report.update(before_workload=len(before), after_workload=len(after), qualified_pid=pid)
+    if not before or not after:
+        raise ValueError("samples do not bracket complete workload")
+    if (begin - before[-1]).total_seconds() > 3 or (after[0] - end).total_seconds() > 3:
+        raise ValueError("workload boundary sample gap exceeds 3 seconds")
+    report.update(status="PASS", first_sample=qualified[0].isoformat(), last_sample=qualified[-1].isoformat(),
+                  workload_begin=begin.isoformat(), workload_end=end.isoformat())
+except (OSError, KeyError, ValueError, TypeError) as exc:
+    report["error"] = str(exc)
+output.write_text(json.dumps(report, indent=2) + "\n")
+print("workload sample coverage: " + json.dumps(report, sort_keys=True))
+sys.exit(0 if report["status"] == "PASS" else 2)
+PYCOVERAGE
+}
+
 # ---- resolve the Simulator UDID by NAME (do not assume it matches COPAKY_UDID from the other
 #      scripts in this folder — those default to "iPhone 17 Pro Max", a DIFFERENT device) -----------
 resolve_sim_udid() {
@@ -403,17 +470,18 @@ else
       log "ERROR: could not terminate stale Keyboard process"; exit 2;
     }
   done
+  # Copaky: observe before Safari can restore focus and spawn the extension.
+  start_sampler
   log "pre-navigating Safari on the phone to https://copaky.app/kbtest"
   xcrun devicectl device process launch --device "$DEVICE_ID" --payload-url "https://copaky.app/kbtest" com.apple.mobilesafari >/dev/null 2>&1 || \
     log "WARN: devicectl could not open Safari — the test will fail on 'textarea-field not found' if the page is not open"
   sleep 3
-  start_sampler
   # `-configuration Release` measures the SHIPPED kind of binary (Debug builds carry unoptimised
   # code and allocator debugging and read several MB higher — first device run: 47-51 MB Debug).
   if [[ "$PREPARED" == 1 ]]; then
     xcodebuild test-without-building -xctestrun "$PREPARED_XCTESTRUN" \
       -destination "platform=iOS,id=$DEVICE_ID" \
-      -parallel-testing-enabled NO -maximum-concurrent-test-device-destinations 1 \
+      -parallel-testing-enabled NO -maximum-concurrent-test-device-destinations 1 -collect-test-diagnostics never \
       -only-testing:"$TEST_ID" -resultBundlePath "$RESULT_BUNDLE" \
       2>&1 | tee "$XCLOG"
   else
@@ -438,6 +506,9 @@ fi
 
 stop_sampler
 trap - EXIT
+if [[ "$MODE" == "device" ]]; then
+  check_workload_sample_coverage || XCODEBUILD_STATUS=2
+fi
 if [[ "$PREPARED" == 1 ]]; then
   prepared_input_manifest "$PREPARED_AFTER" "$PREPARED_MANIFEST" || XCODEBUILD_STATUS=2
 fi

@@ -24,17 +24,31 @@ set -euo pipefail
 LANG_ARG="en"
 INCLUDE_YESTERDAY=0
 UDID="${COPAKY_UDID:-E0552C62-FFDB-4DF6-9040-2734DB5B2458}"
+UDID_EXPLICIT=0
+[[ -z "${COPAKY_UDID:-}" ]] || UDID_EXPLICIT=1
 GROUP_ID="group.com.pettipol.copaky"
 KB_BUNDLE="com.pettipol.copaky.keyboard"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --lang) LANG_ARG="$2"; shift 2 ;;
-    --udid) UDID="$2"; shift 2 ;;
+    --udid) UDID="$2"; UDID_EXPLICIT=1; shift 2 ;;
     --include-yesterday) INCLUDE_YESTERDAY=1; shift ;;
     *) echo "Unknown arg: $1" >&2; exit 2 ;;
   esac
 done
+
+# Copaky: reject H-55 input before resolving containers or creating/writing anything.
+if [[ -n "${TEST_RUNNER_COPAKY_H55_TOKEN:-}" ]]; then
+  [[ "$TEST_RUNNER_COPAKY_H55_TOKEN" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$ ]] \
+    || { echo "ERROR: H-55 token must be a canonical lowercase UUID" >&2; exit 2; }
+  [[ "$UDID_EXPLICIT" == 1 && "$UDID" =~ ^[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12}$ ]] \
+    || { echo "ERROR: H-55 requires an explicit simulator UUID (--udid or COPAKY_UDID)" >&2; exit 2; }
+  [[ "$INCLUDE_YESTERDAY" == 0 && "${TEST_RUNNER_COPAKY_BENCH_RECENT_CLIPBOARD:-}" != 1 \
+      && "${TEST_RUNNER_COPAKY_BENCH_CAPS_CLIPBOARD:-}" != 1 \
+      && "${TEST_RUNNER_COPAKY_BENCH_EXPIRED_CLIPBOARD:-}" != 1 ]] \
+    || { echo "ERROR: H-55 fixture cannot be combined with benchmark/yesterday fixtures" >&2; exit 2; }
+fi
 
 if [[ "$LANG_ARG" != "en" && "$LANG_ARG" != "ja" && "$LANG_ARG" != "it" ]]; then
   echo "ERROR: --lang must be 'en', 'ja' or 'it' (got '$LANG_ARG')" >&2
@@ -92,7 +106,7 @@ COPAKY_INCLUDE_YESTERDAY="$INCLUDE_YESTERDAY" \
 COPAKY_TABBAR="$TABBAR_FILE" \
 COPAKY_HISTORY="$HISTORY_FILE" \
 /usr/bin/python3 - <<'PY'
-import datetime, json, os, time
+import datetime, json, os, time, uuid
 
 lang = os.environ["COPAKY_LANG"]
 include_yesterday = os.environ["COPAKY_INCLUDE_YESTERDAY"] == "1"
@@ -143,6 +157,25 @@ else:
         ("Your verification code is 482913", 90, None),
         ("https://copaky.app/demo", 180, None),
         ("Let's catch up over coffee this week.", 260, None),
+    ]
+
+# Copaky: opt-in H-55 fixtures for a disposable simulator, never a personal pasteboard.
+# Copaky: H-55専用シミュレータの合成履歴。個人のペーストボードは読み書きしない。
+qualification_token = os.environ.get("TEST_RUNNER_COPAKY_H55_TOKEN")
+if qualification_token:
+    if str(uuid.UUID(qualification_token)) != qualification_token:
+        raise SystemExit("H-55 token must be a canonical lowercase UUID")
+    if include_yesterday or any(os.environ.get(key) == "1" for key in (
+        "TEST_RUNNER_COPAKY_BENCH_RECENT_CLIPBOARD",
+        "TEST_RUNNER_COPAKY_BENCH_CAPS_CLIPBOARD",
+        "TEST_RUNNER_COPAKY_BENCH_EXPIRED_CLIPBOARD",
+    )):
+        raise SystemExit("H-55 fixture cannot be combined with benchmark/yesterday fixtures")
+    prefix = "COPAKY-H55-" + qualification_token
+    entries = [
+        (prefix + "-keep-pin", 400, 40),
+        (prefix + "-target-à-日本", 90, None),
+        (prefix + "-keep-plain", 180, None),
     ]
 
 # Copaky: an explicit toolbar pilot needs fresh synthetic clips throughout setup.
@@ -201,11 +234,13 @@ PY
 # Write both, cheap and covers either world.
 for PREFS in "$CONTAINER/Library/Preferences/$GROUP_ID.plist" \
              "$HOME/Library/Developer/CoreSimulator/Devices/$UDID/data/Library/Preferences/$GROUP_ID.plist"; do
-  killall cfprefsd 2>/dev/null || true
-  /usr/libexec/PlistBuddy -c "Set :keyboard_type_en roman" "$PREFS" 2>/dev/null \
-    || /usr/libexec/PlistBuddy -c "Add :keyboard_type_en string roman" "$PREFS" 2>/dev/null || true
-  killall cfprefsd 2>/dev/null || true
-  echo "keyboard_type_en=roman written to $PREFS"
+  mkdir -p "$(dirname "$PREFS")"
+  [[ -f "$PREFS" ]] || plutil -create xml1 "$PREFS"
+  /usr/libexec/PlistBuddy -c "Delete :keyboard_type_en" "$PREFS" 2>/dev/null || true
+  /usr/libexec/PlistBuddy -c "Add :keyboard_type_en string roman" "$PREFS"
+  [[ "$(/usr/libexec/PlistBuddy -c 'Print :keyboard_type_en' "$PREFS")" == roman ]] \
+    || { echo "ERROR: keyboard_type_en file read-back mismatch" >&2; exit 1; }
+  echo "keyboard_type_en=roman written to $PREFS (file read-back OK; live cache not asserted)"
 done
 
 echo "Seed complete for lang=$LANG_ARG"

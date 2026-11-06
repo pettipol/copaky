@@ -7,8 +7,8 @@
 # switch inside the app does NOT reach the keyboard. The domain the extension actually reads is the
 # device-wide one:
 #   ~/Library/Developer/CoreSimulator/Devices/<UDID>/data/Library/Preferences/group.com.pettipol.copaky.plist
-# and `cfprefsd` is shared host<->simulator, so it must be flushed around the write (never use
-# `simctl spawn <bundle> defaults write`: wrong domain, silently overwritten).
+# Direct writes are verified on disk; no host-wide preference daemon is restarted. The UI wrapper
+# checks after app launch and may restart ONLY the selected simulator if a cache overwrites them.
 # On a real device none of this is needed — the App Group works and the app's own settings apply.
 #
 # It also TERMINATES the keyboard extension, on purpose: `KeyboardViewController.variableStates` is a
@@ -30,6 +30,8 @@
 set -uo pipefail
 
 UDID="${COPAKY_UDID:-E0552C62-FFDB-4DF6-9040-2734DB5B2458}"
+UDID_EXPLICIT=0
+[[ -z "${COPAKY_UDID:-}" ]] || UDID_EXPLICIT=1
 GROUP_ID="group.com.pettipol.copaky"
 KB_BUNDLE="com.pettipol.copaky.keyboard"
 PB=/usr/libexec/PlistBuddy
@@ -40,7 +42,7 @@ declare -a DELETES=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --udid) UDID="$2"; shift 2 ;;
+    --udid) UDID="$2"; UDID_EXPLICIT=1; shift 2 ;;
     --delete) DELETES+=("$2"); shift 2 ;;
     --print) PRINT_ONLY=1; shift ;;
     --keep-keyboard) KILL_KEYBOARD=0; shift ;;   # leave the running extension alone (rarely wanted)
@@ -49,6 +51,13 @@ while [[ $# -gt 0 ]]; do
     *) echo "ERROR: unknown argument '$1' (expected key=value, --delete key, --udid, --print)" >&2; exit 2 ;;
   esac
 done
+
+if [[ -n "${TEST_RUNNER_COPAKY_H55_TOKEN:-}" ]]; then
+  [[ "$TEST_RUNNER_COPAKY_H55_TOKEN" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$ ]] \
+    || { echo "ERROR: H-55 token must be a canonical lowercase UUID" >&2; exit 2; }
+  [[ "$UDID_EXPLICIT" == 1 && "$UDID" =~ ^[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12}$ ]] \
+    || { echo "ERROR: H-55 requires an explicit simulator UUID (--udid or COPAKY_UDID)" >&2; exit 2; }
+fi
 
 PLIST="$HOME/Library/Developer/CoreSimulator/Devices/$UDID/data/Library/Preferences/$GROUP_ID.plist"
 if [[ ! -d "$HOME/Library/Developer/CoreSimulator/Devices/$UDID" ]]; then
@@ -67,10 +76,7 @@ if [[ ${#PAIRS[@]} -eq 0 && ${#DELETES[@]} -eq 0 ]]; then
   exit 2
 fi
 
-# cfprefsd caches this file for BOTH host and simulator: flush before touching it, or the daemon
-# rewrites our edit from its cache. / 書き込み前後に必ずフラッシュする。
-killall cfprefsd 2>/dev/null || true
-sleep 0.3
+# File read-back is required; it does not attest that a running process reloaded its cache.
 
 mkdir -p "$(dirname "$PLIST")"
 [[ -f "$PLIST" ]] || $PB -c "Save" "$PLIST" >/dev/null 2>&1 || plutil -create xml1 "$PLIST"
@@ -86,6 +92,10 @@ plist_type() {
 # macOS ships bash 3.2, where "${arr[@]}" on an EMPTY array trips `set -u` — hence the length guards.
 for key in ${DELETES[@]+"${DELETES[@]}"}; do
   $PB -c "Delete :$key" "$PLIST" >/dev/null 2>&1 || true
+  if $PB -c "Print :$key" "$PLIST" >/dev/null 2>&1; then
+    echo "ERROR: deleted key remains in device-wide file: $key" >&2
+    exit 1
+  fi
   echo "deleted  $key"
 done
 
@@ -98,6 +108,10 @@ for pair in ${PAIRS[@]+"${PAIRS[@]}"}; do
   $PB -c "Delete :$key" "$PLIST" >/dev/null 2>&1 || true
   if ! $PB -c "Add :$key $type $value" "$PLIST" >/dev/null 2>&1; then
     echo "ERROR: could not write $key ($type $value) into $PLIST" >&2
+    exit 1
+  fi
+  if [[ "$($PB -c "Print :$key" "$PLIST" 2>/dev/null)" != "$value" ]]; then
+    echo "ERROR: device-wide file read-back mismatch: $key" >&2
     exit 1
   fi
   echo "set      $key = $value ($type)"
@@ -181,9 +195,6 @@ if [[ "$MIRRORS_WRITTEN" == 0 ]]; then
     exit 1
   fi
 fi
-
-killall cfprefsd 2>/dev/null || true
-sleep 0.3
 
 if [[ "$KILL_KEYBOARD" == 1 ]]; then
   # The extension re-reads its settings (and rebuilds the static VariableStates, so the tab goes back
