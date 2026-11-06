@@ -3958,20 +3958,7 @@ class CopakyCampaignTests: XCTestCase {
         }
 
         guard runPhase("clipboard", {
-            guard switchToLatinQwertyTab(in: safari), longPressClipboardShortcut(),
-                  clipboardPanelIsOpen(timeout: 3) else {
-                return "clipboard-not-opened-requires-full-access-signed-app-group-and-history-enabled"
-            }
-            shot("42-clipboard-open")
-            RunLoop.current.run(until: Date().addingTimeInterval(3))
-            guard let back = clipboardBackKey(in: safari, timeout: 3), back.isHittable else {
-                return "clipboard-back-key-missing"
-            }
-            back.tap()
-            guard switchToLatinQwertyTab(in: safari), !clipboardPanelIsOpen(timeout: 1) else {
-                return "keyboard-did-not-return-from-clipboard"
-            }
-            return nil
+            memoryClipboardRoundTrip(field: field, evidencePrefix: "42", holdSeconds: 3)
         }) else { return }
 
         guard runPhase("it", {
@@ -6320,3 +6307,106 @@ private func copakyCompleteJapaneseSystemReading(_ input: String) -> CopakySyste
     return CopakySystemReadingEvidence(kana: fullReading, utf16Length: cursor, tokenCount: count)
 }
 // END COPAKY_SYSTEM_READING_ORACLE
+
+// Copaky: test42 and its short preflight share the exact no-capture navigation path.
+// Copaky: test42と短い事前検査で同じ経路を使用。取り込み・設定変更は行わない。
+extension CopakyCampaignTests {
+    private func memoryClipboardRoundTrip(
+        field: XCUIElement, evidencePrefix: String, holdSeconds: TimeInterval
+    ) -> String? {
+        func safe() -> Bool {
+            !safari.alerts.firstMatch.exists && !springboard.alerts.firstMatch.exists
+                && keyboardFixturePresent(in: safari.webViews.firstMatch) && copakyActive(in: safari)
+        }
+        func empty() -> Bool {
+            guard field.exists, let value = field.value as? String else { return false }
+            return value.isEmpty || (field.placeholderValue == "textarea-field" && value == "textarea-field")
+        }
+        let back = safari.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier == %@", "copaky_clipboard_back")).firstMatch
+        func panelOpen() -> Bool {
+            back.exists && back.isHittable && clipboardPanelIsOpen(timeout: 0.5)
+        }
+        func key(identifier: String) -> XCUIElement? {
+            let matches = safari.descendants(matching: .any)
+                .matching(NSPredicate(format: "identifier == %@", identifier))
+            guard let input = keyboardInputViewFrame(of: safari) else { return nil }
+            return matches.allElementsBoundByIndex.first {
+                $0.exists && $0.isHittable && input.contains($0.frame)
+            }
+        }
+        func tapVerifiedTabItem() -> Bool {
+            guard safe(), let input = keyboardInputViewFrame(of: safari) else { return false }
+            let items = safari.buttons.matching(NSPredicate(format: "identifier == %@", "doc.badge.clock"))
+            var inside: [XCUIElement] = []
+            for item in items.allElementsBoundByIndex where item.exists {
+                let rect = item.frame
+                let center = CGPoint(x: rect.midX, y: rect.midY)
+                let centered = rect.width > 0 && rect.height > 0
+                    && input.contains(center) && safari.frame.contains(center)
+                note("\(evidencePrefix)-clipboard-tab-geometry", "input=\(input); itemFrame=\(rect); centerInsideInputAndApp=\(centered); hittable=\(item.isHittable)")
+                if centered { inside.append(item) }
+            }
+            note("\(evidencePrefix)-clipboard-tab-geometry-count", "exactIdentifier=doc.badge.clock; centersInside=\(inside.count)")
+            guard inside.count == 1, let item = inside.first, safe(), item.exists, item.isHittable,
+                  let currentInput = keyboardInputViewFrame(of: safari),
+                  currentInput.contains(CGPoint(x: item.frame.midX, y: item.frame.midY)) else { return false }
+            item.tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.6))
+            return panelOpen()
+        }
+        guard holdSeconds >= 0, holdSeconds <= 3, safe(), empty(), !panelOpen(),
+              let flick = ensureJapaneseTab(in: safari), safe(), empty() else {
+            return "clipboard-roundtrip-requires-owned-empty-fixture-japanese-tab-without-alerts"
+        }
+        // The product identifier targets ☆123 itself; never choose optional #+= by a broad label.
+        if flick, let star = key(identifier: "keyboard-flick-star-123") {
+            star.press(forDuration: 1.0)
+            note("\(evidencePrefix)-clipboard-route", "Japanese flick product identifier keyboard-flick-star-123")
+            RunLoop.current.run(until: Date().addingTimeInterval(0.6))
+        }
+        if !panelOpen(), !tapVerifiedTabItem() {
+            guard safe(), switchToLatinQwertyTab(in: safari), safe(), empty() else {
+                return "clipboard-latin-fallback-unavailable"
+            }
+            if let numbers = key(identifier: "textformat.123") {
+                numbers.press(forDuration: 1.0)
+                note("\(evidencePrefix)-clipboard-route", "Latin letters/123 product identifier textformat.123; #+= excluded")
+                RunLoop.current.run(until: Date().addingTimeInterval(0.6))
+            }
+            if !panelOpen(), !tapVerifiedTabItem(),
+               let bar = firstMatch(in: safari, labels: L.tabBarButton, timeout: 1), bar.isHittable,
+               safe() {
+                bar.tap()
+                RunLoop.current.run(until: Date().addingTimeInterval(0.6))
+                _ = tapVerifiedTabItem()
+            }
+        }
+        guard safe(), empty(), panelOpen() else {
+            return "clipboard-panel-markers-unproved-no-capture-or-setting-change-attempted"
+        }
+        shot("\(evidencePrefix)-clipboard-open")
+        RunLoop.current.run(until: Date().addingTimeInterval(holdSeconds))
+        guard safe(), empty(), panelOpen() else { return "clipboard-panel-not-preserved-for-required-load" }
+        back.tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.6))
+        guard safe(), !back.exists, switchToLatinQwertyTab(in: safari),
+              safe(), !back.exists, latinQwertyVisible(in: safari, timeout: 2), empty() else {
+            return "clipboard-exit-and-latin-return-unproved"
+        }
+        shot("\(evidencePrefix)-clipboard-closed-latin")
+        note("\(evidencePrefix)-clipboard-roundtrip", "Panel entry/exit and Latin return observed; fixture stayed empty; no capture, paste permission or settings action")
+        return nil
+    }
+
+    func test42a_clipboardRoundTripPreflight() throws {
+        let field = activatePreNavigatedField("textarea-field")
+        switchToCopaky(in: safari)
+        let failure = memoryClipboardRoundTrip(field: field, evidencePrefix: "42a", holdSeconds: 0)
+        if let failure {
+            dump(safari, "42a-clipboard-roundtrip-failed")
+            shot("42a-clipboard-roundtrip-failed")
+            XCTFail("Memory clipboard preflight failed: \(failure)")
+        }
+    }
+}
